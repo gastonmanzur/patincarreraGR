@@ -8,6 +8,8 @@ import path from 'path';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import User from './models/User.js';
+import { protegerRuta } from './middlewares/authMiddleware.js';
+import upload from './utils/multer.js';
 
 // Cargar variables de entorno desde .env si está presente
 const envPath = path.resolve('.env');
@@ -31,6 +33,10 @@ mongoose
 const app = express();
 app.use(cors());
 app.use(express.json());
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
+app.use('/uploads', express.static('uploads'));
 
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
@@ -134,6 +140,32 @@ app.post('/api/auth/login', async (req, res) => {
     usuario: { nombre: usuario.nombre, rol: usuario.rol, foto: usuario.foto || '' }
   });
 });
+
+app.get('/api/protegido/usuario', protegerRuta, async (req, res) => {
+  try {
+    const usuario = await User.findById(req.usuario.id).select('-password');
+    res.json({ usuario });
+  } catch (error) {
+    res.status(500).json({ mensaje: 'Error al obtener el usuario' });
+  }
+});
+
+app.post(
+  '/api/protegido/foto-perfil',
+  protegerRuta,
+  upload.single('foto'),
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.usuario.id);
+      user.foto = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+      await user.save();
+      res.json({ mensaje: 'Foto actualizada', foto: user.foto });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al actualizar la foto' });
+    }
+  }
+);
 
 // Inicio de sesión con Google (OAuth 2.0 sin dependencias externas)
 app.get('/api/auth/google', (req, res) => {
