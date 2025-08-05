@@ -67,8 +67,8 @@ export default function Navbar() {
           <img
             src="/vite.svg"
             alt="Logo"
-            width="40"
-            height="40"
+            width="80"
+            height="80"
             className="rounded-circle"
           />
         </a>
@@ -84,7 +84,7 @@ export default function Navbar() {
           <span className="navbar-toggler-icon"></span>
         </button>
         <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+          <ul className="navbar-nav mx-auto mb-2 mb-lg-0">
             {navItems.map((item) => (
               <li className="nav-item" key={item.label}>
                 <a
@@ -98,7 +98,7 @@ export default function Navbar() {
             ))}
           </ul>
           {isLoggedIn && (
-            <div className="d-flex align-items-center gap-2">
+            <div className="d-flex align-items-center gap-2 ms-auto">
               <div className="position-relative">
                 <img
                   src={foto || '/default-user.png'}
