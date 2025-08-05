@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import GoogleSuccess from './pages/GoogleSuccess';
 import Dashboard from './pages/Dashboard';
@@ -13,16 +13,27 @@ function AdminRoute({ children }) {
   return token && rol === 'admin' ? children : <Navigate to="/" />;
 }
 
-export default function App() {
+function AppRoutes() {
+  const location = useLocation();
+  const hideNavbarPaths = ['/', '/login', '/register'];
+
   return (
-    <BrowserRouter>
-    <Navbar />
+    <>
+      {!hideNavbarPaths.includes(location.pathname) && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/google-success" element={<GoogleSuccess />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><PanelAdmin /></AdminRoute>} />
       </Routes>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
     </BrowserRouter>
   );
 }
