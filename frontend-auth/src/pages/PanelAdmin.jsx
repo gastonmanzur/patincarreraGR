@@ -20,15 +20,34 @@ export default function PanelAdmin() {
   }, []);
 
   return (
-    <div>
-      <h1>Panel de Administración</h1>
-      <LogoutButton />
-      <h2>Usuarios registrados</h2>
-      <ul>
-        {usuarios.map(user => (
-          <li key={user._id}>{user.nombre} {user.apellido} - {user.email} ({user.rol})</li>
-        ))}
-      </ul>
+    <div className="container mt-4">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h1 className="m-0">Panel de Administración</h1>
+        <LogoutButton />
+      </div>
+      <h2 className="mb-3">Usuarios registrados</h2>
+      <div className="table-responsive">
+        <table className="table table-striped">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Apellido</th>
+              <th>Email</th>
+              <th>Rol</th>
+            </tr>
+          </thead>
+          <tbody>
+            {usuarios.map((user) => (
+              <tr key={user._id}>
+                <td>{user.nombre}</td>
+                <td>{user.apellido}</td>
+                <td>{user.email}</td>
+                <td>{user.rol}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

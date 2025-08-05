@@ -2,7 +2,6 @@ import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import LogoutButton from './LogoutButton';
-import './Navbar.css';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -55,40 +54,75 @@ export default function Navbar() {
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
+  const navItems = isLoggedIn ? (rol === 'admin' ? itemsAdmin : itemsUsuario) : [];
+
   return (
-    <nav className="navbar">
-      <div className="navbar-left" onClick={() => handleNavigate('/dashboard')}>
-        <img src="/vite.svg" alt="Logo" className="logo" />
-      </div>
-      <ul className="navbar-list">
-        {(isLoggedIn ? (rol === 'admin' ? itemsAdmin : itemsUsuario) : []).map((item) => (
-          <li key={item.label} onClick={() => handleNavigate(item.path)}>
-            {item.label}
-          </li>
-        ))}
-      </ul>
-      <div className="navbar-right">
-        {isLoggedIn && (
-          <>
-            <div className="profile-pic">
-              <img
-                src={foto || '/default-user.png'}
-                alt="Foto perfil"
-                onClick={!foto?.includes('googleusercontent') ? triggerFileSelect : undefined}
-              />
-              {!foto?.includes('googleusercontent') && (
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                  onChange={handleFileChange}
+    <nav className="navbar navbar-expand-lg navbar-light bg-light">
+      <div className="container">
+        <a
+          className="navbar-brand d-flex align-items-center"
+          onClick={() => handleNavigate('/dashboard')}
+          style={{ cursor: 'pointer' }}
+        >
+          <img
+            src="/vite.svg"
+            alt="Logo"
+            width="40"
+            height="40"
+            className="rounded-circle"
+          />
+        </a>
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
+        <div className="collapse navbar-collapse" id="navbarNav">
+          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+            {navItems.map((item) => (
+              <li className="nav-item" key={item.label}>
+                <a
+                  className="nav-link"
+                  onClick={() => handleNavigate(item.path)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+          {isLoggedIn && (
+            <div className="d-flex align-items-center gap-2">
+              <div className="position-relative">
+                <img
+                  src={foto || '/default-user.png'}
+                  alt="Foto perfil"
+                  width="40"
+                  height="40"
+                  className="rounded-circle"
+                  style={{ objectFit: 'cover', cursor: foto?.includes('googleusercontent') ? 'default' : 'pointer' }}
+                  onClick={!foto?.includes('googleusercontent') ? triggerFileSelect : undefined}
                 />
-              )}
+                {!foto?.includes('googleusercontent') && (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={handleFileChange}
+                  />
+                )}
+              </div>
+              <LogoutButton />
             </div>
-            <LogoutButton />
-          </>
-        )}
+          )}
+        </div>
       </div>
     </nav>
   );
