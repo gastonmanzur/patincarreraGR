@@ -5,6 +5,8 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import User from './models/User.js';
 
 // Cargar variables de entorno desde .env si está presente
@@ -34,6 +36,7 @@ const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
@@ -66,8 +69,48 @@ app.post('/api/auth/registro', async (req, res) => {
 
   const hashed = bcrypt.hashSync(password, 10);
   const rolGuardado = rol.charAt(0).toUpperCase() + rol.slice(1);
-  await User.create({ nombre, apellido, email, password: hashed, rol: rolGuardado });
-  return res.status(201).json({ mensaje: 'Usuario registrado con éxito' });
+  const token = crypto.randomBytes(20).toString('hex');
+
+  await User.create({
+    nombre,
+    apellido,
+    email,
+    password: hashed,
+    rol: rolGuardado,
+    tokenConfirmacion: token
+  });
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+
+  const url = `${BACKEND_URL}/api/auth/confirmar/${token}`;
+  await transporter.sendMail({
+    from: '"Mi Proyecto" <no-reply@miweb.com>',
+    to: email,
+    subject: 'Confirmá tu cuenta',
+    html: `<p>Hacé clic en el siguiente enlace para confirmar tu cuenta:</p><a href="${url}">${url}</a>`
+  });
+
+  return res
+    .status(201)
+    .json({ mensaje: 'Usuario registrado con éxito. Revisa tu email para confirmar la cuenta.' });
+});
+
+app.get('/api/auth/confirmar/:token', async (req, res) => {
+  const { token } = req.params;
+  const usuario = await User.findOne({ tokenConfirmacion: token });
+  if (!usuario) {
+    return res.status(400).send('Token no válido o ya usado');
+  }
+  usuario.confirmado = true;
+  usuario.tokenConfirmacion = null;
+  await usuario.save();
+  return res.redirect(`${FRONTEND_URL}/`);
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -75,6 +118,9 @@ app.post('/api/auth/login', async (req, res) => {
   const usuario = await User.findOne({ email });
   if (!usuario) {
     return res.status(400).json({ mensaje: 'Credenciales inválidas' });
+  }
+  if (!usuario.confirmado) {
+    return res.status(403).json({ mensaje: 'Tenés que confirmar tu cuenta primero' });
   }
   const valido = bcrypt.compareSync(password, usuario.password);
   if (!valido) {
