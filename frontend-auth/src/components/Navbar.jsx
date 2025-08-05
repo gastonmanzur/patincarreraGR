@@ -1,15 +1,18 @@
 import { useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import LogoutButton from './LogoutButton';
 import './Navbar.css';
 
 export default function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef(null);
   const rol = localStorage.getItem('rol');
   const foto = localStorage.getItem('foto');
   const isLoggedIn = localStorage.getItem('token');
+
+  if (location.pathname === '/dashboard') return null;
 
   const itemsAdmin = [
     { label: 'Servicios', path: '/servicios' },
@@ -68,7 +71,7 @@ export default function Navbar() {
         ))}
       </ul>
       <div className="navbar-right">
-        {isLoggedIn ? (
+        {isLoggedIn && (
           <>
             <div className="profile-pic">
               <img
@@ -87,11 +90,6 @@ export default function Navbar() {
               )}
             </div>
             <LogoutButton />
-          </>
-        ) : (
-          <>
-            <button onClick={() => handleNavigate('/register')}>Registrarse</button>
-            <button onClick={() => handleNavigate('/login')}>Iniciar sesión</button>
           </>
         )}
       </div>
