@@ -49,6 +49,7 @@ export default function Dashboard() {
       setFoto(res.data.foto);
       setNuevaFoto(null);
     } catch (err) {
+      console.error(err);
       alert('Error al subir la foto');
     }
   };

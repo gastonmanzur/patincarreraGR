@@ -23,6 +23,7 @@ export default function FotoUploader() {
       localStorage.setItem('foto', res.data.foto);
       window.location.reload();
     } catch (err) {
+      console.error(err);
       alert('Error al subir la foto');
     }
   };
