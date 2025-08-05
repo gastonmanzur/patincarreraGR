@@ -1,7 +1,6 @@
-// middlewares/authMiddleware.js
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
-exports.protegerRuta = (req, res, next) => {
+export const protegerRuta = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith('Bearer ')) {
@@ -19,14 +18,11 @@ exports.protegerRuta = (req, res, next) => {
   }
 };
 
-// middlddeware de roles
-
-exports.permitirRol = (...roles) => {
-    return (req, res, next) => {
-      if (!roles.includes(req.usuario.rol)) {
-        return res.status(403).json({ mensaje: 'Acceso denegado: rol insuficiente' });
-      }
-      next();
-    };
+export const permitirRol = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.usuario.rol)) {
+      return res.status(403).json({ mensaje: 'Acceso denegado: rol insuficiente' });
+    }
+    next();
   };
-  
+};
