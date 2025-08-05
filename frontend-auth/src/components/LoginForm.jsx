@@ -25,17 +25,24 @@ export default function LoginForm() {
   };
 
   const handleGoogleLogin = () => {
-   
+
     window.location.href = 'http://localhost:5000/api/auth/google';
   };
 
   return (
     <form onSubmit={handleLogin}>
-      <input type="email" name="email" placeholder="Email" required /><br />
-      <input type="password" name="password" placeholder="Contraseña" required /><br />
-      <button type="submit">Iniciar sesión</button>
-      <hr />
-      <button type="button" onClick={handleGoogleLogin}>Ingresar con Google</button>
+      <div className="mb-3">
+        <label htmlFor="email" className="form-label">Email</label>
+        <input type="email" className="form-control" name="email" id="email" required />
+      </div>
+      <div className="mb-3">
+        <label htmlFor="password" className="form-label">Contraseña</label>
+        <input type="password" className="form-control" name="password" id="password" required />
+      </div>
+      <div className="d-grid gap-2">
+        <button type="submit" className="btn btn-primary">Iniciar sesión</button>
+        <button type="button" className="btn btn-outline-danger" onClick={handleGoogleLogin}>Ingresar con Google</button>
+      </div>
     </form>
   );
 }

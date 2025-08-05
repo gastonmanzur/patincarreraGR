@@ -54,32 +54,62 @@ export default function RegisterForm() {
   return (
     <div>
       <form onSubmit={handleRegister}>
-        <input type="text" name="nombre" placeholder="Nombre" required /><br />
-        <input type="text" name="apellido" placeholder="Apellido" required /><br />
-        <input type="email" name="email" placeholder="Email" required /><br />
-        <input type="password" name="password" placeholder="Contraseña" required /><br />
-        <input type="password" name="confirmarPassword" placeholder="Confirmar Contraseña" required /><br />
-        <select name="rol" value={rol} onChange={(e) => setRol(e.target.value)} required>
-          <option value="">Seleccione un rol</option>
-          <option value="delegado">Delegado</option>
-          <option value="tecnico">Técnico</option>
-          <option value="deportista">Deportista</option>
-        </select><br />
+        <div className="mb-3">
+          <label htmlFor="nombre" className="form-label">Nombre</label>
+          <input type="text" className="form-control" name="nombre" id="nombre" required />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="apellido" className="form-label">Apellido</label>
+          <input type="text" className="form-control" name="apellido" id="apellido" required />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="email" className="form-label">Email</label>
+          <input type="email" className="form-control" name="email" id="email" required />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="password" className="form-label">Contraseña</label>
+          <input type="password" className="form-control" name="password" id="password" required />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="confirmarPassword" className="form-label">Confirmar Contraseña</label>
+          <input type="password" className="form-control" name="confirmarPassword" id="confirmarPassword" required />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="rol" className="form-label">Rol</label>
+          <select
+            name="rol"
+            id="rol"
+            className="form-select"
+            value={rol}
+            onChange={(e) => setRol(e.target.value)}
+            required
+          >
+            <option value="">Seleccione un rol</option>
+            <option value="delegado">Delegado</option>
+            <option value="tecnico">Técnico</option>
+            <option value="deportista">Deportista</option>
+          </select>
+        </div>
         {requiereCodigo && (
-          <>
+          <div className="mb-3">
+            <label htmlFor="codigo" className="form-label">Código especial</label>
             <input
               type="text"
+              className="form-control"
               name="codigo"
+              id="codigo"
               placeholder="Código especial"
               value={codigo}
               onChange={(e) => setCodigo(e.target.value)}
               required
-            /><br />
-          </>
+            />
+          </div>
         )}
-        <button type="submit">Registrarse</button>
+        <div className="d-grid">
+          <button type="submit" className="btn btn-primary">Registrarse</button>
+        </div>
       </form>
-      {mensaje && <p>{mensaje}</p>}
+      {mensaje && <div className="alert alert-info mt-3">{mensaje}</div>}
     </div>
   );
 }
