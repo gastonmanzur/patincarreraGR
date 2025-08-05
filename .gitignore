@@ -1,3 +1,4 @@
 node_modules
 frontend-auth/node_modules
 backend-auth/node_modules
+backend-auth/usuarios.db
