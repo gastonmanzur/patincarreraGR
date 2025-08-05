@@ -9,5 +9,9 @@ export default function LogoutButton() {
     navigate('/');
   };
 
-  return <button onClick={handleLogout}>Cerrar sesión</button>;
+  return (
+    <button type="button" className="btn btn-outline-secondary" onClick={handleLogout}>
+      Cerrar sesión
+    </button>
+  );
 }

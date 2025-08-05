@@ -55,23 +55,42 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Bienvenido al Dashboard</h1>
-      <LogoutButton />
+    <div className="container mt-4">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h1 className="m-0">Bienvenido al Dashboard</h1>
+        <LogoutButton />
+      </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20, margin: '20px 0' }}>
-        <img src={foto || '/default-user.png'} alt="Perfil" style={{ width: 80, borderRadius: '50%' }} />
+      <div className="card p-3 mb-4 d-flex flex-row align-items-center gap-3">
+        <img
+          src={foto || '/default-user.png'}
+          alt="Perfil"
+          className="rounded-circle"
+          width="80"
+          height="80"
+          style={{ objectFit: 'cover' }}
+        />
         <div>
-          <p><strong>Nombre:</strong> {usuario.nombre || 'Usuario'}</p>
-          <p><strong>Rol:</strong> {rol}</p>
+          <p className="mb-1"><strong>Nombre:</strong> {usuario.nombre || 'Usuario'}</p>
+          <p className="mb-0"><strong>Rol:</strong> {rol}</p>
         </div>
       </div>
 
       {/* Formulario para cambiar foto si NO es de Google */}
       {foto && !foto.includes('googleusercontent') && (
-        <form onSubmit={subirFoto}>
-          <input type="file" accept="image/*" onChange={(e) => setNuevaFoto(e.target.files[0])} required />
-          <button type="submit">Actualizar foto</button>
+        <form onSubmit={subirFoto} className="mb-4">
+          <div className="input-group">
+            <input
+              type="file"
+              accept="image/*"
+              className="form-control"
+              onChange={(e) => setNuevaFoto(e.target.files[0])}
+              required
+            />
+            <button type="submit" className="btn btn-primary">
+              Actualizar foto
+            </button>
+          </div>
         </form>
       )}
 
