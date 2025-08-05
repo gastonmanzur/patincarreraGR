@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import GoogleSuccess from './pages/GoogleSuccess';
 import Dashboard from './pages/Dashboard';
@@ -14,12 +14,9 @@ function AdminRoute({ children }) {
 }
 
 function AppRoutes() {
-  const location = useLocation();
-  const hideNavbarPaths = ['/', '/login', '/register'];
-
   return (
     <>
-      {!hideNavbarPaths.includes(location.pathname) && <Navbar />}
+      <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/google-success" element={<GoogleSuccess />} />

@@ -1,18 +1,15 @@
 import { useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import LogoutButton from './LogoutButton';
 import './Navbar.css';
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const location = useLocation();
   const fileInputRef = useRef(null);
   const rol = localStorage.getItem('rol');
   const foto = localStorage.getItem('foto');
   const isLoggedIn = localStorage.getItem('token');
-
-  if (location.pathname === '/dashboard') return null;
 
   const itemsAdmin = [
     { label: 'Servicios', path: '/servicios' },
