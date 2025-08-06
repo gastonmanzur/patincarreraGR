@@ -225,6 +225,18 @@ app.post(
       res.status(201).json(patinador);
     } catch (err) {
       console.error(err);
+
+      // Manejo específico de errores de validación y duplicados
+      if (err.name === 'ValidationError') {
+        const mensajes = Object.values(err.errors).map((e) => e.message);
+        return res.status(400).json({ mensaje: mensajes.join(', ') });
+      }
+
+      if (err.code === 11000) {
+        const campo = Object.keys(err.keyValue || {})[0];
+        return res.status(400).json({ mensaje: `${campo} ya existe` });
+      }
+
       res.status(500).json({ mensaje: 'Error al crear el patinador' });
     }
   }
