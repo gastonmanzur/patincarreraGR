@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import PanelAdmin from './pages/PanelAdmin';
 import Navbar from './components/Navbar';
+import CargarPatinador from './pages/CargarPatinador';
 
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -21,6 +22,7 @@ function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/google-success" element={<GoogleSuccess />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/cargar-patinador" element={<ProtectedRoute><CargarPatinador /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><PanelAdmin /></AdminRoute>} />
       </Routes>
     </>
