@@ -8,6 +8,7 @@ import path from 'path';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import User from './models/User.js';
+import Patinador from './models/Patinador.js';
 import { protegerRuta } from './middlewares/authMiddleware.js';
 import upload from './utils/multer.js';
 
@@ -163,6 +164,68 @@ app.post(
     } catch (err) {
       console.error(err);
       res.status(500).json({ mensaje: 'Error al actualizar la foto' });
+    }
+  }
+);
+
+app.post(
+  '/api/patinadores',
+  protegerRuta,
+  upload.fields([
+    { name: 'fotoRostro', maxCount: 1 },
+    { name: 'foto', maxCount: 1 }
+  ]),
+  async (req, res) => {
+    try {
+      const {
+        primerNombre,
+        segundoNombre,
+        apellido,
+        edad,
+        fechaNacimiento,
+        dni,
+        cuil,
+        direccion,
+        dniMadre,
+        dniPadre,
+        telefono,
+        sexo,
+        nivel,
+        numeroCorredor,
+        categoria
+      } = req.body;
+
+      const fotoRostroFile = req.files?.fotoRostro?.[0];
+      const fotoFile = req.files?.foto?.[0];
+
+      const patinador = await Patinador.create({
+        primerNombre,
+        segundoNombre,
+        apellido,
+        edad,
+        fechaNacimiento,
+        dni,
+        cuil,
+        direccion,
+        dniMadre,
+        dniPadre,
+        telefono,
+        sexo,
+        nivel,
+        numeroCorredor,
+        categoria,
+        fotoRostro: fotoRostroFile
+          ? `${req.protocol}://${req.get('host')}/uploads/${fotoRostroFile.filename}`
+          : undefined,
+        foto: fotoFile
+          ? `${req.protocol}://${req.get('host')}/uploads/${fotoFile.filename}`
+          : undefined
+      });
+
+      res.status(201).json(patinador);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al crear el patinador' });
     }
   }
 );

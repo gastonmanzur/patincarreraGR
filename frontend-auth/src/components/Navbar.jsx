@@ -14,13 +14,15 @@ export default function Navbar() {
     { label: 'Servicios', path: '/servicios' },
     { label: 'Gestionar Servicios', path: '/admin/servicios' },
     { label: 'Turnos', path: '/turnos' },
-    { label: 'Gestionar Turnos', path: '/admin/turnos' }
+    { label: 'Gestionar Turnos', path: '/admin/turnos' },
+    { label: 'Cargar Patinador', path: '/cargar-patinador' }
   ];
 
   const itemsUsuario = [
     { label: 'Servicios', path: '/servicios' },
     { label: 'Mis Turnos', path: '/mis-turnos' },
-    { label: 'Contacto', path: '/contacto' }
+    { label: 'Contacto', path: '/contacto' },
+    { label: 'Cargar Patinador', path: '/cargar-patinador' }
   ];
 
   const handleNavigate = (path) => navigate(path);
