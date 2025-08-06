@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import LogoutButton from './LogoutButton';
+import './Navbar.css';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ export default function Navbar() {
   const navItems = isLoggedIn ? (rol === 'admin' ? itemsAdmin : itemsUsuario) : [];
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-light">
+    <nav className="navbar navbar-expand-lg navbar-light bg-light navbar-animated">
       <div className="container">
         <a
           className="navbar-brand d-flex align-items-center"
