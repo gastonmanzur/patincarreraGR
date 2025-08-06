@@ -12,7 +12,7 @@
   height: 100%;
   pointer-events: none;
   background: linear-gradient(
-    40deg,
+    -40deg,
     rgba(13, 162, 220, 0) 0px,
     rgba(13, 162, 220, 1) 10px,
     rgba(13, 162, 220, 1) 25px,
@@ -24,8 +24,9 @@
     #000000 70px,
     rgba(0, 0, 0, 0) 80px
   );
-  background-repeat: no-repeat;
-  animation: navbarLines 4s linear forwards;
+  background-repeat: repeat-x;
+  background-size: 80px 100%;
+  animation: navbarLines 4s linear infinite;
   z-index: 0;
 }
 
