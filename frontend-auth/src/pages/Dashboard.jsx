@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 import LogoutButton from '../components/LogoutButton';
-import axios from 'axios';
+import api from '../api.js';
 
 export default function Dashboard() {
   const [rol, setRol] = useState('');
   const [foto, setFoto] = useState('');
   const [usuario, setUsuario] = useState({});
-
-  const token = localStorage.getItem('token');
 
   useEffect(() => {
     setRol(localStorage.getItem('rol'));
@@ -16,9 +14,7 @@ export default function Dashboard() {
     // Podés cargar más info si querés desde el backend
     const cargarDatos = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/protegido/usuario', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await api.get('/protegido/usuario');
         setUsuario(res.data.usuario);
       } catch (err) {
         console.log(err);
@@ -26,7 +22,7 @@ export default function Dashboard() {
     };
 
     cargarDatos();
-  }, [token]);
+  }, []);
 
   const [nuevaFoto, setNuevaFoto] = useState(null);
 
@@ -37,9 +33,8 @@ export default function Dashboard() {
     formData.append('foto', nuevaFoto);
 
     try {
-      const res = await axios.post('http://localhost:5000/api/protegido/foto-perfil', formData, {
+      const res = await api.post('/protegido/foto-perfil', formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });

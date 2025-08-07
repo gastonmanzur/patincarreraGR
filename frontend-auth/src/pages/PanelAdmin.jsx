@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../api.js';
 import LogoutButton from '../components/LogoutButton';
 
 export default function PanelAdmin() {
@@ -7,12 +7,7 @@ export default function PanelAdmin() {
 
   useEffect(() => {
     const fetchUsuarios = async () => {
-      const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/protegido/usuarios', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const res = await api.get('/protegido/usuarios');
       setUsuarios(res.data);
     };
 

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../api.js';
 
 export default function LoginForm() {
   const handleLogin = async (e) => {
@@ -6,8 +6,8 @@ export default function LoginForm() {
     const email = e.target.email.value;
     const password = e.target.password.value;
 
-    try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      try {
+        const res = await api.post('/auth/login', { email, password });
 
       const { token, usuario } = res.data;
 

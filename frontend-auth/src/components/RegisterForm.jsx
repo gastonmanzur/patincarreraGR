@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../api.js';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,8 +28,8 @@ export default function RegisterForm() {
       return;
     }
 
-    try {
-      const res = await axios.post('http://localhost:5000/api/auth/registro', {
+      try {
+        const res = await api.post('/auth/registro', {
         nombre,
         apellido,
         email,
