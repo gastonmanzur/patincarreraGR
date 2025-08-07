@@ -133,8 +133,12 @@ app.post('/api/auth/login', async (req, res) => {
   if (!valido) {
     return res.status(400).json({ mensaje: 'Credenciales inválidas' });
   }
+  // Extendemos la duración del token para evitar que la sesión
+  // se cierre de manera prematura. Antes el token expiraba en 1 hora,
+  // lo cual provocaba que el usuario perdiera la sesión rápidamente.
+  // Ahora el token tiene una vigencia de 24 horas.
   const token = jwt.sign({ id: usuario._id, rol: usuario.rol }, JWT_SECRET, {
-    expiresIn: '1h'
+    expiresIn: '24h'
   });
   return res.json({
     token,
