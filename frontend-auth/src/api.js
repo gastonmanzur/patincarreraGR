@@ -13,4 +13,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Si el servidor responde 401, limpiamos los datos y redirigimos al inicio
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('rol');
+      localStorage.removeItem('foto');
+      window.location.href = '/';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
