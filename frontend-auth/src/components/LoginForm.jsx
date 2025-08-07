@@ -1,6 +1,9 @@
 import api from '../api.js';
+import { useNavigate } from 'react-router-dom';
 
 export default function LoginForm() {
+  const navigate = useNavigate();
+
   const handleLogin = async (e) => {
     e.preventDefault();
     const email = e.target.email.value;
@@ -18,7 +21,7 @@ export default function LoginForm() {
 
       alert(`Bienvenido ${usuario.nombre}`);
       // Podés redirigir según el rol si querés
-      window.location.href = '/dashboard';
+      navigate('/dashboard');
     } catch (err) {
       alert(err.response?.data?.mensaje || 'Error al iniciar sesión');
     }
