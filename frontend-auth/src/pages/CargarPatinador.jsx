@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import api from '../api.js';
 
 export default function CargarPatinador() {
   const [mensaje, setMensaje] = useState('');
@@ -29,10 +29,8 @@ export default function CargarPatinador() {
     if (foto) formData.append('foto', foto);
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/patinadores', formData, {
+      await api.post('/patinadores', formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });

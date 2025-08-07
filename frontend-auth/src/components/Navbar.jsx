@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api.js';
 import LogoutButton from './LogoutButton';
 
 export default function Navbar() {
@@ -32,18 +32,16 @@ export default function Navbar() {
     if (!file) return;
     const formData = new FormData();
     formData.append('foto', file);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post(
-        'http://localhost:5000/api/protegido/foto-perfil',
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data'
+      try {
+        const res = await api.post(
+          '/protegido/foto-perfil',
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
           }
-        }
-      );
+        );
       localStorage.setItem('foto', res.data.foto);
       window.location.reload();
     } catch (err) {
