@@ -9,8 +9,9 @@ import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import User from './models/User.js';
 import Patinador from './models/Patinador.js';
-import { protegerRuta } from './middlewares/authMiddleware.js';
+import { protegerRuta, permitirRol } from './middlewares/authMiddleware.js';
 import upload from './utils/multer.js';
+import News from './models/News.js';
 
 // Cargar variables de entorno desde .env si está presente
 const envPath = path.resolve('.env');
@@ -242,6 +243,51 @@ app.post(
       }
 
       res.status(500).json({ mensaje: 'Error al crear el patinador' });
+    }
+  }
+);
+
+app.get('/api/news', async (req, res) => {
+  try {
+    const noticias = await News.find()
+      .sort({ fecha: -1 })
+      .populate('autor', 'nombre apellido');
+    const respuesta = noticias.map((n) => ({
+      _id: n._id,
+      titulo: n.titulo,
+      contenido: n.contenido,
+      imagen: n.imagen,
+      autor: n.autor ? `${n.autor.nombre} ${n.autor.apellido}` : 'Anónimo',
+      fecha: n.fecha
+    }));
+    res.json(respuesta);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener noticias' });
+  }
+});
+
+app.post(
+  '/api/news',
+  protegerRuta,
+  permitirRol('Delegado', 'Tecnico'),
+  upload.single('imagen'),
+  async (req, res) => {
+    try {
+      const { titulo, contenido } = req.body;
+      const imagen = req.file
+        ? `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
+        : undefined;
+      const noticia = await News.create({
+        titulo,
+        contenido,
+        imagen,
+        autor: req.usuario.id
+      });
+      res.status(201).json(noticia);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al crear la noticia' });
     }
   }
 );
