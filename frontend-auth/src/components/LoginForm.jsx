@@ -21,7 +21,7 @@ export default function LoginForm() {
 
       alert(`Bienvenido ${usuario.nombre}`);
       // Podés redirigir según el rol si querés
-      navigate('/cargar-patinador');
+      navigate('/dashboard');
     } catch (err) {
       alert(err.response?.data?.mensaje || 'Error al iniciar sesión');
     }
