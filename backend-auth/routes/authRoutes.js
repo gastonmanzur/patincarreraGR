@@ -1,11 +1,17 @@
 // routes/authRoutes.js
-const express = require('express');
+import express from 'express';
+import {
+  registrarUsuario,
+  confirmarCuenta,
+  loginUsuario
+} from '../controllers/authController.js';
+import passport from 'passport';
+import jwt from 'jsonwebtoken';
+
 const router = express.Router();
-const { registrarUsuario } = require('../controllers/authController');
-const { confirmarCuenta } = require('../controllers/authController');
-const { loginUsuario } = require('../controllers/authController');
-const passport = require('passport');
-const jwt = require('jsonwebtoken');
+
+// Clave JWT consistente en toda la app
+const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
 
 router.post('/registro', registrarUsuario);
 router.get('/confirmar/:token', confirmarCuenta);
@@ -30,7 +36,7 @@ router.get('/google/callback',
         rol: req.user.rol,
         foto: req.user.foto
       },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
     
@@ -42,4 +48,4 @@ router.get('/google/callback',
 
 
 
-module.exports = router;
+export default router;
