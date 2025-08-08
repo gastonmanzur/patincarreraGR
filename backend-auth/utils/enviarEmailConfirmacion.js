@@ -1,5 +1,5 @@
 // utils/enviarEmailConfirmacion.js
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 const enviarEmailConfirmacion = async (email, token) => {
   const transporter = nodemailer.createTransport({
@@ -20,4 +20,4 @@ const enviarEmailConfirmacion = async (email, token) => {
   });
 };
 
-module.exports = enviarEmailConfirmacion;
+export default enviarEmailConfirmacion;

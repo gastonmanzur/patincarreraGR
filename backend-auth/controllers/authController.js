@@ -1,10 +1,14 @@
 // controllers/authController.js
-const User = require('../models/User');
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
-const enviarEmailConfirmacion = require('../utils/enviarEmailConfirmacion');
+import User from '../models/User.js';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import enviarEmailConfirmacion from '../utils/enviarEmailConfirmacion.js';
+import jwt from 'jsonwebtoken';
 
-exports.registrarUsuario = async (req, res) => {
+// Clave JWT unificada
+const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
+
+export const registrarUsuario = async (req, res) => {
   const { nombre, apellido, email, password, confirmarPassword } = req.body;
 
   if (password !== confirmarPassword) {
@@ -36,7 +40,7 @@ exports.registrarUsuario = async (req, res) => {
 };
 
 // Confirmar cuenta con token
-exports.confirmarCuenta = async (req, res) => {
+export const confirmarCuenta = async (req, res) => {
     const { token } = req.params;
   
     const usuario = await User.findOne({ tokenConfirmacion: token });
@@ -53,8 +57,8 @@ exports.confirmarCuenta = async (req, res) => {
     res.status(200).json({ mensaje: 'Cuenta confirmada. Ya podés iniciar sesión.' });
   };
   
-  // Login de usuario
-exports.loginUsuario = async (req, res) => {
+// Login de usuario
+export const loginUsuario = async (req, res) => {
     const { email, password } = req.body;
   
     const usuario = await User.findOne({ email });
@@ -72,10 +76,9 @@ exports.loginUsuario = async (req, res) => {
       return res.status(401).json({ mensaje: 'Contraseña incorrecta' });
     }
   
-    const jwt = require('jsonwebtoken');
     const token = jwt.sign(
       { id: usuario._id, rol: usuario.rol },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
   
