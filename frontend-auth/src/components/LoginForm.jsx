@@ -20,8 +20,8 @@ export default function LoginForm() {
       localStorage.setItem('foto', usuario.foto || '');
 
       alert(`Bienvenido ${usuario.nombre}`);
-      // Podés redirigir según el rol si querés
-      navigate('/dashboard');
+      // Redirigir a la página de noticias
+      navigate('/home');
     } catch (err) {
       alert(err.response?.data?.mensaje || 'Error al iniciar sesión');
     }

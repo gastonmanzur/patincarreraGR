@@ -18,7 +18,7 @@ export default function GoogleSuccess() {
         localStorage.setItem('foto', datos.foto);
       }
   
-      navigate('/dashboard');
+      navigate('/home');
     }
   }, [token, navigate]);
   

@@ -10,21 +10,6 @@ export default function Navbar() {
   const foto = localStorage.getItem('foto');
   const isLoggedIn = localStorage.getItem('token');
 
-  const itemsAdmin = [
-    { label: 'Servicios', path: '/servicios' },
-    { label: 'Gestionar Servicios', path: '/admin/servicios' },
-    { label: 'Turnos', path: '/turnos' },
-    { label: 'Gestionar Turnos', path: '/admin/turnos' },
-    { label: 'Cargar Patinador', path: '/cargar-patinador' }
-  ];
-
-  const itemsUsuario = [
-    { label: 'Servicios', path: '/servicios' },
-    { label: 'Mis Turnos', path: '/mis-turnos' },
-    { label: 'Contacto', path: '/contacto' },
-    { label: 'Cargar Patinador', path: '/cargar-patinador' }
-  ];
-
   const handleNavigate = (path) => navigate(path);
 
   const handleFileChange = async (e) => {
@@ -54,14 +39,21 @@ export default function Navbar() {
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
-  const navItems = isLoggedIn ? (rol === 'admin' ? itemsAdmin : itemsUsuario) : [];
+  const navItems = isLoggedIn
+    ? [
+        { label: 'Inicio', path: '/home' },
+        ...(rol === 'Delegado' || rol === 'Tecnico'
+          ? [{ label: 'Crear Noticia', path: '/crear-noticia' }]
+          : [])
+      ]
+    : [];
 
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-light">
       <div className="container">
         <a
           className="navbar-brand d-flex align-items-center"
-          onClick={() => handleNavigate('/dashboard')}
+          onClick={() => handleNavigate('/home')}
           style={{ cursor: 'pointer' }}
         >
           <img
