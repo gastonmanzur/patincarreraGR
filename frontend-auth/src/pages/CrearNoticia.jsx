@@ -13,9 +13,7 @@ export default function CrearNoticia() {
       formData.append('imagen', e.target.imagen.files[0]);
     }
     try {
-      await api.post('/news', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.post('/news', formData);
       navigate('/home');
     } catch (err) {
       alert(err.response?.data?.mensaje || 'Error al crear la noticia');
