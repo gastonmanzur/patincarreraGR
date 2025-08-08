@@ -301,10 +301,14 @@ app.get('/api/auth/google/callback', async (req, res) => {
       });
     }
 
+    // Generamos un token con vigencia de 24 horas para evitar que la
+    // sesión de los usuarios que inician con Google se cierre de manera
+    // prematura. De esta forma se mantiene el mismo tiempo de expiración
+    // que en el inicio de sesión tradicional.
     const token = jwt.sign(
       { id: usuario._id, rol: usuario.rol, foto: usuario.foto || '' },
       JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '24h' }
     );
 
     res.redirect(`${FRONTEND_URL}/google-success?token=${token}`);
