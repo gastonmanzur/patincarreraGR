@@ -242,10 +242,20 @@ app.post(
         return res.status(400).json({ mensaje: `${campo} ya existe` });
       }
 
-      res.status(500).json({ mensaje: 'Error al crear el patinador' });
+  res.status(500).json({ mensaje: 'Error al crear el patinador' });
     }
   }
 );
+
+app.get('/api/patinadores', async (req, res) => {
+  try {
+    const patinadores = await Patinador.find().sort({ edad: 1 });
+    res.json(patinadores);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener patinadores' });
+  }
+});
 
 app.get('/api/news', async (req, res) => {
   try {
