@@ -308,18 +308,58 @@ app.put(
   }
 );
 
-app.delete('/api/patinadores/:id', protegerRuta, async (req, res) => {
-  try {
-    const patinador = await Patinador.findByIdAndDelete(req.params.id);
-    if (!patinador) {
-      return res.status(404).json({ mensaje: 'Patinador no encontrado' });
+  app.delete('/api/patinadores/:id', protegerRuta, async (req, res) => {
+    try {
+      const patinador = await Patinador.findByIdAndDelete(req.params.id);
+      if (!patinador) {
+        return res.status(404).json({ mensaje: 'Patinador no encontrado' });
+      }
+      res.json({ mensaje: 'Patinador eliminado' });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al eliminar el patinador' });
     }
-    res.json({ mensaje: 'Patinador eliminado' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ mensaje: 'Error al eliminar el patinador' });
-  }
-});
+  });
+
+  // Asociar patinadores a un usuario por DNI de padre o madre
+  app.post('/api/patinadores/asociar', protegerRuta, async (req, res) => {
+    try {
+      const { dni } = req.body;
+      if (!dni) {
+        return res.status(400).json({ mensaje: 'DNI requerido' });
+      }
+
+      const patinadores = await Patinador.find({
+        $or: [{ dniMadre: dni }, { dniPadre: dni }]
+      });
+
+      if (patinadores.length === 0) {
+        return res.status(404).json({ mensaje: 'No se encontraron patinadores' });
+      }
+
+      await User.findByIdAndUpdate(
+        req.usuario.id,
+        { $addToSet: { patinadores: { $each: patinadores.map((p) => p._id) } } },
+        { new: true }
+      );
+
+      res.json(patinadores);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al asociar patinadores' });
+    }
+  });
+
+  // Obtener patinadores asociados a un usuario
+  app.get('/api/patinadores/asociados', protegerRuta, async (req, res) => {
+    try {
+      const usuario = await User.findById(req.usuario.id).populate('patinadores');
+      res.json(usuario.patinadores || []);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al obtener patinadores asociados' });
+    }
+  });
 
 app.get('/api/news', async (req, res) => {
   try {
