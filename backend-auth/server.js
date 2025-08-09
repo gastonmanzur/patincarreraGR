@@ -257,6 +257,70 @@ app.get('/api/patinadores', async (req, res) => {
   }
 });
 
+app.get('/api/patinadores/:id', async (req, res) => {
+  try {
+    const patinador = await Patinador.findById(req.params.id);
+    if (!patinador) {
+      return res.status(404).json({ mensaje: 'Patinador no encontrado' });
+    }
+    res.json(patinador);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener el patinador' });
+  }
+});
+
+app.put(
+  '/api/patinadores/:id',
+  protegerRuta,
+  upload.fields([
+    { name: 'fotoRostro', maxCount: 1 },
+    { name: 'foto', maxCount: 1 }
+  ]),
+  async (req, res) => {
+    try {
+      const actualizacion = { ...req.body };
+      const fotoRostroFile = req.files?.fotoRostro?.[0];
+      const fotoFile = req.files?.foto?.[0];
+
+      if (fotoRostroFile) {
+        actualizacion.fotoRostro = `${req.protocol}://${req.get('host')}/uploads/${fotoRostroFile.filename}`;
+      }
+      if (fotoFile) {
+        actualizacion.foto = `${req.protocol}://${req.get('host')}/uploads/${fotoFile.filename}`;
+      }
+
+      const patinadorActualizado = await Patinador.findByIdAndUpdate(
+        req.params.id,
+        actualizacion,
+        { new: true, runValidators: true }
+      );
+
+      if (!patinadorActualizado) {
+        return res.status(404).json({ mensaje: 'Patinador no encontrado' });
+      }
+
+      res.json(patinadorActualizado);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al actualizar el patinador' });
+    }
+  }
+);
+
+app.delete('/api/patinadores/:id', protegerRuta, async (req, res) => {
+  try {
+    const patinador = await Patinador.findByIdAndDelete(req.params.id);
+    if (!patinador) {
+      return res.status(404).json({ mensaje: 'Patinador no encontrado' });
+    }
+    res.json({ mensaje: 'Patinador eliminado' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al eliminar el patinador' });
+  }
+});
+
 app.get('/api/news', async (req, res) => {
   try {
     const noticias = await News.find()
