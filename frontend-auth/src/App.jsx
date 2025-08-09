@@ -8,6 +8,7 @@ import PanelAdmin from './pages/PanelAdmin';
 import Navbar from './components/Navbar';
 import CargarPatinador from './pages/CargarPatinador';
 import CrearNoticia from './pages/CrearNoticia';
+import ListaPatinadores from './pages/ListaPatinadores';
 
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -25,6 +26,7 @@ function AppRoutes() {
         <Route path="/google-success" element={<GoogleSuccess />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/cargar-patinador" element={<ProtectedRoute><CargarPatinador /></ProtectedRoute>} />
+        <Route path="/patinadores" element={<ProtectedRoute><ListaPatinadores /></ProtectedRoute>} />
         <Route
           path="/crear-noticia"
           element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><CrearNoticia /></ProtectedRoute>}
