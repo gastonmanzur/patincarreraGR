@@ -1,7 +1,5 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
-
 export const protegerRuta = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -10,6 +8,7 @@ export const protegerRuta = (req, res, next) => {
   }
 
   const token = authHeader.split(' ')[1];
+  const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
 
   try {
     const decodificado = jwt.verify(token, JWT_SECRET);
