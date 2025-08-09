@@ -15,7 +15,8 @@ const userSchema = new mongoose.Schema(
     confirmado: { type: Boolean, default: false },
     tokenConfirmacion: { type: String },
     googleId: { type: String }, // por si se loguea con Google
-    foto: { type: String }
+    foto: { type: String },
+    patinadores: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Patinador' }]
   },
   { timestamps: true }
 );
