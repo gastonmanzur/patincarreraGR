@@ -9,6 +9,8 @@ import Navbar from './components/Navbar';
 import CargarPatinador from './pages/CargarPatinador';
 import CrearNoticia from './pages/CrearNoticia';
 import ListaPatinadores from './pages/ListaPatinadores';
+import VerPatinador from './pages/VerPatinador';
+import EditarPatinador from './pages/EditarPatinador';
 
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -27,6 +29,8 @@ function AppRoutes() {
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/cargar-patinador" element={<ProtectedRoute><CargarPatinador /></ProtectedRoute>} />
         <Route path="/patinadores" element={<ProtectedRoute><ListaPatinadores /></ProtectedRoute>} />
+        <Route path="/patinadores/:id" element={<ProtectedRoute><VerPatinador /></ProtectedRoute>} />
+        <Route path="/patinadores/:id/editar" element={<ProtectedRoute><EditarPatinador /></ProtectedRoute>} />
         <Route
           path="/crear-noticia"
           element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><CrearNoticia /></ProtectedRoute>}
