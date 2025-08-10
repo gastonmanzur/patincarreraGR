@@ -10,14 +10,20 @@ export default function Home() {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const [newsRes, patRes] = await Promise.all([
-          api.get('/news'),
-          api.get('/patinadores/asociados')
-        ]);
+        const newsRes = await api.get('/news');
         setNews(newsRes.data);
-        setPatinadores(patRes.data);
       } catch (err) {
         console.error(err);
+      }
+
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const patRes = await api.get('/patinadores/asociados');
+          setPatinadores(patRes.data);
+        } catch (err) {
+          console.error(err);
+        }
       }
     };
     cargarDatos();
