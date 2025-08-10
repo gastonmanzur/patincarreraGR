@@ -354,6 +354,9 @@ app.put(
   app.get('/api/patinadores/asociados', protegerRuta, async (req, res) => {
     try {
       const usuario = await User.findById(req.usuario.id).populate('patinadores');
+      if (!usuario) {
+        return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+      }
       res.json(usuario.patinadores || []);
     } catch (err) {
       console.error(err);
