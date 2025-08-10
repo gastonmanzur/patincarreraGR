@@ -11,6 +11,7 @@ import CrearNoticia from './pages/CrearNoticia';
 import ListaPatinadores from './pages/ListaPatinadores';
 import VerPatinador from './pages/VerPatinador';
 import EditarPatinador from './pages/EditarPatinador';
+import AsociarPatinadores from './pages/AsociarPatinadores';
 
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -35,6 +36,7 @@ function AppRoutes() {
           path="/crear-noticia"
           element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><CrearNoticia /></ProtectedRoute>}
         />
+        <Route path="/asociar-patinadores" element={<ProtectedRoute><AsociarPatinadores /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><PanelAdmin /></AdminRoute>} />
       </Routes>
     </>
