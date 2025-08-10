@@ -3,61 +3,20 @@ import api from '../api.js';
 
 export default function Home() {
   const [news, setNews] = useState([]);
-  const [patinadores, setPatinadores] = useState([]);
-  
-
   useEffect(() => {
-    const cargarDatos = async () => {
+    const cargarNoticias = async () => {
       try {
         const newsRes = await api.get('/news');
         setNews(newsRes.data);
       } catch (err) {
         console.error(err);
       }
-
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const patRes = await api.get('/patinadores/asociados', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setPatinadores(patRes.data);
-        } catch (err) {
-          console.error(err);
-        }
-      }
     };
-    cargarDatos();
+    cargarNoticias();
   }, []);
 
   return (
     <div className="container mt-4">
-      {patinadores.map((p) => (
-        <div className="card mb-3" key={p._id}>
-          <div className="row g-0">
-            <div className="col-md-4">
-              {p.foto && (
-                <img
-                  src={p.foto}
-                  className="img-fluid rounded-start"
-                  alt={`${p.primerNombre} ${p.apellido}`}
-                />
-              )}
-            </div>
-            <div className="col-md-8">
-              <div className="card-body">
-                <h5 className="card-title">
-                  {p.primerNombre} {p.apellido}
-                </h5>
-                <p className="card-text mb-1">Edad: {p.edad}</p>
-                <p className="card-text mb-1">Categoría: {p.categoria}</p>
-                <p className="card-text">Número de corredor: {p.numeroCorredor}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      ))}
-
       <h1 className="mb-4">Noticias</h1>
       {news.map((n) => (
         <div className="card mb-3" key={n._id}>

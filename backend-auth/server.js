@@ -321,32 +321,6 @@ app.put(
     }
   });
 
-  // Obtener patinadores asociados a un usuario
-  app.get('/api/patinadores/asociados', protegerRuta, async (req, res) => {
-    try {
-      const userId = req.usuario.id || req.usuario._id;
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        return res.status(400).json({ mensaje: 'ID de usuario no válido' });
-      }
-
-      const usuario = await User.findById(userId).lean();
-      if (!usuario) {
-        return res.status(404).json({ mensaje: 'Usuario no encontrado' });
-      }
-
-      const patinadorIds = Array.isArray(usuario.patinadores)
-        ? usuario.patinadores.filter((id) => mongoose.Types.ObjectId.isValid(id))
-        : [];
-
-      const patinadores = await Patinador.find({ _id: { $in: patinadorIds } });
-
-      res.json(patinadores);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ mensaje: 'Error al obtener patinadores asociados' });
-    }
-  });
-
 app.get('/api/news', async (req, res) => {
   try {
     const noticias = await News.find()
