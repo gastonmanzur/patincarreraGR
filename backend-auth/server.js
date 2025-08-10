@@ -321,40 +321,6 @@ app.put(
     }
   });
 
-  // Asociar patinadores a un usuario por DNI de padre o madre
-  app.post('/api/patinadores/asociar', protegerRuta, async (req, res) => {
-    try {
-      const { dni } = req.body;
-      if (!dni) {
-        return res.status(400).json({ mensaje: 'DNI requerido' });
-      }
-
-      const patinadores = await Patinador.find({
-        $or: [{ dniMadre: dni }, { dniPadre: dni }]
-      });
-
-      if (patinadores.length === 0) {
-        return res.status(404).json({ mensaje: 'No se encontraron patinadores' });
-      }
-
-      const userId = req.usuario.id || req.usuario._id;
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        return res.status(400).json({ mensaje: 'ID de usuario no válido' });
-      }
-
-      await User.findByIdAndUpdate(
-        userId,
-        { $addToSet: { patinadores: { $each: patinadores.map((p) => p._id) } } },
-        { new: true }
-      );
-
-      res.json(patinadores);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ mensaje: 'Error al asociar patinadores' });
-    }
-  });
-
   // Obtener patinadores asociados a un usuario
   app.get('/api/patinadores/asociados', protegerRuta, async (req, res) => {
     try {
