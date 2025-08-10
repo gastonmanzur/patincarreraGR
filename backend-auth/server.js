@@ -337,8 +337,13 @@ app.put(
         return res.status(404).json({ mensaje: 'No se encontraron patinadores' });
       }
 
+      const userId = req.usuario.id || req.usuario._id;
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ mensaje: 'ID de usuario no válido' });
+      }
+
       await User.findByIdAndUpdate(
-        req.usuario.id,
+        userId,
         { $addToSet: { patinadores: { $each: patinadores.map((p) => p._id) } } },
         { new: true }
       );
@@ -353,7 +358,12 @@ app.put(
   // Obtener patinadores asociados a un usuario
   app.get('/api/patinadores/asociados', protegerRuta, async (req, res) => {
     try {
-      const usuario = await User.findById(req.usuario.id).populate('patinadores');
+      const userId = req.usuario.id || req.usuario._id;
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ mensaje: 'ID de usuario no válido' });
+      }
+
+      const usuario = await User.findById(userId).populate('patinadores');
       if (!usuario) {
         return res.status(404).json({ mensaje: 'Usuario no encontrado' });
       }
