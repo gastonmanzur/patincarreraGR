@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api.js';
 
 export default function Home() {
@@ -17,6 +18,11 @@ export default function Home() {
 
   return (
     <div className="container mt-4">
+      <div className="d-flex justify-content-end mb-3">
+        <Link to="/asociar-patinadores" className="btn btn-primary">
+          Asociar Patinadores
+        </Link>
+      </div>
       <h1 className="mb-4">Noticias</h1>
       {news.map((n) => (
         <div className="card mb-3" key={n._id}>

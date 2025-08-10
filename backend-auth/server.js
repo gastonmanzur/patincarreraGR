@@ -321,6 +321,35 @@ app.put(
     }
   });
 
+app.post('/api/patinadores/asociar', protegerRuta, async (req, res) => {
+  const { dniPadre, dniMadre } = req.body;
+  if (!dniPadre && !dniMadre) {
+    return res.status(400).json({ mensaje: 'Debe proporcionar dniPadre o dniMadre' });
+  }
+  try {
+    const condiciones = [];
+    if (dniPadre) condiciones.push({ dniPadre });
+    if (dniMadre) condiciones.push({ dniMadre });
+    const patinadores = await Patinador.find({ $or: condiciones });
+    if (patinadores.length === 0) {
+      return res.status(404).json({ mensaje: 'No se encontraron patinadores' });
+    }
+    const usuario = await User.findById(req.usuario.id);
+    const ids = patinadores.map((p) => p._id);
+    const existentes = (usuario.patinadores || []).map((id) => id.toString());
+    ids.forEach((id) => {
+      if (!existentes.includes(id.toString())) {
+        usuario.patinadores.push(id);
+      }
+    });
+    await usuario.save();
+    res.json(patinadores);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al asociar patinadores' });
+  }
+});
+
 app.get('/api/news', async (req, res) => {
   try {
     const noticias = await News.find()
