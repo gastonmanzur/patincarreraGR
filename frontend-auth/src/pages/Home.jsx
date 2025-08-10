@@ -18,7 +18,9 @@ export default function Home() {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const patRes = await api.get('/patinadores/asociados');
+          const patRes = await api.get('/patinadores/asociados', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
           setPatinadores(patRes.data);
         } catch (err) {
           console.error(err);
