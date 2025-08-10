@@ -4,8 +4,7 @@ import api from '../api.js';
 export default function Home() {
   const [news, setNews] = useState([]);
   const [patinadores, setPatinadores] = useState([]);
-  const [mostrarForm, setMostrarForm] = useState(false);
-  const [dni, setDni] = useState('');
+  
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -29,45 +28,8 @@ export default function Home() {
     cargarDatos();
   }, []);
 
-  const asociarPatinador = async (e) => {
-    e.preventDefault();
-    try {
-      await api.post('/patinadores/asociar', { dni });
-      const res = await api.get('/patinadores/asociados');
-      setPatinadores(res.data);
-      setDni('');
-      setMostrarForm(false);
-    } catch (err) {
-      console.error(err);
-      alert('No se encontraron patinadores para ese DNI');
-    }
-  };
-
   return (
     <div className="container mt-4">
-      <button
-        className="btn btn-primary mb-3"
-        onClick={() => setMostrarForm(!mostrarForm)}
-      >
-        Asociar Patinador
-      </button>
-      {mostrarForm && (
-        <form onSubmit={asociarPatinador} className="mb-4">
-          <div className="input-group">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="DNI"
-              value={dni}
-              onChange={(e) => setDni(e.target.value)}
-            />
-            <button type="submit" className="btn btn-success">
-              Asociar
-            </button>
-          </div>
-        </form>
-      )}
-
       {patinadores.map((p) => (
         <div className="card mb-3" key={p._id}>
           <div className="row g-0">
