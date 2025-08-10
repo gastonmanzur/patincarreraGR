@@ -334,9 +334,9 @@ app.put(
         return res.status(404).json({ mensaje: 'Usuario no encontrado' });
       }
 
-      const patinadorIds = (usuario.patinadores || []).filter((id) =>
-        mongoose.Types.ObjectId.isValid(id)
-      );
+      const patinadorIds = Array.isArray(usuario.patinadores)
+        ? usuario.patinadores.filter((id) => mongoose.Types.ObjectId.isValid(id))
+        : [];
 
       const patinadores = await Patinador.find({ _id: { $in: patinadorIds } });
 
