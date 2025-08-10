@@ -363,11 +363,18 @@ app.put(
         return res.status(400).json({ mensaje: 'ID de usuario no válido' });
       }
 
-      const usuario = await User.findById(userId).populate('patinadores');
+      const usuario = await User.findById(userId).lean();
       if (!usuario) {
         return res.status(404).json({ mensaje: 'Usuario no encontrado' });
       }
-      res.json(usuario.patinadores || []);
+
+      const patinadorIds = (usuario.patinadores || []).filter((id) =>
+        mongoose.Types.ObjectId.isValid(id)
+      );
+
+      const patinadores = await Patinador.find({ _id: { $in: patinadorIds } });
+
+      res.json(patinadores);
     } catch (err) {
       console.error(err);
       res.status(500).json({ mensaje: 'Error al obtener patinadores asociados' });
