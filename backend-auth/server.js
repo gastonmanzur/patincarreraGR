@@ -149,7 +149,9 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/protegido/usuario', protegerRuta, async (req, res) => {
   try {
-    const usuario = await User.findById(req.usuario.id).select('-password');
+    const usuario = await User.findById(req.usuario.id)
+      .select('-password')
+      .populate('patinadores');
     res.json({ usuario });
   } catch (error) {
     res.status(500).json({ mensaje: 'Error al obtener el usuario' });
