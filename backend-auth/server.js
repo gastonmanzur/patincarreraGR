@@ -12,6 +12,7 @@ import Patinador from './models/Patinador.js';
 import { protegerRuta, permitirRol } from './middlewares/authMiddleware.js';
 import upload from './utils/multer.js';
 import News from './models/News.js';
+import Notification from './models/Notification.js';
 
 // Cargar variables de entorno desde .env si está presente
 const envPath = path.resolve('.env');
@@ -47,6 +48,18 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+
+async function crearNotificacionesParaTodos(mensaje) {
+  try {
+    const usuarios = await User.find({}, '_id');
+    const notificaciones = usuarios.map((u) => ({ destinatario: u._id, mensaje }));
+    if (notificaciones.length > 0) {
+      await Notification.insertMany(notificaciones);
+    }
+  } catch (e) {
+    console.error('Error creando notificaciones', e);
+  }
+}
 
 app.post('/api/auth/registro', async (req, res) => {
   const { nombre, apellido, email, password, confirmarPassword, rol, codigo } = req.body;
@@ -389,6 +402,7 @@ app.post(
         imagen,
         autor: req.usuario.id
       });
+      await crearNotificacionesParaTodos(`Nueva noticia: ${titulo}`);
       res.status(201).json(noticia);
     } catch (err) {
       console.error(err);
@@ -396,6 +410,46 @@ app.post(
     }
   }
 );
+
+
+
+app.post(
+  '/api/notifications',
+  protegerRuta,
+  permitirRol('Delegado', 'Tecnico'),
+  async (req, res) => {
+    const { mensaje } = req.body;
+    if (!mensaje) return res.status(400).json({ mensaje: 'Mensaje requerido' });
+    await crearNotificacionesParaTodos(mensaje);
+    res.status(201).json({ mensaje: 'Notificaciones enviadas' });
+  },
+);
+
+app.get('/api/notifications', protegerRuta, async (req, res) => {
+  try {
+    const notificaciones = await Notification.find({ destinatario: req.usuario.id })
+      .sort({ createdAt: -1 });
+    res.json(notificaciones);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener notificaciones' });
+  }
+});
+
+app.put('/api/notifications/:id/read', protegerRuta, async (req, res) => {
+  try {
+    const notif = await Notification.findOneAndUpdate(
+      { _id: req.params.id, destinatario: req.usuario.id },
+      { leido: true },
+      { new: true }
+    );
+    if (!notif) return res.status(404).json({ mensaje: 'Notificación no encontrada' });
+    res.json(notif);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al marcar notificación' });
+  }
+});
 
 // Inicio de sesión con Google (OAuth 2.0 sin dependencias externas)
 app.get('/api/auth/google', (req, res) => {
