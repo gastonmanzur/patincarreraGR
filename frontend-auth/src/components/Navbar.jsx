@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api.js';
 import LogoutButton from './LogoutButton';
@@ -9,6 +9,20 @@ export default function Navbar() {
   const rol = localStorage.getItem('rol');
   const foto = localStorage.getItem('foto');
   const isLoggedIn = localStorage.getItem('token');
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        const res = await api.get('/notifications');
+        const count = res.data.filter((n) => !n.leido).length;
+        setUnread(count);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    if (isLoggedIn) cargar();
+  }, [isLoggedIn]);
 
   const handleNavigate = (path) => navigate(path);
 
@@ -45,7 +59,10 @@ export default function Navbar() {
         { label: 'Patinadores', path: '/patinadores' },
         { label: 'Cargar Patinador', path: '/cargar-patinador' },
         ...(rol === 'Delegado' || rol === 'Tecnico'
-          ? [{ label: 'Crear Noticia', path: '/crear-noticia' }]
+          ? [
+              { label: 'Crear Noticia', path: '/crear-noticia' },
+              { label: 'Crear Notificacion', path: '/crear-notificacion' }
+            ]
           : [])
       ]
     : [];
@@ -93,6 +110,18 @@ export default function Navbar() {
           </ul>
           {isLoggedIn && (
             <div className="d-flex align-items-center gap-2 ms-auto">
+              <div className="position-relative me-2">
+                <i
+                  className="bi bi-bell"
+                  style={{ fontSize: '1.5rem', color: unread > 0 ? 'red' : 'gray', cursor: 'pointer' }}
+                  onClick={() => handleNavigate('/notificaciones')}
+                ></i>
+                {unread > 0 && (
+                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    {unread}
+                  </span>
+                )}
+              </div>
               <div className="position-relative">
                 <img
                   src={foto || '/default-user.png'}
