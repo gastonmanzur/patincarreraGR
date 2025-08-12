@@ -65,8 +65,12 @@ export default function Navbar() {
   const navItems = isLoggedIn
     ? [
         { label: 'Inicio', path: '/home' },
-        { label: 'Patinadores', path: '/patinadores' },
-        { label: 'Cargar Patinador', path: '/cargar-patinador' },
+        ...(rol === 'Delegado' || rol === 'Tecnico'
+          ? [{ label: 'Patinadores', path: '/patinadores' }]
+          : []),
+        ...(rol === 'Delegado'
+          ? [{ label: 'Cargar Patinador', path: '/cargar-patinador' }]
+          : []),
         ...(rol === 'Delegado' || rol === 'Tecnico'
           ? [
               { label: 'Crear Noticia', path: '/crear-noticia' },

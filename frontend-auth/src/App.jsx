@@ -30,10 +30,22 @@ function AppRoutes() {
         <Route path="/home" element={<Home />} />
         <Route path="/google-success" element={<GoogleSuccess />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/cargar-patinador" element={<ProtectedRoute><CargarPatinador /></ProtectedRoute>} />
-        <Route path="/patinadores" element={<ProtectedRoute><ListaPatinadores /></ProtectedRoute>} />
-        <Route path="/patinadores/:id" element={<ProtectedRoute><VerPatinador /></ProtectedRoute>} />
-        <Route path="/patinadores/:id/editar" element={<ProtectedRoute><EditarPatinador /></ProtectedRoute>} />
+        <Route
+          path="/cargar-patinador"
+          element={<ProtectedRoute roles={['Delegado']}><CargarPatinador /></ProtectedRoute>}
+        />
+        <Route
+          path="/patinadores"
+          element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><ListaPatinadores /></ProtectedRoute>}
+        />
+        <Route
+          path="/patinadores/:id"
+          element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><VerPatinador /></ProtectedRoute>}
+        />
+        <Route
+          path="/patinadores/:id/editar"
+          element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><EditarPatinador /></ProtectedRoute>}
+        />
         <Route
           path="/crear-noticia"
           element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><CrearNoticia /></ProtectedRoute>}
