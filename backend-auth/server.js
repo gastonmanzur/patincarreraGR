@@ -573,7 +573,7 @@ app.post(
   protegerRuta,
   permitirRol('Delegado'),
   async (req, res) => {
-    const { nombre, club, tiempo, posicion } = req.body;
+    const { nombre, club, tiempo, posicion, categoria, total } = req.body;
     if (!nombre || !club) {
       return res.status(400).json({ mensaje: 'Faltan datos' });
     }
@@ -585,12 +585,57 @@ app.post(
         nombre,
         club,
         tiempo,
-        posicion
+        posicion,
+        categoria,
+        total
       });
       res.status(201).json(resultado);
     } catch (err) {
       console.error(err);
       res.status(500).json({ mensaje: 'Error al cargar resultado' });
+    }
+  }
+);
+
+app.post(
+  '/api/competitions/:id/resultados/pdf',
+  protegerRuta,
+  permitirRol('Delegado'),
+  upload.single('pdf'),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ mensaje: 'Archivo PDF requerido' });
+    }
+    try {
+      const comp = await Competencia.findById(req.params.id);
+      if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
+      const buffer = fs.readFileSync(req.file.path);
+      const pdfParse = (await import('pdf-parse')).default;
+      const data = await pdfParse(buffer);
+      fs.unlinkSync(req.file.path);
+      const lines = data.text.split('\n').map((l) => l.trim()).filter(Boolean);
+      const creados = [];
+      for (const line of lines) {
+        const parts = line.split(/\s{2,}/);
+        if (parts.length >= 4) {
+          const [nombre, club, categoria, totalStr] = parts;
+          const totalNum = parseFloat(totalStr.replace(',', '.'));
+          if (nombre && club && categoria && !isNaN(totalNum)) {
+            const r = await Resultado.create({
+              competencia: comp._id,
+              nombre,
+              club,
+              categoria,
+              total: totalNum
+            });
+            creados.push(r);
+          }
+        }
+      }
+      res.json(creados);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error procesando PDF' });
     }
   }
 );
