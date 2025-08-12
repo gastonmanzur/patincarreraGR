@@ -29,6 +29,22 @@ export default function Notificaciones() {
     }
   };
 
+  const responder = async (competenciaId, notifId, participa) => {
+    try {
+      await api.post(`/competitions/${competenciaId}/responder`, { participa });
+      setNotificaciones((prev) =>
+        prev.map((n) =>
+          n._id === notifId
+            ? { ...n, estadoRespuesta: participa ? 'Participo' : 'No Participo', leido: true }
+            : n
+        )
+      );
+      window.dispatchEvent(new Event('notificationsUpdated'));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (notificaciones.length === 0) {
     return (
       <div className="container mt-4">
@@ -43,13 +59,36 @@ export default function Notificaciones() {
       <h1 className="mb-4">Notificaciones</h1>
       <ul className="list-group">
         {notificaciones.map((n) => (
-          <li
-            key={n._id}
-            className={`list-group-item d-flex justify-content-between align-items-center ${n.leido ? '' : 'list-group-item-warning'}`}
-            onClick={() => !n.leido && marcarLeida(n._id)}
-            style={{ cursor: n.leido ? 'default' : 'pointer' }}
-          >
-            <span style={{ fontWeight: n.leido ? 'normal' : 'bold' }}>{n.mensaje}</span>
+          <li key={n._id} className={`list-group-item ${n.leido ? '' : 'list-group-item-warning'}`}>
+            <div className="d-flex justify-content-between align-items-center">
+              <span style={{ fontWeight: n.leido ? 'normal' : 'bold' }}>{n.mensaje}</span>
+              {n.competencia && n.estadoRespuesta !== 'Pendiente' && (
+                <span className="badge bg-secondary">{n.estadoRespuesta}</span>
+              )}
+            </div>
+            {n.competencia && n.estadoRespuesta === 'Pendiente' && (
+              <div className="mt-2">
+                <button
+                  className="btn btn-sm btn-success me-2"
+                  onClick={() => responder(n.competencia, n._id, true)}
+                >
+                  Participo
+                </button>
+                <button
+                  className="btn btn-sm btn-danger"
+                  onClick={() => responder(n.competencia, n._id, false)}
+                >
+                  No Participo
+                </button>
+              </div>
+            )}
+            {!n.competencia && !n.leido && (
+              <div className="mt-2">
+                <button className="btn btn-sm btn-primary" onClick={() => marcarLeida(n._id)}>
+                  Marcar como leída
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>
