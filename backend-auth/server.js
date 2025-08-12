@@ -13,6 +13,8 @@ import { protegerRuta, permitirRol } from './middlewares/authMiddleware.js';
 import upload from './utils/multer.js';
 import News from './models/News.js';
 import Notification from './models/Notification.js';
+import Torneo from './models/Torneo.js';
+import Competencia from './models/Competencia.js';
 
 // Cargar variables de entorno desde .env si está presente
 const envPath = path.resolve('.env');
@@ -49,10 +51,14 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
-async function crearNotificacionesParaTodos(mensaje) {
+async function crearNotificacionesParaTodos(mensaje, competencia = null) {
   try {
     const usuarios = await User.find({}, '_id');
-    const notificaciones = usuarios.map((u) => ({ destinatario: u._id, mensaje }));
+    const notificaciones = usuarios.map((u) => ({
+      destinatario: u._id,
+      mensaje,
+      ...(competencia ? { competencia } : {})
+    }));
     if (notificaciones.length > 0) {
       await Notification.insertMany(notificaciones);
     }
@@ -450,6 +456,106 @@ app.put('/api/notifications/:id/read', protegerRuta, async (req, res) => {
     res.status(500).json({ mensaje: 'Error al marcar notificación' });
   }
 });
+
+// ---- TORNEOS Y COMPETENCIAS ----
+
+app.post('/api/tournaments', protegerRuta, permitirRol('Delegado'), async (req, res) => {
+  const { nombre, fechaInicio, fechaFin } = req.body;
+  if (!nombre || !fechaInicio || !fechaFin) {
+    return res.status(400).json({ mensaje: 'Faltan datos' });
+  }
+  try {
+    const torneo = await Torneo.create({ nombre, fechaInicio, fechaFin });
+    res.status(201).json(torneo);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al crear torneo' });
+  }
+});
+
+app.get('/api/tournaments', protegerRuta, async (req, res) => {
+  try {
+    const torneos = await Torneo.find().sort({ fechaInicio: -1 });
+    res.json(torneos);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener torneos' });
+  }
+});
+
+app.post(
+  '/api/tournaments/:id/competitions',
+  protegerRuta,
+  permitirRol('Delegado'),
+  async (req, res) => {
+    const { nombre, fecha } = req.body;
+    if (!nombre || !fecha) {
+      return res.status(400).json({ mensaje: 'Faltan datos' });
+    }
+    try {
+      const torneo = await Torneo.findById(req.params.id);
+      if (!torneo) return res.status(404).json({ mensaje: 'Torneo no encontrado' });
+      const competencia = await Competencia.create({ nombre, fecha, torneo: torneo._id });
+      await crearNotificacionesParaTodos(`Nueva competencia ${nombre}`, competencia._id);
+      res.status(201).json(competencia);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al crear competencia' });
+    }
+  }
+);
+
+app.get('/api/tournaments/:id/competitions', protegerRuta, async (req, res) => {
+  try {
+    const comps = await Competencia.find({ torneo: req.params.id }).sort({ fecha: 1 });
+    res.json(comps);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener competencias' });
+  }
+});
+
+app.post('/api/competitions/:id/responder', protegerRuta, async (req, res) => {
+  const { participa } = req.body;
+  try {
+    const competencia = await Competencia.findById(req.params.id);
+    if (!competencia) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
+    const usuario = await User.findById(req.usuario.id).populate('patinadores');
+    const notif = await Notification.findOne({
+      destinatario: req.usuario.id,
+      competencia: competencia._id
+    });
+    if (!notif) return res.status(404).json({ mensaje: 'Notificación no encontrada' });
+    notif.estadoRespuesta = participa ? 'Participo' : 'No Participo';
+    notif.leido = true;
+    await notif.save();
+    if (participa) {
+      const ids = usuario.patinadores.map((p) => p._id);
+      competencia.listaBuenaFe.addToSet(...ids);
+      await competencia.save();
+    }
+    res.json({ mensaje: 'Respuesta registrada' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al responder' });
+  }
+});
+
+app.get(
+  '/api/competitions/:id/lista-buena-fe',
+  protegerRuta,
+  permitirRol('Delegado'),
+  async (req, res) => {
+    try {
+      const comp = await Competencia.findById(req.params.id).populate('listaBuenaFe');
+      if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
+      res.json(comp.listaBuenaFe);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al obtener lista' });
+    }
+  }
+);
 
 // Inicio de sesión con Google (OAuth 2.0 sin dependencias externas)
 app.get('/api/auth/google', (req, res) => {
