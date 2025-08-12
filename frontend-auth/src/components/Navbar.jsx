@@ -12,6 +12,7 @@ export default function Navbar() {
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
+    let interval;
     const cargar = async () => {
       try {
         const res = await api.get('/notifications');
@@ -21,7 +22,15 @@ export default function Navbar() {
         console.error(err);
       }
     };
-    if (isLoggedIn) cargar();
+    if (isLoggedIn) {
+      cargar();
+      interval = setInterval(cargar, 5000);
+      window.addEventListener('notificationsUpdated', cargar);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+      window.removeEventListener('notificationsUpdated', cargar);
+    };
   }, [isLoggedIn]);
 
   const handleNavigate = (path) => navigate(path);
