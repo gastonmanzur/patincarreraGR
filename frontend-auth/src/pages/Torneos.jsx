@@ -73,13 +73,15 @@ export default function Torneos() {
 
   const agregarResultado = async (e, compId) => {
     e.preventDefault();
-    const { nombre, club, tiempo, posicion } = e.target;
+    const { nombre, club, tiempo, posicion, categoria, total } = e.target;
     try {
       await api.post(`/competitions/${compId}/resultados`, {
         nombre: nombre.value,
         club: club.value,
         tiempo: tiempo.value,
-        posicion: posicion.value
+        posicion: posicion.value,
+        categoria: categoria.value,
+        total: total.value
       });
       e.target.reset();
       const resultados = await api.get(`/competitions/${compId}/resultados`);
@@ -89,6 +91,27 @@ export default function Torneos() {
       }));
     } catch (err) {
       alert(err.response?.data?.mensaje || 'Error al cargar resultado');
+    }
+  };
+
+  const cargarResultadosPdf = async (e, compId) => {
+    e.preventDefault();
+    const file = e.target.pdf.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('pdf', file);
+    try {
+      await api.post(`/competitions/${compId}/resultados/pdf`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      e.target.reset();
+      const resultados = await api.get(`/competitions/${compId}/resultados`);
+      setDetalles((prev) => ({
+        ...prev,
+        [compId]: { ...prev[compId], resultados: resultados.data }
+      }));
+    } catch (err) {
+      alert(err.response?.data?.mensaje || 'Error al procesar PDF');
     }
   };
 
@@ -167,52 +190,87 @@ export default function Torneos() {
                         {(detalles[c._id].resultados || []).map((r) => (
                           <li key={r._id}>
                             {r.posicion ? `${r.posicion}. ` : ''}
-                            {r.nombre} ({r.club}) {r.tiempo}
+                            {r.nombre} ({r.club}) {r.categoria} - {r.total}
                           </li>
                         ))}
                       </ul>
                       {rol === 'Delegado' && (
-                        <form className="row g-2" onSubmit={(e) => agregarResultado(e, c._id)}>
-                          <div className="col-md-3">
-                            <input
-                              type="text"
-                              name="nombre"
-                              className="form-control"
-                              placeholder="Nombre"
-                              required
-                            />
-                          </div>
-                          <div className="col-md-3">
-                            <input
-                              type="text"
-                              name="club"
-                              className="form-control"
-                              placeholder="Club"
-                              required
-                            />
-                          </div>
-                          <div className="col-md-3">
-                            <input
-                              type="text"
-                              name="tiempo"
-                              className="form-control"
-                              placeholder="Tiempo"
-                            />
-                          </div>
-                          <div className="col-md-2">
-                            <input
-                              type="number"
-                              name="posicion"
-                              className="form-control"
-                              placeholder="Posición"
-                            />
-                          </div>
-                          <div className="col-md-1">
-                            <button type="submit" className="btn btn-primary w-100">
-                              +
-                            </button>
-                          </div>
-                        </form>
+                        <>
+                          <form className="row g-2" onSubmit={(e) => agregarResultado(e, c._id)}>
+                            <div className="col-md-3">
+                              <input
+                                type="text"
+                                name="nombre"
+                                className="form-control"
+                                placeholder="Nombre"
+                                required
+                              />
+                            </div>
+                            <div className="col-md-3">
+                              <input
+                                type="text"
+                                name="club"
+                                className="form-control"
+                                placeholder="Club"
+                                required
+                              />
+                            </div>
+                            <div className="col-md-2">
+                              <input
+                                type="text"
+                                name="categoria"
+                                className="form-control"
+                                placeholder="Categoría"
+                              />
+                            </div>
+                            <div className="col-md-2">
+                              <input
+                                type="number"
+                                step="any"
+                                name="total"
+                                className="form-control"
+                                placeholder="Total"
+                              />
+                            </div>
+                            <div className="col-md-1">
+                              <input
+                                type="text"
+                                name="tiempo"
+                                className="form-control"
+                                placeholder="Tiempo"
+                              />
+                            </div>
+                            <div className="col-md-1">
+                              <input
+                                type="number"
+                                name="posicion"
+                                className="form-control"
+                                placeholder="Posición"
+                              />
+                            </div>
+                            <div className="col-md-12 mt-2">
+                              <button type="submit" className="btn btn-primary w-100">
+                                Agregar
+                              </button>
+                            </div>
+                          </form>
+                          <form className="row g-2 mt-2" onSubmit={(e) => cargarResultadosPdf(e, c._id)}>
+                            <div className="col-md-8">
+                              <input
+                                type="file"
+                                name="pdf"
+                                accept="application/pdf"
+                                className="form-control"
+                                required
+                              />
+                            </div>
+                            <div className="col-md-4">
+                              <button type="submit" className="btn btn-secondary w-100">
+                                Cargar PDF
+                              </button>
+                            </div>
+                          </form>
+                        </>
                       )}
                     </div>
                   )}

@@ -6,7 +6,9 @@ const resultadoSchema = new mongoose.Schema(
     nombre: { type: String, required: true },
     club: { type: String, required: true },
     tiempo: { type: String },
-    posicion: { type: Number }
+    posicion: { type: Number },
+    categoria: { type: String },
+    total: { type: Number }
   },
   { timestamps: true }
 );
