@@ -20,7 +20,10 @@ export default function Notificaciones() {
   const marcarLeida = async (id) => {
     try {
       await api.put(`/notifications/${id}/read`);
-      cargar();
+      setNotificaciones((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, leido: true } : n))
+      );
+      window.dispatchEvent(new Event('notificationsUpdated'));
     } catch (err) {
       console.error(err);
     }
@@ -43,13 +46,10 @@ export default function Notificaciones() {
           <li
             key={n._id}
             className={`list-group-item d-flex justify-content-between align-items-center ${n.leido ? '' : 'list-group-item-warning'}`}
+            onClick={() => !n.leido && marcarLeida(n._id)}
+            style={{ cursor: n.leido ? 'default' : 'pointer' }}
           >
-            <span>{n.mensaje}</span>
-            {!n.leido && (
-              <button className="btn btn-sm btn-primary" onClick={() => marcarLeida(n._id)}>
-                Marcar como leída
-              </button>
-            )}
+            <span style={{ fontWeight: n.leido ? 'normal' : 'bold' }}>{n.mensaje}</span>
           </li>
         ))}
       </ul>
