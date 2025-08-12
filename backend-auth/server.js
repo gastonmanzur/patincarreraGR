@@ -15,6 +15,7 @@ import News from './models/News.js';
 import Notification from './models/Notification.js';
 import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
+import Resultado from './models/Resultado.js';
 
 // Cargar variables de entorno desde .env si está presente
 const envPath = path.resolve('.env');
@@ -553,6 +554,43 @@ app.get(
     } catch (err) {
       console.error(err);
       res.status(500).json({ mensaje: 'Error al obtener lista' });
+    }
+  }
+);
+
+app.get('/api/competitions/:id/resultados', protegerRuta, async (req, res) => {
+  try {
+    const resultados = await Resultado.find({ competencia: req.params.id }).sort({ posicion: 1 });
+    res.json(resultados);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener resultados' });
+  }
+});
+
+app.post(
+  '/api/competitions/:id/resultados',
+  protegerRuta,
+  permitirRol('Delegado'),
+  async (req, res) => {
+    const { nombre, club, tiempo, posicion } = req.body;
+    if (!nombre || !club) {
+      return res.status(400).json({ mensaje: 'Faltan datos' });
+    }
+    try {
+      const comp = await Competencia.findById(req.params.id);
+      if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
+      const resultado = await Resultado.create({
+        competencia: comp._id,
+        nombre,
+        club,
+        tiempo,
+        posicion
+      });
+      res.status(201).json(resultado);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al cargar resultado' });
     }
   }
 );
