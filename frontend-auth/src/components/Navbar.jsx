@@ -66,15 +66,27 @@ export default function Navbar() {
     ? [
         { label: 'Inicio', path: '/home' },
         ...(rol === 'Delegado' || rol === 'Tecnico'
-          ? [{ label: 'Patinadores', path: '/patinadores' }]
-          : []),
-        ...(rol === 'Delegado'
-          ? [{ label: 'Cargar Patinador', path: '/cargar-patinador' }]
+          ? [
+              {
+                label: 'Patinadores',
+                children: [
+                  { label: 'Patinadores', path: '/patinadores' },
+                  ...(rol === 'Delegado'
+                    ? [{ label: 'Cargar Patinador', path: '/cargar-patinador' }]
+                    : [])
+                ]
+              }
+            ]
           : []),
         ...(rol === 'Delegado' || rol === 'Tecnico'
           ? [
-              { label: 'Crear Noticia', path: '/crear-noticia' },
-              { label: 'Crear Notificacion', path: '/crear-notificacion' }
+              {
+                label: 'Crear',
+                children: [
+                  { label: 'Crear Noticia', path: '/crear-noticia' },
+                  { label: 'Crear Notificacion', path: '/crear-notificacion' }
+                ]
+              }
             ]
           : [])
       ]
@@ -110,15 +122,42 @@ export default function Navbar() {
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav mx-auto mb-2 mb-lg-0">
             {navItems.map((item) => (
-              <li className="nav-item" key={item.label}>
-                <a
-                  className="nav-link"
-                  onClick={() => handleNavigate(item.path)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {item.label}
-                </a>
-              </li>
+              item.children ? (
+                <li className="nav-item dropdown" key={item.label}>
+                  <a
+                    className="nav-link dropdown-toggle"
+                    role="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {item.label}
+                  </a>
+                  <ul className="dropdown-menu">
+                    {item.children.map((child) => (
+                      <li key={child.label}>
+                        <a
+                          className="dropdown-item"
+                          onClick={() => handleNavigate(child.path)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {child.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ) : (
+                <li className="nav-item" key={item.label}>
+                  <a
+                    className="nav-link"
+                    onClick={() => handleNavigate(item.path)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              )
             ))}
           </ul>
           {isLoggedIn && (
