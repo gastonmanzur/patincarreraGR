@@ -664,7 +664,8 @@ app.get(
       d8.alignment = { horizontal: 'center', vertical: 'middle' };
 
       const lista = Array.isArray(comp.listaBuenaFe) ? comp.listaBuenaFe : [];
-      const getGrupo = (cat = '') => {
+      const getGrupo = (cat) => {
+        if (!cat || typeof cat !== 'string') return '';
         const l = cat.trim().slice(-1).toUpperCase();
         if (l === 'F') return 'F';
         if (l === 'E') return 'E';
