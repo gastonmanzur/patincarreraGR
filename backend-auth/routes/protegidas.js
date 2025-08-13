@@ -4,6 +4,9 @@ const { protegerRuta, permitirRol } = require('../middlewares/authMiddleware');
 const User = require('../models/User');
 const upload = require('../utils/multer');
 
+// Base URL of the backend, used when returning file paths.
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+
 
 router.get('/usuario', protegerRuta, async (req, res) => {
   const usuario = await User.findById(req.usuario.id).select('-password');
@@ -24,7 +27,7 @@ router.get('/usuarios', protegerRuta, permitirRol('admin'), async (req, res) => 
 router.post('/foto-perfil', protegerRuta, upload.single('foto'), async (req, res) => {
   try {
     const user = await User.findById(req.usuario.id);
-    user.foto = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    user.foto = `${BACKEND_URL}/uploads/${req.file.filename}`;
     await user.save();
     res.json({ mensaje: 'Foto actualizada', foto: user.foto });
   } catch (err) {
