@@ -116,6 +116,25 @@ export default function Torneos() {
     }
   };
 
+  const exportarExcel = async (compId) => {
+    try {
+      const res = await api.get(`/competitions/${compId}/lista-buena-fe/excel`, {
+        params: { organizador: CLUB_LOCAL },
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'lista_buena_fe.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const agregarResultado = async (e, compId) => {
     e.preventDefault();
     const { nombre, club, numero, puntos, categoria } = e.target;
@@ -199,6 +218,12 @@ export default function Torneos() {
                       {rol === 'Delegado' && (
                         <>
                           <h6>Lista Buena Fe</h6>
+                          <button
+                            className="btn btn-outline-success mb-2"
+                            onClick={() => exportarExcel(c._id)}
+                          >
+                            Exportar Excel
+                          </button>
                           <table className="table">
                             <thead>
                               <tr>
