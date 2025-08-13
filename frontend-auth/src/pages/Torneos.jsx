@@ -94,27 +94,6 @@ export default function Torneos() {
     }
   };
 
-  const cargarResultadosPdf = async (e, compId) => {
-    e.preventDefault();
-    const file = e.target.pdf.files[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append('pdf', file);
-    try {
-      await api.post(`/competitions/${compId}/resultados/pdf`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      e.target.reset();
-      const resultados = await api.get(`/competitions/${compId}/resultados`);
-      setDetalles((prev) => ({
-        ...prev,
-        [compId]: { ...prev[compId], resultados: resultados.data }
-      }));
-    } catch (err) {
-      alert(err.response?.data?.mensaje || 'Error al procesar PDF');
-    }
-  };
-
   const crearCompetencia = async (e, torneoId) => {
     e.preventDefault();
     const { nombre, fecha } = e.target;
@@ -251,22 +230,6 @@ export default function Torneos() {
                             <div className="col-md-12 mt-2">
                               <button type="submit" className="btn btn-primary w-100">
                                 Agregar
-                              </button>
-                            </div>
-                          </form>
-                          <form className="row g-2 mt-2" onSubmit={(e) => cargarResultadosPdf(e, c._id)}>
-                            <div className="col-md-8">
-                              <input
-                                type="file"
-                                name="pdf"
-                                accept="application/pdf"
-                                className="form-control"
-                                required
-                              />
-                            </div>
-                            <div className="col-md-4">
-                              <button type="submit" className="btn btn-secondary w-100">
-                                Cargar PDF
                               </button>
                             </div>
                           </form>
