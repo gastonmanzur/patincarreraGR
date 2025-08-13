@@ -4,6 +4,7 @@ import api from '../api.js';
 export default function Torneos() {
   const [torneos, setTorneos] = useState([]);
   const [detalles, setDetalles] = useState({});
+  const CLUB_LOCAL = 'Club Local';
   const rol = localStorage.getItem('rol');
 
   const cargar = async () => {
@@ -58,30 +59,73 @@ export default function Torneos() {
       const respuestas = await Promise.all(peticiones);
       const resultados = respuestas[rol === 'Delegado' ? 1 : 0].data;
       const lista = rol === 'Delegado' ? respuestas[0].data : [];
+        setDetalles((prev) => ({
+          ...prev,
+          [compId]: {
+            abierta: true,
+            lista,
+            resultados,
+            categoria: '',
+            externos: []
+          }
+        }));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const seleccionarCategoria = async (compId, categoria) => {
+    try {
+      const res = await api.get(`/skaters-externos/${categoria}`);
       setDetalles((prev) => ({
         ...prev,
-        [compId]: {
-          abierta: true,
-          lista,
-          resultados
-        }
+        [compId]: { ...prev[compId], categoria, externos: res.data }
       }));
     } catch (err) {
       console.error(err);
     }
   };
 
+  const seleccionarPatinadorClub = (e, compId) => {
+    const id = e.target.value;
+    const pat = detalles[compId].lista.find((p) => p._id === id);
+    const form = document.getElementById(`form-resultado-${compId}`);
+    if (pat && form) {
+      form.nombre.value = `${pat.primerNombre} ${pat.apellido}`;
+      form.club.value = CLUB_LOCAL;
+      form.numero.value = pat.numeroCorredor;
+    }
+  };
+
+  const seleccionarExterno = (e, compId) => {
+    const val = e.target.value;
+    const form = document.getElementById(`form-resultado-${compId}`);
+    if (val === 'manual') {
+      if (form) {
+        form.nombre.value = '';
+        form.club.value = '';
+        form.numero.value = '';
+      }
+      return;
+    }
+    const pat = detalles[compId].externos[val];
+    if (pat && form) {
+      form.nombre.value = pat.nombre;
+      form.club.value = pat.club;
+      form.numero.value = pat.numero || '';
+    }
+  };
+
   const agregarResultado = async (e, compId) => {
     e.preventDefault();
-    const { nombre, club, tiempo, posicion, categoria, total } = e.target;
+    const { nombre, club, numero, puntos, categoria } = e.target;
     try {
       await api.post(`/competitions/${compId}/resultados`, {
         nombre: nombre.value,
         club: club.value,
-        tiempo: tiempo.value,
-        posicion: posicion.value,
-        categoria: categoria.value,
-        total: total.value
+        numero: numero.value,
+        puntos: puntos.value,
+        categoria: categoria.value
       });
       e.target.reset();
       const resultados = await api.get(`/competitions/${compId}/resultados`);
@@ -166,78 +210,114 @@ export default function Torneos() {
                       )}
                       <h6>Resultados</h6>
                       <ul>
-                        {(detalles[c._id].resultados || []).map((r) => (
-                          <li key={r._id}>
-                            {r.posicion ? `${r.posicion}. ` : ''}
-                            {r.nombre} ({r.club}) {r.categoria} - {r.total}
-                          </li>
-                        ))}
-                      </ul>
-                      {rol === 'Delegado' && (
-                        <>
-                          <form className="row g-2" onSubmit={(e) => agregarResultado(e, c._id)}>
-                            <div className="col-md-3">
-                              <input
-                                type="text"
-                                name="nombre"
-                                className="form-control"
-                                placeholder="Nombre"
-                                required
-                              />
-                            </div>
-                            <div className="col-md-3">
-                              <input
-                                type="text"
-                                name="club"
-                                className="form-control"
-                                placeholder="Club"
-                                required
-                              />
-                            </div>
-                            <div className="col-md-2">
-                              <input
-                                type="text"
-                                name="categoria"
-                                className="form-control"
-                                placeholder="Categoría"
-                              />
-                            </div>
-                            <div className="col-md-2">
-                              <input
-                                type="number"
-                                step="any"
-                                name="total"
-                                className="form-control"
-                                placeholder="Total"
-                              />
-                            </div>
-                            <div className="col-md-1">
-                              <input
-                                type="text"
-                                name="tiempo"
-                                className="form-control"
-                                placeholder="Tiempo"
-                              />
-                            </div>
-                            <div className="col-md-1">
-                              <input
-                                type="number"
-                                name="posicion"
-                                className="form-control"
-                                placeholder="Posición"
-                              />
-                            </div>
-                            <div className="col-md-12 mt-2">
-                              <button type="submit" className="btn btn-primary w-100">
-                                Agregar
-                              </button>
-                            </div>
-                          </form>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </li>
+                          {(detalles[c._id].resultados || []).map((r) => (
+                            <li key={r._id}>
+                              {r.posicion ? `${r.posicion}. ` : ''}
+                              {r.nombre} ({r.club}) #{r.numero} - {r.puntos}
+                            </li>
+                          ))}
+                        </ul>
+                        {rol === 'Delegado' && (
+                          <>
+                            <form
+                              id={`form-resultado-${c._id}`}
+                              className="row g-2"
+                              onSubmit={(e) => agregarResultado(e, c._id)}
+                            >
+                              <div className="col-md-2">
+                                <select
+                                  name="categoria"
+                                  className="form-select"
+                                  onChange={(e) => seleccionarCategoria(c._id, e.target.value)}
+                                  required
+                                >
+                                  <option value="">Categoría</option>
+                                  {Array.from(
+                                    new Set((detalles[c._id].lista || []).map((p) => p.categoria))
+                                  ).map((cat) => (
+                                    <option key={cat} value={cat}>
+                                      {cat}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="col-md-3">
+                                <select
+                                  className="form-select"
+                                  onChange={(e) => seleccionarPatinadorClub(e, c._id)}
+                                >
+                                  <option value="">Patinadores del club</option>
+                                  {(detalles[c._id].lista || [])
+                                    .filter((p) => p.categoria === detalles[c._id].categoria)
+                                    .map((p) => (
+                                      <option key={p._id} value={p._id}>
+                                        {p.primerNombre} {p.apellido}
+                                      </option>
+                                    ))}
+                                </select>
+                              </div>
+                              <div className="col-md-3">
+                                <select
+                                  className="form-select"
+                                  onChange={(e) => seleccionarExterno(e, c._id)}
+                                >
+                                  <option value="">Patinadores de otros clubes</option>
+                                  {(detalles[c._id].externos || []).map((p, idx) => (
+                                    <option key={`${p.nombre}-${idx}`} value={idx}>
+                                      {p.nombre} ({p.club})
+                                    </option>
+                                  ))}
+                                  <option value="manual">Cargar manualmente</option>
+                                </select>
+                              </div>
+                              <div className="col-md-3">
+                                <input
+                                  type="text"
+                                  name="nombre"
+                                  className="form-control"
+                                  placeholder="Nombre y Apellido"
+                                  required
+                                />
+                              </div>
+                              <div className="col-md-2">
+                                <input
+                                  type="text"
+                                  name="club"
+                                  className="form-control"
+                                  placeholder="Club"
+                                  required
+                                />
+                              </div>
+                              <div className="col-md-2">
+                                <input
+                                  type="number"
+                                  name="numero"
+                                  className="form-control"
+                                  placeholder="Número"
+                                  required
+                                />
+                              </div>
+                              <div className="col-md-2">
+                                <input
+                                  type="number"
+                                  step="any"
+                                  name="puntos"
+                                  className="form-control"
+                                  placeholder="Puntos"
+                                  required
+                                />
+                              </div>
+                              <div className="col-md-12 mt-2">
+                                <button type="submit" className="btn btn-primary w-100">
+                                  Agregar
+                                </button>
+                              </div>
+                            </form>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </li>
               ))}
             </ul>
             {rol === 'Delegado' && (
