@@ -16,6 +16,7 @@ import Notification from './models/Notification.js';
 import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
+import PatinadorExterno from './models/PatinadorExterno.js';
 
 // Cargar variables de entorno desde .env si está presente
 const envPath = path.resolve('.env');
@@ -49,6 +50,7 @@ const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+const CLUB_LOCAL = process.env.CLUB_LOCAL || 'General Rodríguez';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
@@ -570,19 +572,12 @@ app.get('/api/competitions/:id/resultados', protegerRuta, async (req, res) => {
 
 app.get('/api/skaters-externos/:categoria', protegerRuta, async (req, res) => {
   try {
-    const registros = await Resultado.find({ categoria: req.params.categoria })
+    const patinadores = await PatinadorExterno.find({
+      categoria: req.params.categoria
+    })
       .select('nombre club numero')
       .lean();
-    const unicos = [];
-    const set = new Set();
-    registros.forEach((r) => {
-      const key = `${r.nombre}|${r.club}|${r.numero}`;
-      if (!set.has(key)) {
-        set.add(key);
-        unicos.push(r);
-      }
-    });
-    res.json(unicos);
+    res.json(patinadores);
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al obtener patinadores' });
@@ -609,6 +604,13 @@ app.post(
         puntos,
         categoria
       });
+      if (club !== CLUB_LOCAL) {
+        await PatinadorExterno.findOneAndUpdate(
+          { nombre, club, numero, categoria },
+          { nombre, club, numero, categoria },
+          { upsert: true, new: true }
+        );
+      }
       res.status(201).json(resultado);
     } catch (err) {
       console.error(err);
