@@ -112,7 +112,7 @@ export default function Torneos() {
     if (pat && form) {
       form.nombre.value = pat.nombre;
       form.club.value = pat.club;
-      form.numero.value = pat.numero || '';
+      form.numero.value = pat.numero ?? '';
     }
   };
 
@@ -264,7 +264,7 @@ export default function Torneos() {
                                   <option value="">Patinadores de otros clubes</option>
                                   {(detalles[c._id].externos || []).map((p, idx) => (
                                     <option key={`${p.nombre}-${idx}`} value={idx}>
-                                      {p.nombre} ({p.club})
+                                      {p.nombre} ({p.club}){p.numero ? ` #${p.numero}` : ''}
                                     </option>
                                   ))}
                                   <option value="manual">Cargar manualmente</option>
