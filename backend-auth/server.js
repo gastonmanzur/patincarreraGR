@@ -32,8 +32,13 @@ if (fs.existsSync(envPath)) {
   });
 }
 
+// Define la URI de MongoDB con un valor predeterminado para evitar errores
+// cuando no se proporciona la variable de entorno correspondiente.
+const MONGODB_URI =
+  process.env.MONGODB_URI || 'mongodb://localhost:27017/backend-auth';
+
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect(MONGODB_URI)
   .then(() => console.log('MongoDB conectado'))
   .catch((err) => console.error('Error conectando a MongoDB:', err.message));
 
