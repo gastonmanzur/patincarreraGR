@@ -59,29 +59,30 @@ export const confirmarCuenta = async (req, res) => {
   
 // Login de usuario
 export const loginUsuario = async (req, res) => {
+  try {
     const { email, password } = req.body;
-  
+
     const usuario = await User.findOne({ email });
-  
+
     if (!usuario) {
       return res.status(404).json({ mensaje: 'Usuario no encontrado' });
     }
-  
+
     if (!usuario.confirmado) {
       return res.status(403).json({ mensaje: 'Tenés que confirmar tu cuenta primero' });
     }
-  
+
     const passwordValido = await bcrypt.compare(password, usuario.password);
     if (!passwordValido) {
       return res.status(401).json({ mensaje: 'Contraseña incorrecta' });
     }
-  
+
     const token = jwt.sign(
       { id: usuario._id, rol: usuario.rol },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
-  
+
     res.status(200).json({
       mensaje: 'Login exitoso',
       token,
@@ -93,5 +94,9 @@ export const loginUsuario = async (req, res) => {
         foto: usuario.foto
       }
     });
-  };
+  } catch (error) {
+    console.error('Error en loginUsuario', error);
+    res.status(500).json({ mensaje: 'Error al iniciar sesión' });
+  }
+};
   

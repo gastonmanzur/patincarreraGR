@@ -149,29 +149,34 @@ app.get('/api/auth/confirmar/:token', async (req, res) => {
 });
 
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
-  const usuario = await User.findOne({ email });
-  if (!usuario) {
-    return res.status(400).json({ mensaje: 'Credenciales inválidas' });
+  try {
+    const { email, password } = req.body;
+    const usuario = await User.findOne({ email });
+    if (!usuario) {
+      return res.status(400).json({ mensaje: 'Credenciales inválidas' });
+    }
+    if (!usuario.confirmado) {
+      return res.status(403).json({ mensaje: 'Tenés que confirmar tu cuenta primero' });
+    }
+    const valido = bcrypt.compareSync(password, usuario.password);
+    if (!valido) {
+      return res.status(400).json({ mensaje: 'Credenciales inválidas' });
+    }
+    // Extendemos la duración del token para evitar que la sesión
+    // se cierre de manera prematura. Antes el token expiraba en 1 hora,
+    // lo cual provocaba que el usuario perdiera la sesión rápidamente.
+    // Ahora el token tiene una vigencia de 24 horas.
+    const token = jwt.sign({ id: usuario._id, rol: usuario.rol }, JWT_SECRET, {
+      expiresIn: '24h'
+    });
+    return res.json({
+      token,
+      usuario: { nombre: usuario.nombre, rol: usuario.rol, foto: usuario.foto || '' }
+    });
+  } catch (err) {
+    console.error('Error en /api/auth/login', err);
+    res.status(500).json({ mensaje: 'Error al iniciar sesión' });
   }
-  if (!usuario.confirmado) {
-    return res.status(403).json({ mensaje: 'Tenés que confirmar tu cuenta primero' });
-  }
-  const valido = bcrypt.compareSync(password, usuario.password);
-  if (!valido) {
-    return res.status(400).json({ mensaje: 'Credenciales inválidas' });
-  }
-  // Extendemos la duración del token para evitar que la sesión
-  // se cierre de manera prematura. Antes el token expiraba en 1 hora,
-  // lo cual provocaba que el usuario perdiera la sesión rápidamente.
-  // Ahora el token tiene una vigencia de 24 horas.
-  const token = jwt.sign({ id: usuario._id, rol: usuario.rol }, JWT_SECRET, {
-    expiresIn: '24h'
-  });
-  return res.json({
-    token,
-    usuario: { nombre: usuario.nombre, rol: usuario.rol, foto: usuario.foto || '' }
-  });
 });
 
 app.get('/api/protegido/usuario', protegerRuta, async (req, res) => {
