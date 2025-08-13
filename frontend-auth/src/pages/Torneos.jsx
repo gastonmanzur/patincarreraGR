@@ -4,7 +4,7 @@ import api from '../api.js';
 export default function Torneos() {
   const [torneos, setTorneos] = useState([]);
   const [detalles, setDetalles] = useState({});
-  const CLUB_LOCAL = 'Club Local';
+  const CLUB_LOCAL = 'General Rodríguez';
   const rol = localStorage.getItem('rol');
 
   const cargar = async () => {
