@@ -199,13 +199,36 @@ export default function Torneos() {
                       {rol === 'Delegado' && (
                         <>
                           <h6>Lista Buena Fe</h6>
-                          <ul>
-                            {(detalles[c._id].lista || []).map((p) => (
-                              <li key={p._id}>
-                                {p.primerNombre} {p.apellido}
-                              </li>
-                            ))}
-                          </ul>
+                          <table className="table">
+                            <thead>
+                              <tr>
+                                <th>#</th>
+                                <th>Seguro</th>
+                                <th>Apellido y Nombre</th>
+                                <th>Categoría</th>
+                                <th>Club</th>
+                                <th>F. Nacimiento</th>
+                                <th>DNI</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(detalles[c._id].lista || []).map((p, idx) => (
+                                <tr key={p._id}>
+                                  <td>{idx + 1}</td>
+                                  <td>SA</td>
+                                  <td>
+                                    {p.apellido} {p.primerNombre}
+                                  </td>
+                                  <td>{p.categoria}</td>
+                                  <td>{CLUB_LOCAL}</td>
+                                  <td>
+                                    {new Date(p.fechaNacimiento).toLocaleDateString()}
+                                  </td>
+                                  <td>{p.dni}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </>
                       )}
                       <h6>Resultados</h6>
