@@ -7,7 +7,6 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-import ExcelJS from 'exceljs';
 import User from './models/User.js';
 import Patinador from './models/Patinador.js';
 import { protegerRuta, permitirRol } from './middlewares/authMiddleware.js';
@@ -569,6 +568,7 @@ app.get(
   permitirRol('Delegado'),
   async (req, res) => {
     try {
+      const { default: ExcelJS } = await import('exceljs');
       const comp = await Competencia.findById(req.params.id).populate('listaBuenaFe');
       if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
 
@@ -709,6 +709,9 @@ app.get(
       await workbook.xlsx.write(res);
       res.end();
     } catch (err) {
+      if (err.code === 'ERR_MODULE_NOT_FOUND') {
+        return res.status(500).json({ mensaje: 'Dependencia exceljs no instalada' });
+      }
       console.error(err);
       res.status(500).json({ mensaje: 'Error al generar excel' });
     }
