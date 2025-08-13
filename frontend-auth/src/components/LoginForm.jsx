@@ -27,9 +27,11 @@ export default function LoginForm() {
     }
   };
 
+  // Redirect the user to the backend's Google auth endpoint. Using the base
+  // URL from our Axios instance avoids hard-coding `localhost` and keeps the
+  // frontend portable across environments.
   const handleGoogleLogin = () => {
-
-    window.location.href = 'http://localhost:5000/api/auth/google';
+    window.location.href = `${api.defaults.baseURL}/auth/google`;
   };
 
   return (

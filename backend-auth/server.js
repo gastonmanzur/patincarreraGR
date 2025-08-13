@@ -188,7 +188,9 @@ app.post(
   async (req, res) => {
     try {
       const user = await User.findById(req.usuario.id);
-      user.foto = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+      // Use the configured backend URL when returning the uploaded image so the
+      // path is valid even when requests are proxied through another host.
+      user.foto = `${BACKEND_URL}/uploads/${req.file.filename}`;
       await user.save();
       res.json({ mensaje: 'Foto actualizada', foto: user.foto });
     } catch (err) {
@@ -245,10 +247,10 @@ app.post(
         numeroCorredor,
         categoria,
         fotoRostro: fotoRostroFile
-          ? `${req.protocol}://${req.get('host')}/uploads/${fotoRostroFile.filename}`
+          ? `${BACKEND_URL}/uploads/${fotoRostroFile.filename}`
           : undefined,
         foto: fotoFile
-          ? `${req.protocol}://${req.get('host')}/uploads/${fotoFile.filename}`
+          ? `${BACKEND_URL}/uploads/${fotoFile.filename}`
           : undefined
       });
 
@@ -309,10 +311,10 @@ app.put(
       const fotoFile = req.files?.foto?.[0];
 
       if (fotoRostroFile) {
-        actualizacion.fotoRostro = `${req.protocol}://${req.get('host')}/uploads/${fotoRostroFile.filename}`;
+        actualizacion.fotoRostro = `${BACKEND_URL}/uploads/${fotoRostroFile.filename}`;
       }
       if (fotoFile) {
-        actualizacion.foto = `${req.protocol}://${req.get('host')}/uploads/${fotoFile.filename}`;
+        actualizacion.foto = `${BACKEND_URL}/uploads/${fotoFile.filename}`;
       }
 
       const patinadorActualizado = await Patinador.findByIdAndUpdate(
@@ -404,7 +406,7 @@ app.post(
     try {
       const { titulo, contenido } = req.body;
       const imagen = req.file
-        ? `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
+        ? `${BACKEND_URL}/uploads/${req.file.filename}`
         : undefined;
       const noticia = await News.create({
         titulo,
