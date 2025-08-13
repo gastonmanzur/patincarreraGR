@@ -568,13 +568,34 @@ app.get('/api/competitions/:id/resultados', protegerRuta, async (req, res) => {
   }
 });
 
+app.get('/api/skaters-externos/:categoria', protegerRuta, async (req, res) => {
+  try {
+    const registros = await Resultado.find({ categoria: req.params.categoria })
+      .select('nombre club numero')
+      .lean();
+    const unicos = [];
+    const set = new Set();
+    registros.forEach((r) => {
+      const key = `${r.nombre}|${r.club}|${r.numero}`;
+      if (!set.has(key)) {
+        set.add(key);
+        unicos.push(r);
+      }
+    });
+    res.json(unicos);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener patinadores' });
+  }
+});
+
 app.post(
   '/api/competitions/:id/resultados',
   protegerRuta,
   permitirRol('Delegado'),
   async (req, res) => {
-    const { nombre, club, tiempo, posicion, categoria, total } = req.body;
-    if (!nombre || !club) {
+    const { nombre, club, numero, puntos, categoria } = req.body;
+    if (!nombre || !club || !numero || !puntos) {
       return res.status(400).json({ mensaje: 'Faltan datos' });
     }
     try {
@@ -584,10 +605,9 @@ app.post(
         competencia: comp._id,
         nombre,
         club,
-        tiempo,
-        posicion,
-        categoria,
-        total
+        numero,
+        puntos,
+        categoria
       });
       res.status(201).json(resultado);
     } catch (err) {

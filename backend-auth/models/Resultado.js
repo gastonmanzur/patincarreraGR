@@ -5,10 +5,11 @@ const resultadoSchema = new mongoose.Schema(
     competencia: { type: mongoose.Schema.Types.ObjectId, ref: 'Competencia', required: true },
     nombre: { type: String, required: true },
     club: { type: String, required: true },
-    tiempo: { type: String },
-    posicion: { type: Number },
+    numero: { type: Number, required: true },
+    puntos: { type: Number, required: true },
     categoria: { type: String },
-    total: { type: Number }
+    tiempo: { type: String },
+    posicion: { type: Number }
   },
   { timestamps: true }
 );
