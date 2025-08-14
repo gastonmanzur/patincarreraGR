@@ -229,6 +229,7 @@ export default function Torneos() {
                               <tr>
                                 <th>#</th>
                                 <th>Seguro</th>
+                                <th>Número</th>
                                 <th>Apellido y Nombre</th>
                                 <th>Categoría</th>
                                 <th>Club</th>
@@ -241,6 +242,7 @@ export default function Torneos() {
                                 <tr key={p._id}>
                                   <td>{idx + 1}</td>
                                   <td>SA</td>
+                                  <td>{p.numeroCorredor}</td>
                                   <td>
                                     {p.apellido} {p.primerNombre}
                                   </td>
