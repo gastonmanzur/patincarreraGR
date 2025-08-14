@@ -720,8 +720,8 @@ app.get(
         row.getCell(1).value = idx + 1;
         row.getCell(2).value = 'SA';
         row.getCell(3).value = p.numeroCorredor;
-        row.getCell(4).value = `${p.apellido} ${p.primerNombre}`;
-        row.getCell(5).value = p.categoria;
+        row.getCell(4).value = p.categoria;
+        row.getCell(5).value = `${p.apellido} ${p.primerNombre}`;
         row.getCell(6).value = CLUB;
         row.getCell(7).value = new Date(p.fechaNacimiento).toLocaleDateString();
         row.getCell(8).value = p.dni;
@@ -733,7 +733,7 @@ app.get(
         row.commit();
 
         const next = lista[idx + 1];
-        const currL = getUltimaLetra(p.categoria);
+        const currL = getUltimaLetra(row.getCell(4).value);
         const nextL = next ? getUltimaLetra(next.categoria) : null;
         if (
           !next ||
