@@ -812,17 +812,41 @@ app.get(
       }
 
       const staff = [
-        'MANZUR VANESA CAROLINA TECN 08/07/1989 34543626',
-        'MANZUR GASTON ALFREDO DELEG 14/12/1983 30609550',
-        'CURA VANESA ELIZABEHT DELEG 24/02/1982 29301868'
+        {
+          name: 'MANZUR VANESA CAROLINA',
+          role: 'TECN',
+          birth: '08/07/1989',
+          dni: '34543626'
+        },
+        {
+          name: 'MANZUR GASTON ALFREDO',
+          role: 'DELEG',
+          birth: '14/12/1983',
+          dni: '30609550',
+          highlight: true
+        },
+        {
+          name: 'CURA VANESA ELIZABEHT',
+          role: 'DELEG',
+          birth: '24/02/1982',
+          dni: '29301868',
+          highlight: true
+        }
       ];
-      staff.forEach((text) => {
-        sheet.mergeCells(`D${rowNum}:H${rowNum}`);
-        const cell = sheet.getCell(`D${rowNum}`);
-        cell.value = text;
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-        cell.border = allBorders;
-        sheet.getRow(rowNum).commit();
+
+      staff.forEach(({ name, role, birth, dni, highlight }) => {
+        const row = sheet.getRow(rowNum);
+        const values = [name, role, birth, dni];
+        values.forEach((value, idx) => {
+          const cell = row.getCell(4 + idx);
+          cell.value = value;
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = allBorders;
+          if (highlight) {
+            cell.font = { color: { argb: 'FFFF0000' }, bold: true };
+          }
+        });
+        row.commit();
         rowNum++;
       });
 
