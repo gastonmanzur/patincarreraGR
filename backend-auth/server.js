@@ -57,7 +57,57 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 const CLUB_LOCAL = process.env.CLUB_LOCAL || 'Gral. Rodríguez';
 
+const ORDEN_CATEGORIAS = [
+  'CHP',
+  'M7DE',
+  'M7VE',
+  'PDE',
+  'PVE',
+  '6DE',
+  '6VE',
+  '5DE',
+  '5VE',
+  '4DE',
+  '4VE',
+  'JDE',
+  'JVE',
+  'MDE',
+  'MVE',
+  'PDT',
+  'PVT',
+  '6DT',
+  '6VT',
+  '5DT',
+  '5VT',
+  '4DT',
+  '4VT',
+  'JDI',
+  'JVI',
+  'MDI',
+  'MVI',
+  'PDF',
+  'PVF',
+  '6DF',
+  '6VF',
+  '5DF',
+  '5VF',
+  '4DF',
+  '4VF',
+  'JDF',
+  'JVF',
+  'MDF',
+  'MVF'
+];
+
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+
+const ordenarPorCategoria = (lista) => {
+  const pos = (cat) => {
+    const idx = ORDEN_CATEGORIAS.indexOf(cat);
+    return idx === -1 ? ORDEN_CATEGORIAS.length : idx;
+  };
+  return lista.sort((a, b) => pos(a.categoria) - pos(b.categoria));
+};
 
 async function crearNotificacionesParaTodos(mensaje, competencia = null) {
   try {
@@ -564,7 +614,8 @@ app.get(
     try {
       const comp = await Competencia.findById(req.params.id).populate('listaBuenaFe');
       if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
-      res.json(comp.listaBuenaFe);
+      const listaOrdenada = ordenarPorCategoria([...comp.listaBuenaFe]);
+      res.json(listaOrdenada);
     } catch (err) {
       console.error(err);
       res.status(500).json({ mensaje: 'Error al obtener lista' });
@@ -707,7 +758,9 @@ app.get(
       d8.alignment = { horizontal: 'center', vertical: 'middle' };
       d8.border = allBorders;
 
-      const lista = Array.isArray(comp.listaBuenaFe) ? comp.listaBuenaFe : [];
+      const lista = Array.isArray(comp.listaBuenaFe)
+        ? ordenarPorCategoria([...comp.listaBuenaFe])
+        : [];
       const getUltimaLetra = (cat) => {
         if (!cat || typeof cat !== 'string') return '';
         return cat.trim().slice(-1).toUpperCase();
