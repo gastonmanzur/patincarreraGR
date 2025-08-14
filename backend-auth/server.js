@@ -593,6 +593,14 @@ app.get(
 
       const workbook = new ExcelJS.Workbook();
       const sheet = workbook.addWorksheet('Lista');
+      sheet.getColumn(1).width = 1.89;
+      sheet.getColumn(2).width = 10.22;
+      sheet.getColumn(3).width = 7.56;
+      sheet.getColumn(4).width = 37.78;
+      sheet.getColumn(5).width = 10.33;
+      sheet.getColumn(6).width = 13.22;
+      sheet.getColumn(7).width = 11.6;
+      sheet.getColumn(8).width = 11.33;
 
       sheet.getRow(1);
 
@@ -698,11 +706,12 @@ app.get(
         const row = sheet.getRow(rowNum++);
         row.getCell(1).value = idx + 1;
         row.getCell(2).value = 'SA';
-        row.getCell(3).value = `${p.apellido} ${p.primerNombre}`;
-        row.getCell(4).value = p.categoria;
-        row.getCell(5).value = CLUB;
-        row.getCell(6).value = new Date(p.fechaNacimiento).toLocaleDateString();
-        row.getCell(7).value = p.dni;
+        row.getCell(3).value = p.numeroCorredor;
+        row.getCell(4).value = `${p.apellido} ${p.primerNombre}`;
+        row.getCell(5).value = p.categoria;
+        row.getCell(6).value = CLUB;
+        row.getCell(7).value = new Date(p.fechaNacimiento).toLocaleDateString();
+        row.getCell(8).value = p.dni;
         row.commit();
 
         const next = lista[idx + 1];
