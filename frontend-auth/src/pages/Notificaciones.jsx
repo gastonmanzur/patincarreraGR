@@ -47,21 +47,21 @@ export default function Notificaciones() {
 
   if (notificaciones.length === 0) {
     return (
-      <div className="container mt-4">
-        <h1 className="mb-4">Notificaciones</h1>
+      <div className="container mt-4 text-black fw-normal">
+        <h1 className="mb-4 fw-normal">Notificaciones</h1>
         <p>No hay notificaciones.</p>
       </div>
     );
   }
 
   return (
-    <div className="container mt-4">
-      <h1 className="mb-4">Notificaciones</h1>
+    <div className="container mt-4 text-black fw-normal">
+      <h1 className="mb-4 fw-normal">Notificaciones</h1>
       <ul className="list-group">
         {notificaciones.map((n) => (
           <li key={n._id} className={`list-group-item ${n.leido ? '' : 'list-group-item-warning'}`}>
             <div className="d-flex justify-content-between align-items-center">
-              <span style={{ fontWeight: n.leido ? 'normal' : 'bold' }}>{n.mensaje}</span>
+              <span className="text-black fw-normal">{n.mensaje}</span>
               {n.competencia && n.estadoRespuesta !== 'Pendiente' && (
                 <span className="badge bg-secondary">{n.estadoRespuesta}</span>
               )}
