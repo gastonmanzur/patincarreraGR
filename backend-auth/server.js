@@ -672,7 +672,7 @@ app.get(
       sheet.mergeCells('D2:H2');
       const r2 = sheet.getCell('D2');
       r2.value = 'ASOCIACIÓN PATINADORES METROPOLITANOS';
-      r2.font = { name: 'Verdana', size: 16, color: { argb: 'FFFFFFFF' } };
+      r2.font = { name: 'Verdana', size: 16, color: { argb: 'FF000000' } };
       r2.alignment = { horizontal: 'center', vertical: 'middle' };
       r2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } };
       r2.border = allBorders;
@@ -689,7 +689,7 @@ app.get(
       sheet.mergeCells('D4:H4');
       const r4 = sheet.getCell('D4');
       r4.value = 'COMITÉ DE CARRERAS';
-      r4.font = { name: 'Franklin Gothic Medium', size: 16, color: { argb: 'FFFFFFFF' } };
+      r4.font = { name: 'Franklin Gothic Medium', size: 16, color: { argb: 'FF000000' } };
       r4.alignment = { horizontal: 'center', vertical: 'middle' };
       r4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } };
       r4.border = allBorders;
@@ -698,7 +698,7 @@ app.get(
       const r5 = sheet.getCell('D5');
       r5.value =
         'LISTA DE BUENA FE  ESCUELA-TRANSICION-INTERMEDIA-FEDERADOS-LIBRES';
-      r5.font = { name: 'Lucida Console', size: 10, color: { argb: 'FFFFFFFF' } };
+      r5.font = { name: 'Lucida Console', size: 10, color: { argb: 'FF000000' } };
       r5.alignment = { horizontal: 'center', vertical: 'middle' };
       r5.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } };
       r5.border = allBorders;
@@ -843,7 +843,7 @@ app.get(
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
           cell.border = allBorders;
           if (highlight) {
-            cell.font = { color: { argb: 'FFFF0000' }, bold: true };
+            cell.font = { color: { argb: 'FF000000' }, bold: true };
           }
         });
         row.commit();
