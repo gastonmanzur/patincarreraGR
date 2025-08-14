@@ -806,6 +806,68 @@ app.get(
         }
       });
 
+      // After listing all skaters, add additional certification info
+      for (let i = 0; i < 2; i++) {
+        sheet.getRow(rowNum++).commit();
+      }
+
+      const staff = [
+        'MANZUR VANESA CAROLINA TECN 08/07/1989 34543626',
+        'MANZUR GASTON ALFREDO DELEG 14/12/1983 30609550',
+        'CURA VANESA ELIZABEHT DELEG 24/02/1982 29301868'
+      ];
+      staff.forEach((text) => {
+        sheet.mergeCells(`D${rowNum}:H${rowNum}`);
+        const cell = sheet.getCell(`D${rowNum}`);
+        cell.value = text;
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = allBorders;
+        sheet.getRow(rowNum).commit();
+        rowNum++;
+      });
+
+      sheet.getRow(rowNum++).commit();
+
+      const fechaRow = sheet.getRow(rowNum++);
+      const cFecha = fechaRow.getCell(3);
+      cFecha.value = 'FECHA';
+      cFecha.font = { bold: true };
+      cFecha.alignment = { horizontal: 'center', vertical: 'middle' };
+      const gFecha = fechaRow.getCell(7);
+      gFecha.value = 'FECHA';
+      gFecha.font = { bold: true };
+      gFecha.alignment = { horizontal: 'center', vertical: 'middle' };
+      fechaRow.commit();
+
+      const sigRow = sheet.getRow(rowNum++);
+      const cSig = sigRow.getCell(3);
+      cSig.value = 'SECRETARIO/A CLUB';
+      cSig.font = { bold: true };
+      cSig.alignment = { horizontal: 'center', vertical: 'middle' };
+      const gSig = sigRow.getCell(7);
+      gSig.value = 'PRESIDENTE/A CLUB';
+      gSig.font = { bold: true };
+      gSig.alignment = { horizontal: 'center', vertical: 'middle' };
+      sigRow.commit();
+
+      sheet.getRow(rowNum++).commit();
+
+      sheet.mergeCells(`B${rowNum}:H${rowNum}`);
+      const med1 = sheet.getCell(`B${rowNum}`);
+      med1.value =
+        'CERTIFICACION MEDICA: CERTIFICO QUE LAS PERSONAS DETALLADAS PRECEDENTEMENTE SE ENCUENTRAN APTAS FISICA Y';
+      med1.alignment = { horizontal: 'left', vertical: 'middle' };
+      sheet.getRow(rowNum).commit();
+      rowNum++;
+
+      sheet.mergeCells(`B${rowNum}:H${rowNum}`);
+      const med2 = sheet.getCell(`B${rowNum}`);
+      med2.value =
+        'PSIQUICAMENTE, PARA LA PRACTICA ACTIVA DE ESTE DEPORTE Y CUENTAN CON SEGURO CON POLIZA VIGENTE.';
+      med2.alignment = { horizontal: 'left', vertical: 'middle' };
+      sheet.getRow(rowNum).commit();
+      rowNum++;
+
       const buffer = await workbook.xlsx.writeBuffer();
       res.setHeader(
         'Content-Type',
