@@ -708,13 +708,9 @@ app.get(
       d8.border = allBorders;
 
       const lista = Array.isArray(comp.listaBuenaFe) ? comp.listaBuenaFe : [];
-      const getGrupo = (cat) => {
+      const getUltimaLetra = (cat) => {
         if (!cat || typeof cat !== 'string') return '';
-        const l = cat.trim().slice(-1).toUpperCase();
-        if (l === 'F') return 'F';
-        if (l === 'E') return 'E';
-        if (l === 'T' || l === 'I') return 'TI';
-        return l;
+        return cat.trim().slice(-1).toUpperCase();
       };
 
       let rowNum = 9;
@@ -737,10 +733,15 @@ app.get(
         row.commit();
 
         const next = lista[idx + 1];
-        const currG = getGrupo(p.categoria);
-        const nextG = next ? getGrupo(next.categoria) : null;
-        if (!next || (currG === 'E' && nextG === 'TI') || (currG === 'TI' && nextG === 'F')) {
+        const currL = getUltimaLetra(p.categoria);
+        const nextL = next ? getUltimaLetra(next.categoria) : null;
+        if (
+          !next ||
+          (currL === 'E' && (nextL === 'T' || nextL === 'I')) ||
+          ((currL === 'T' || currL === 'I') && nextL === 'F')
+        ) {
           const sep = sheet.getRow(rowNum++);
+          sep.height = 10;
           for (let c = 1; c <= 8; c++) {
             sep.getCell(c).fill = {
               type: 'pattern',
