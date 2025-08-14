@@ -55,7 +55,7 @@ const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-const CLUB_LOCAL = process.env.CLUB_LOCAL || 'General Rodríguez';
+const CLUB_LOCAL = process.env.CLUB_LOCAL || 'Gral. Rodríguez';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
@@ -701,7 +701,7 @@ app.get(
       };
 
       let rowNum = 9;
-      const CLUB = 'General Rodríguez';
+      const CLUB = CLUB_LOCAL;
       lista.forEach((p, idx) => {
         const row = sheet.getRow(rowNum++);
         row.getCell(1).value = idx + 1;
@@ -712,6 +712,9 @@ app.get(
         row.getCell(6).value = CLUB;
         row.getCell(7).value = new Date(p.fechaNacimiento).toLocaleDateString();
         row.getCell(8).value = p.dni;
+        for (let c = 1; c <= 8; c++) {
+          row.getCell(c).alignment = { horizontal: 'center', vertical: 'middle' };
+        }
         row.commit();
 
         const next = lista[idx + 1];

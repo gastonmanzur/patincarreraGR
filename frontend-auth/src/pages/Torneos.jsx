@@ -4,7 +4,7 @@ import api from '../api.js';
 export default function Torneos() {
   const [torneos, setTorneos] = useState([]);
   const [detalles, setDetalles] = useState({});
-  const CLUB_LOCAL = 'General Rodríguez';
+  const CLUB_LOCAL = 'Gral. Rodríguez';
   const rol = localStorage.getItem('rol');
 
   const cargar = async () => {
@@ -224,7 +224,7 @@ export default function Torneos() {
                           >
                             Exportar Excel
                           </button>
-                          <table className="table">
+                          <table className="table text-center">
                             <thead>
                               <tr>
                                 <th>#</th>
