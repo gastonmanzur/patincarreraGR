@@ -604,6 +604,13 @@ app.get(
 
       sheet.getRow(1);
 
+      const allBorders = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+
       const imgPath = path.resolve('frontend-auth/public/APM.png');
       if (fs.existsSync(imgPath)) {
         const imgId = workbook.addImage({ filename: imgPath, extension: 'png' });
@@ -617,6 +624,7 @@ app.get(
       r2.font = { name: 'Verdana', size: 16, color: { argb: 'FFFFFFFF' } };
       r2.alignment = { horizontal: 'center', vertical: 'middle' };
       r2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } };
+      r2.border = allBorders;
 
       sheet.mergeCells('D3:H3');
       const r3 = sheet.getCell('D3');
@@ -625,6 +633,7 @@ app.get(
       r3.font = { name: 'Arial', size: 10, color: { argb: 'FF000000' } };
       r3.alignment = { horizontal: 'center', vertical: 'middle' };
       r3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+      r3.border = allBorders;
 
       sheet.mergeCells('D4:H4');
       const r4 = sheet.getCell('D4');
@@ -632,6 +641,7 @@ app.get(
       r4.font = { name: 'Franklin Gothic Medium', size: 16, color: { argb: 'FFFFFFFF' } };
       r4.alignment = { horizontal: 'center', vertical: 'middle' };
       r4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } };
+      r4.border = allBorders;
 
       sheet.mergeCells('D5:H5');
       const r5 = sheet.getCell('D5');
@@ -640,12 +650,14 @@ app.get(
       r5.font = { name: 'Lucida Console', size: 10, color: { argb: 'FFFFFFFF' } };
       r5.alignment = { horizontal: 'center', vertical: 'middle' };
       r5.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } };
+      r5.border = allBorders;
 
       sheet.mergeCells('B6:C6');
       const b6 = sheet.getCell('B6');
       b6.value = 'FECHA DE EMISION';
       b6.font = { name: 'Calibri', size: 11 };
       b6.alignment = { horizontal: 'center', vertical: 'middle' };
+      b6.border = allBorders;
       sheet.mergeCells('D6:H6');
       const d6 = sheet.getCell('D6');
       const emision = new Date();
@@ -666,29 +678,34 @@ app.get(
       d6.value = `${emision.getDate()} de ${meses[emision.getMonth()]} de ${emision.getFullYear()}`;
       d6.font = { name: 'Arial', size: 10 };
       d6.alignment = { horizontal: 'center', vertical: 'middle' };
+      d6.border = allBorders;
 
       sheet.mergeCells('B7:C7');
       const b7 = sheet.getCell('B7');
       b7.value = 'EVENTO Y FECHA';
       b7.font = { name: 'Calibri', size: 11 };
       b7.alignment = { horizontal: 'center', vertical: 'middle' };
+      b7.border = allBorders;
       sheet.mergeCells('D7:H7');
       const d7 = sheet.getCell('D7');
       const compDate = new Date(comp.fecha);
       d7.value = `${comp.nombre} ${compDate.getDate()} de ${meses[compDate.getMonth()]} de ${compDate.getFullYear()}`;
       d7.font = { name: 'Arial', size: 10 };
       d7.alignment = { horizontal: 'center', vertical: 'middle' };
+      d7.border = allBorders;
 
       sheet.mergeCells('B8:C8');
       const b8 = sheet.getCell('B8');
       b8.value = 'ORGANIZADOR';
       b8.font = { name: 'Calibri', size: 11 };
       b8.alignment = { horizontal: 'center', vertical: 'middle' };
+      b8.border = allBorders;
       sheet.mergeCells('D8:H8');
       const d8 = sheet.getCell('D8');
       d8.value = req.query.organizador || '';
       d8.font = { name: 'Arial', size: 10 };
       d8.alignment = { horizontal: 'center', vertical: 'middle' };
+      d8.border = allBorders;
 
       const lista = Array.isArray(comp.listaBuenaFe) ? comp.listaBuenaFe : [];
       const getGrupo = (cat) => {
@@ -713,7 +730,9 @@ app.get(
         row.getCell(7).value = new Date(p.fechaNacimiento).toLocaleDateString();
         row.getCell(8).value = p.dni;
         for (let c = 1; c <= 8; c++) {
-          row.getCell(c).alignment = { horizontal: 'center', vertical: 'middle' };
+          const cell = row.getCell(c);
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = allBorders;
         }
         row.commit();
 
