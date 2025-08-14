@@ -752,13 +752,16 @@ app.get(
         }
       });
 
+      const buffer = await workbook.xlsx.writeBuffer();
       res.setHeader(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       );
-      res.setHeader('Content-Disposition', 'attachment; filename="lista_buena_fe.xlsx"');
-      await workbook.xlsx.write(res);
-      res.end();
+      res.setHeader(
+        'Content-Disposition',
+        'attachment; filename="lista_buena_fe.xlsx"'
+      );
+      res.send(Buffer.from(buffer));
     } catch (err) {
       console.error(err);
       res.status(500).json({ mensaje: 'Error al generar excel' });
