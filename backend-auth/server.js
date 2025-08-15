@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import User from './models/User.js';
@@ -17,6 +18,8 @@ import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
 import PatinadorExterno from './models/PatinadorExterno.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Cargar variables de entorno desde .env si está presente
 const envPath = path.resolve('.env');
@@ -662,9 +665,13 @@ app.get(
         right: { style: 'thin' }
       };
 
-      const imgPath = path.resolve('frontend-auth/public/APM.png');
+      const imgPath = path.resolve(
+        __dirname,
+        '../frontend-auth/public/APM.png'
+      );
       if (fs.existsSync(imgPath)) {
-        const imgId = workbook.addImage({ filename: imgPath, extension: 'png' });
+        const imgBase64 = fs.readFileSync(imgPath, { encoding: 'base64' });
+        const imgId = workbook.addImage({ base64: imgBase64, extension: 'png' });
         sheet.mergeCells('A2:C5');
         sheet.addImage(imgId, 'A2:C5');
       }
