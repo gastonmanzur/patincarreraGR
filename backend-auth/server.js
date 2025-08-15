@@ -672,9 +672,9 @@ app.get(
       sheet.mergeCells('D2:H2');
       const r2 = sheet.getCell('D2');
       r2.value = 'ASOCIACIÓN PATINADORES METROPOLITANOS';
-      r2.font = { name: 'Verdana', size: 16, color: { argb: 'FF000000' } };
+      r2.font = { name: 'Verdana', size: 16, color: { argb: 'FFFFFFFF' } };
       r2.alignment = { horizontal: 'center', vertical: 'middle' };
-      r2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } };
+      r2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00008B' } };
       r2.border = allBorders;
 
       sheet.mergeCells('D3:H3');
@@ -689,18 +689,18 @@ app.get(
       sheet.mergeCells('D4:H4');
       const r4 = sheet.getCell('D4');
       r4.value = 'COMITÉ DE CARRERAS';
-      r4.font = { name: 'Franklin Gothic Medium', size: 16, color: { argb: 'FF000000' } };
+      r4.font = { name: 'Franklin Gothic Medium', size: 16, color: { argb: 'FFFFFFFF' } };
       r4.alignment = { horizontal: 'center', vertical: 'middle' };
-      r4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } };
+      r4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00008B' } };
       r4.border = allBorders;
 
       sheet.mergeCells('D5:H5');
       const r5 = sheet.getCell('D5');
       r5.value =
         'LISTA DE BUENA FE  ESCUELA-TRANSICION-INTERMEDIA-FEDERADOS-LIBRES';
-      r5.font = { name: 'Lucida Console', size: 10, color: { argb: 'FF000000' } };
+      r5.font = { name: 'Lucida Console', size: 10, color: { argb: 'FFFFFFFF' } };
       r5.alignment = { horizontal: 'center', vertical: 'middle' };
-      r5.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } };
+      r5.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00008B' } };
       r5.border = allBorders;
 
       sheet.mergeCells('B6:C6');
@@ -822,19 +822,17 @@ app.get(
           name: 'MANZUR GASTON ALFREDO',
           role: 'DELEG',
           birth: '14/12/1983',
-          dni: '30609550',
-          highlight: true
+          dni: '30609550'
         },
         {
           name: 'CURA VANESA ELIZABEHT',
           role: 'DELEG',
           birth: '24/02/1982',
-          dni: '29301868',
-          highlight: true
+          dni: '29301868'
         }
       ];
 
-      staff.forEach(({ name, role, birth, dni, highlight }) => {
+      staff.forEach(({ name, role, birth, dni }) => {
         const row = sheet.getRow(rowNum);
         const values = [name, role, birth, dni];
         values.forEach((value, idx) => {
@@ -842,9 +840,7 @@ app.get(
           cell.value = value;
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
           cell.border = allBorders;
-          if (highlight) {
-            cell.font = { color: { argb: 'FF000000' }, bold: true };
-          }
+          cell.font = { color: { argb: 'FF000000' }, bold: true };
         });
         row.commit();
         rowNum++;
@@ -880,6 +876,7 @@ app.get(
       const med1 = sheet.getCell(`B${rowNum}`);
       med1.value =
         'CERTIFICACION MEDICA: CERTIFICO QUE LAS PERSONAS DETALLADAS PRECEDENTEMENTE SE ENCUENTRAN APTAS FISICA Y';
+      med1.font = { color: { argb: 'FFFF0000' } };
       med1.alignment = { horizontal: 'left', vertical: 'middle' };
       sheet.getRow(rowNum).commit();
       rowNum++;
@@ -888,6 +885,7 @@ app.get(
       const med2 = sheet.getCell(`B${rowNum}`);
       med2.value =
         'PSIQUICAMENTE, PARA LA PRACTICA ACTIVA DE ESTE DEPORTE Y CUENTAN CON SEGURO CON POLIZA VIGENTE.';
+      med2.font = { color: { argb: 'FFFF0000' } };
       med2.alignment = { horizontal: 'left', vertical: 'middle' };
       sheet.getRow(rowNum).commit();
       rowNum++;
