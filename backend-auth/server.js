@@ -18,6 +18,8 @@ import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
 import PatinadorExterno from './models/PatinadorExterno.js';
+import ExcelJS from 'exceljs';
+import pdfParse from 'pdf-parse';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -635,16 +637,6 @@ app.get(
       const comp = await Competencia.findById(req.params.id).populate('listaBuenaFe');
       if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
 
-      let ExcelJS;
-      try {
-        ExcelJS = (await import('exceljs')).default;
-      } catch (err) {
-        console.error('exceljs no instalado', err);
-        return res
-          .status(500)
-          .json({ mensaje: 'Dependencia exceljs no instalada' });
-      }
-
       const workbook = new ExcelJS.Workbook();
       const sheet = workbook.addWorksheet('Lista');
       sheet.getColumn(1).width = 1.89;
@@ -981,16 +973,6 @@ app.post(
   async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ mensaje: 'Archivo no proporcionado' });
-    }
-    let pdfParse;
-    try {
-      pdfParse = (await import('pdf-parse')).default;
-    } catch (err) {
-      console.error('pdf-parse no disponible', err);
-      fs.unlinkSync(req.file.path);
-      return res
-        .status(500)
-        .json({ mensaje: 'Dependencia pdf-parse no instalada' });
     }
     try {
       const buffer = fs.readFileSync(req.file.path);
