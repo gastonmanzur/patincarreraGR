@@ -2,11 +2,12 @@ import axios from 'axios';
 
 // Axios instance that automatically attaches the JWT token from localStorage
 // Use the API URL from environment variables when available. If it is not
-// provided, fall back to a relative `/api` path so the frontend can work
-// regardless of where the backend is hosted. During development the Vite
-// proxy will redirect these calls to the backend server.
+// provided, fall back to `http://localhost:5000/api` so the frontend
+// connects directly to the backend without relying on Vite's dev proxy.
+// This avoids proxy connection errors when the dev server cannot reach the
+// backend.
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api'
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 });
 
 api.interceptors.request.use((config) => {
