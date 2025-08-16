@@ -135,6 +135,24 @@ export default function Torneos() {
     }
   };
 
+  const cargarPdfPuntajes = async (e, compId) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('archivo', file);
+    try {
+      await api.post(`/competitions/${compId}/resultados/pdf`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      alert('PDF procesado correctamente');
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.mensaje || 'Error al procesar PDF');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   const agregarResultado = async (e, compId) => {
     e.preventDefault();
     const { nombre, club, numero, puntos, categoria } = e.target;
@@ -224,6 +242,12 @@ export default function Torneos() {
                           >
                             Exportar Excel
                           </button>
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            className="form-control mb-2"
+                            onChange={(e) => cargarPdfPuntajes(e, c._id)}
+                          />
                           <table className="table text-center">
                             <thead>
                               <tr>
