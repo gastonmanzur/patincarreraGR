@@ -18,7 +18,6 @@ import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
 import PatinadorExterno from './models/PatinadorExterno.js';
-import pdfParse from 'pdf-parse';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -983,6 +982,16 @@ app.post(
     if (!req.file) {
       return res.status(400).json({ mensaje: 'Archivo no proporcionado' });
     }
+    let pdfParse;
+    try {
+      pdfParse = (await import('pdf-parse')).default;
+    } catch (err) {
+      console.error('pdf-parse no disponible', err);
+      fs.unlinkSync(req.file.path);
+      return res
+        .status(500)
+        .json({ mensaje: 'Dependencia pdf-parse no instalada' });
+    }
     try {
       const buffer = fs.readFileSync(req.file.path);
       const data = await pdfParse(buffer);
@@ -1012,6 +1021,7 @@ app.post(
       fs.unlinkSync(req.file.path);
       res.json({ mensaje: 'Archivo procesado', cantidad: count });
     } catch (err) {
+      fs.unlinkSync(req.file.path);
       console.error(err);
       res.status(500).json({ mensaje: 'Error al procesar el archivo' });
     }
