@@ -19,7 +19,9 @@ import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
 import PatinadorExterno from './models/PatinadorExterno.js';
 import ExcelJS from 'exceljs';
-import pdfParse from 'pdf-parse';
+// Importación diferida de pdf-parse para evitar errores al iniciar el servidor
+// cuando el módulo no está instalado o no se requiere.
+// Se cargará dinámicamente en la ruta que procesa resultados en PDF.
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -976,6 +978,7 @@ app.post(
     }
     try {
       const buffer = fs.readFileSync(req.file.path);
+      const pdfParse = (await import('pdf-parse')).default;
       const data = await pdfParse(buffer);
       const lines = data.text
         .split('\n')
