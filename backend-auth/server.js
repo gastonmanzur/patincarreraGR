@@ -978,7 +978,13 @@ app.post(
     }
     try {
       const buffer = fs.readFileSync(req.file.path);
-      const pdfParse = (await import('pdf-parse')).default;
+      // Importar directamente la implementación principal de pdf-parse para
+      // evitar la carga del archivo de prueba inexistente que provoca el
+      // error ENOENT. El paquete expone la funcionalidad en
+      // "lib/pdf-parse.js" sin dependencias a archivos externos.
+      const pdfParse = (
+        await import('pdf-parse/lib/pdf-parse.js')
+      ).default;
       const data = await pdfParse(buffer);
       const lines = data.text
         .split('\n')
