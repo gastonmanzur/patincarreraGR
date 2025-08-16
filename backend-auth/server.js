@@ -18,6 +18,7 @@ import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
 import PatinadorExterno from './models/PatinadorExterno.js';
+import pdfParse from 'pdf-parse';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -969,6 +970,50 @@ app.post(
     } catch (err) {
       console.error(err);
       res.status(500).json({ mensaje: 'Error al cargar resultado' });
+    }
+  }
+);
+
+app.post(
+  '/api/competitions/:id/resultados/pdf',
+  protegerRuta,
+  permitirRol('Delegado'),
+  upload.single('archivo'),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ mensaje: 'Archivo no proporcionado' });
+    }
+    try {
+      const buffer = fs.readFileSync(req.file.path);
+      const data = await pdfParse(buffer);
+      const lines = data.text
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l);
+      let count = 0;
+      for (const line of lines) {
+        if (/apellido/i.test(line) && /nro/i.test(line) && /club/i.test(line)) {
+          continue;
+        }
+        const parts = line.split(/\s{2,}/);
+        if (parts.length < 4) continue;
+        const [nombre, numeroStr, club, categoria] = parts;
+        const numero = parseInt(numeroStr, 10);
+        if (!nombre || !numero || !club || !categoria) continue;
+        if (club !== CLUB_LOCAL) {
+          await PatinadorExterno.findOneAndUpdate(
+            { nombre, club, numero, categoria },
+            { nombre, club, numero, categoria },
+            { upsert: true, new: true }
+          );
+          count++;
+        }
+      }
+      fs.unlinkSync(req.file.path);
+      res.json({ mensaje: 'Archivo procesado', cantidad: count });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al procesar el archivo' });
     }
   }
 );
