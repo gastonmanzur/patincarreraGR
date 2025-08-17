@@ -918,6 +918,25 @@ app.get('/api/competitions/:id/resultados', protegerRuta, async (req, res) => {
   }
 });
 
+app.get('/api/competitions/:id/puntajes', protegerRuta, async (req, res) => {
+  try {
+    const resultados = await Resultado.find({ competencia: req.params.id }).lean();
+    const tabla = resultados.reduce((acc, r) => {
+      const key = `${r.numero}-${r.club}-${r.nombre}`;
+      if (!acc[key]) {
+        acc[key] = { nombre: r.nombre, numero: r.numero, club: r.club, puntosTotales: 0 };
+      }
+      acc[key].puntosTotales += Number(r.puntos) || 0;
+      return acc;
+    }, {});
+    const lista = Object.values(tabla).sort((a, b) => b.puntosTotales - a.puntosTotales);
+    res.json(lista);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener tabla de puntos' });
+  }
+});
+
 app.get('/api/skaters-externos/:categoria', protegerRuta, async (req, res) => {
   try {
     const patinadores = await PatinadorExterno.find({

@@ -52,23 +52,29 @@ export default function Torneos() {
       return;
     }
     try {
-      const peticiones = [api.get(`/competitions/${compId}/resultados`)];
+      const peticiones = [
+        api.get(`/competitions/${compId}/resultados`),
+        api.get(`/competitions/${compId}/puntajes`)
+      ];
       if (rol === 'Delegado') {
         peticiones.unshift(api.get(`/competitions/${compId}/lista-buena-fe`));
       }
       const respuestas = await Promise.all(peticiones);
-      const resultados = respuestas[rol === 'Delegado' ? 1 : 0].data;
-      const lista = rol === 'Delegado' ? respuestas[0].data : [];
-        setDetalles((prev) => ({
-          ...prev,
-          [compId]: {
-            abierta: true,
-            lista,
-            resultados,
-            categoria: '',
-            externos: []
-          }
-        }));
+      let idx = 0;
+      const lista = rol === 'Delegado' ? respuestas[idx++].data : [];
+      const resultados = respuestas[idx++].data;
+      const tablaPuntos = respuestas[idx++].data;
+      setDetalles((prev) => ({
+        ...prev,
+        [compId]: {
+          abierta: true,
+          lista,
+          resultados,
+          tablaPuntos,
+          categoria: '',
+          externos: []
+        }
+      }));
     } catch (err) {
       console.error(err);
     }
@@ -165,10 +171,17 @@ export default function Torneos() {
         categoria: categoria.value
       });
       e.target.reset();
-      const resultados = await api.get(`/competitions/${compId}/resultados`);
+      const [resultados, tablaPuntos] = await Promise.all([
+        api.get(`/competitions/${compId}/resultados`),
+        api.get(`/competitions/${compId}/puntajes`)
+      ]);
       setDetalles((prev) => ({
         ...prev,
-        [compId]: { ...prev[compId], resultados: resultados.data }
+        [compId]: {
+          ...prev[compId],
+          resultados: resultados.data,
+          tablaPuntos: tablaPuntos.data
+        }
       }));
     } catch (err) {
       alert(err.response?.data?.mensaje || 'Error al cargar resultado');
@@ -291,6 +304,27 @@ export default function Torneos() {
                             </li>
                           ))}
                         </ul>
+                        <h6 className="mt-3">Tabla de puntos</h6>
+                        <table className="table table-sm">
+                          <thead>
+                            <tr>
+                              <th>Apellido y nombre</th>
+                              <th>Nº</th>
+                              <th>Club</th>
+                              <th>Puntos totales</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(detalles[c._id].tablaPuntos || []).map((p) => (
+                              <tr key={`${p.numero}-${p.club}-${p.nombre}`}>
+                                <td>{p.nombre}</td>
+                                <td>{p.numero}</td>
+                                <td>{p.club}</td>
+                                <td>{p.puntosTotales}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                         {rol === 'Delegado' && (
                           <>
                             <form
