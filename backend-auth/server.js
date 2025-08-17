@@ -978,16 +978,19 @@ app.post(
           continue;
         }
         const parts = line.split(/\s{2,}/).map((p) => p.trim());
-        if (parts.length < 5) continue;
+        if (parts.length < 4) continue;
         const [nombre, categoria, numeroStr, club, puntosStr] = parts;
         const numero = parseInt(numeroStr, 10);
-        const puntos = parseFloat(puntosStr);
-        if (!nombre || !categoria || !club || isNaN(puntos)) continue;
+        const puntos = puntosStr ? parseFloat(puntosStr) : undefined;
+        if (!nombre || !categoria || !club) continue;
         const query = { nombre, club, categoria };
-        const update = { nombre, club, categoria, puntos };
+        const update = { nombre, club, categoria };
         if (!isNaN(numero)) {
           query.numero = numero;
           update.numero = numero;
+        }
+        if (puntos !== undefined && !isNaN(puntos)) {
+          update.puntos = puntos;
         }
         await PatinadorExterno.findOneAndUpdate(query, update, {
           upsert: true,
