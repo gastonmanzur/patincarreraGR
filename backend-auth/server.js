@@ -1004,6 +1004,13 @@ app.post(
       const pdfParse = (
         await import('pdf-parse/lib/pdf-parse.js')
       ).default;
+
+      const comp = await Competencia.findById(req.params.id);
+      if (!comp) {
+        fs.unlinkSync(req.file.path);
+        return res.status(404).json({ mensaje: 'Competencia no encontrada' });
+      }
+
       const data = await pdfParse(buffer);
       const lines = data.text
         .split('\n')
@@ -1014,19 +1021,41 @@ app.post(
         if (/apellido/i.test(line) && /nro/i.test(line) && /club/i.test(line)) {
           continue;
         }
-        const parts = line.split(/\s{2,}/);
+        const parts = line.split(/\s{2,}/).map((p) => p.trim());
+        // Detecta una posible columna de posición al inicio
+        let posicion;
+        if (parts.length > 4 && /^\d+$/.test(parts[0])) {
+          posicion = parseInt(parts.shift(), 10);
+        }
         if (parts.length < 4) continue;
-        const [nombre, numeroStr, club, categoria] = parts;
+
+        // Se asume el formato: nombre, numero, club, puntos, [categoria?, tiempo?]
+        const [nombre, numeroStr, club, puntosStr, categoria, tiempo] = parts;
         const numero = parseInt(numeroStr, 10);
-        if (!nombre || !numero || !club || !categoria) continue;
+        const puntos = parseFloat(puntosStr);
+        if (!nombre || isNaN(numero) || !club || isNaN(puntos)) continue;
+
+        const resultadoData = {
+          competencia: comp._id,
+          nombre,
+          club,
+          numero,
+          puntos
+        };
+        if (categoria) resultadoData.categoria = categoria;
+        if (tiempo) resultadoData.tiempo = tiempo;
+        if (posicion !== undefined) resultadoData.posicion = posicion;
+
+        await Resultado.create(resultadoData);
+
         if (club !== CLUB_LOCAL) {
           await PatinadorExterno.findOneAndUpdate(
             { nombre, club, numero, categoria },
             { nombre, club, numero, categoria },
             { upsert: true, new: true }
           );
-          count++;
         }
+        count++;
       }
       fs.unlinkSync(req.file.path);
       res.json({ mensaje: 'Archivo procesado', cantidad: count });
