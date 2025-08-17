@@ -159,6 +159,27 @@ export default function Torneos() {
     }
   };
 
+  const cargarPdfPatinadoresExternos = async (e, compId) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('archivo', file);
+    try {
+      await api.post('/skaters-externos/pdf', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (detalles[compId]?.categoria) {
+        await seleccionarCategoria(compId, detalles[compId].categoria);
+      }
+      alert('PDF procesado correctamente');
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.mensaje || 'Error al procesar PDF');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   const agregarResultado = async (e, compId) => {
     e.preventDefault();
     const { nombre, club, numero, puntos, categoria } = e.target;
@@ -322,16 +343,47 @@ export default function Torneos() {
                                 <td>{p.club}</td>
                                 <td>{p.puntosTotales}</td>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                        {rol === 'Delegado' && (
-                          <>
-                            <form
-                              id={`form-resultado-${c._id}`}
-                              className="row g-2"
-                              onSubmit={(e) => agregarResultado(e, c._id)}
-                            >
+                          ))}
+                        </tbody>
+                      </table>
+                      {detalles[c._id].externos.length > 0 && (
+                        <div className="mt-3">
+                          <h6>Patinadores externos</h6>
+                          <table className="table text-center">
+                            <thead>
+                              <tr>
+                                <th>Nombre</th>
+                                <th>Número</th>
+                                <th>Club</th>
+                                <th>Puntos</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {detalles[c._id].externos.map((p, idx) => (
+                                <tr key={`${p.nombre}-${idx}`}>
+                                  <td>{p.nombre}</td>
+                                  <td>{p.numero ?? ''}</td>
+                                  <td>{p.club}</td>
+                                  <td>{p.puntos ?? ''}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                      {rol === 'Delegado' && (
+                        <>
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            className="form-control mb-2"
+                            onChange={(e) => cargarPdfPatinadoresExternos(e, c._id)}
+                          />
+                          <form
+                            id={`form-resultado-${c._id}`}
+                            className="row g-2"
+                            onSubmit={(e) => agregarResultado(e, c._id)}
+                          >
                               <div className="col-md-2">
                                 <select
                                   name="categoria"
