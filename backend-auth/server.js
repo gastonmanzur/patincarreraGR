@@ -942,7 +942,7 @@ app.get('/api/skaters-externos/:categoria', protegerRuta, async (req, res) => {
     const patinadores = await PatinadorExterno.find({
       categoria: req.params.categoria
     })
-      .select('nombre club numero')
+      .select('nombre club numero puntos')
       .lean();
     res.json(patinadores);
   } catch (err) {
@@ -950,6 +950,60 @@ app.get('/api/skaters-externos/:categoria', protegerRuta, async (req, res) => {
     res.status(500).json({ mensaje: 'Error al obtener patinadores' });
   }
 });
+
+app.post(
+  '/api/skaters-externos/pdf',
+  protegerRuta,
+  permitirRol('Delegado'),
+  upload.single('archivo'),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ mensaje: 'Archivo no proporcionado' });
+    }
+    try {
+      const buffer = fs.readFileSync(req.file.path);
+      const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
+      const data = await pdfParse(buffer);
+      const lines = data.text
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l);
+      let header = false;
+      let count = 0;
+      for (const line of lines) {
+        if (!header) {
+          if (/apellido/i.test(line) && /categoria/i.test(line)) {
+            header = true;
+          }
+          continue;
+        }
+        const parts = line.split(/\s{2,}/).map((p) => p.trim());
+        if (parts.length < 5) continue;
+        const [nombre, categoria, numeroStr, club, puntosStr] = parts;
+        const numero = parseInt(numeroStr, 10);
+        const puntos = parseFloat(puntosStr);
+        if (!nombre || !categoria || !club || isNaN(puntos)) continue;
+        const query = { nombre, club, categoria };
+        const update = { nombre, club, categoria, puntos };
+        if (!isNaN(numero)) {
+          query.numero = numero;
+          update.numero = numero;
+        }
+        await PatinadorExterno.findOneAndUpdate(query, update, {
+          upsert: true,
+          new: true
+        });
+        count++;
+      }
+      fs.unlinkSync(req.file.path);
+      res.json({ mensaje: 'Archivo procesado', cantidad: count });
+    } catch (err) {
+      fs.unlinkSync(req.file.path);
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al procesar el archivo' });
+    }
+  }
+);
 
 app.post(
   '/api/competitions/:id/resultados',
@@ -974,7 +1028,7 @@ app.post(
       if (club !== CLUB_LOCAL) {
         await PatinadorExterno.findOneAndUpdate(
           { nombre, club, numero, categoria },
-          { nombre, club, numero, categoria },
+          { nombre, club, numero, categoria, puntos },
           { upsert: true, new: true }
         );
       }
@@ -1051,7 +1105,7 @@ app.post(
         if (club !== CLUB_LOCAL) {
           await PatinadorExterno.findOneAndUpdate(
             { nombre, club, numero, categoria },
-            { nombre, club, numero, categoria },
+            { nombre, club, numero, categoria, puntos },
             { upsert: true, new: true }
           );
         }
