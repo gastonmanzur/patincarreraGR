@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../api.js';
+import api from '../api';
 import LogoutButton from '../components/LogoutButton';
 
 export default function PanelAdmin() {

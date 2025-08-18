@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api.js';
+import api from '../api';
 
 export default function Home() {
   const [news, setNews] = useState([]);

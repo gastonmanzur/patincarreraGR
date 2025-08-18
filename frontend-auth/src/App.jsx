@@ -14,6 +14,7 @@ import EditarPatinador from './pages/EditarPatinador';
 import AsociarPatinadores from './pages/AsociarPatinadores';
 import Notificaciones from './pages/Notificaciones';
 import CrearNotificacion from './pages/CrearNotificacion';
+import ImportarPuntajesPDF from './pages/ImportarPuntajesPDF';
 
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -53,6 +54,10 @@ function AppRoutes() {
         <Route
           path="/crear-notificacion"
           element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><CrearNotificacion /></ProtectedRoute>}
+        />
+        <Route
+          path="/importar-puntajes"
+          element={<ProtectedRoute roles={['Delegado']}><ImportarPuntajesPDF /></ProtectedRoute>}
         />
         <Route path="/asociar-patinadores" element={<ProtectedRoute><AsociarPatinadores /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><PanelAdmin /></AdminRoute>} />

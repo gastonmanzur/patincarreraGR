@@ -17,8 +17,12 @@ import Notification from './models/Notification.js';
 import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
 import ExcelJS from 'exceljs';
+import importacionesRoutes from './routes/importaciones.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Configurar zona horaria para Argentina
+process.env.TZ = 'America/Argentina/Buenos_Aires';
 
 // Cargar variables de entorno desde .env si está presente
 const envPath = path.resolve('.env');
@@ -51,6 +55,9 @@ if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
 }
 app.use('/uploads', express.static('uploads'));
+
+// Rutas de importación de puntajes desde PDF
+app.use('/api/importaciones/puntajes/pdf', importacionesRoutes);
 
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
