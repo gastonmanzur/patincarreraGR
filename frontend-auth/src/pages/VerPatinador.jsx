@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import api from '../api.js';
+import api from '../api';
 
 export default function VerPatinador() {
   const { id } = useParams();

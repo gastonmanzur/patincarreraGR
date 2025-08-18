@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api.js';
+import api from '../api';
 import LogoutButton from './LogoutButton';
 
 export default function Navbar() {
