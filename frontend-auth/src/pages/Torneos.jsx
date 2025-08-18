@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api.js';
 
 export default function Torneos() {
@@ -336,7 +337,7 @@ export default function Torneos() {
                             </tr>
                           </thead>
                           <tbody>
-                            {(detalles[c._id].tablaPuntos || []).map((p) => (
+                          {(detalles[c._id].tablaPuntos || []).map((p) => (
                               <tr key={`${p.numero}-${p.club}-${p.nombre}`}>
                                 <td>{p.nombre}</td>
                                 <td>{p.numero}</td>
@@ -346,6 +347,14 @@ export default function Torneos() {
                           ))}
                         </tbody>
                       </table>
+                      <div className="mt-2">
+                        <Link
+                          to={`/torneos/${c._id}/tabla-puntos`}
+                          className="btn btn-secondary btn-sm"
+                        >
+                          Ver en página aparte
+                        </Link>
+                      </div>
                       {detalles[c._id].externos.length > 0 && (
                         <div className="mt-3">
                           <h6>Patinadores externos</h6>
