@@ -15,6 +15,7 @@ import AsociarPatinadores from './pages/AsociarPatinadores';
 import Notificaciones from './pages/Notificaciones';
 import CrearNotificacion from './pages/CrearNotificacion';
 import Torneos from './pages/Torneos';
+import TablaPuntos from './pages/TablaPuntos';
 
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -58,7 +59,11 @@ function AppRoutes() {
         <Route path="/asociar-patinadores" element={<ProtectedRoute><AsociarPatinadores /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><PanelAdmin /></AdminRoute>} />
         <Route path="/notificaciones" element={<ProtectedRoute><Notificaciones /></ProtectedRoute>} />
-        <Route path="/torneos" element={<ProtectedRoute><Torneos /></ProtectedRoute>} />
+          <Route path="/torneos" element={<ProtectedRoute><Torneos /></ProtectedRoute>} />
+          <Route
+            path="/torneos/:id/tabla-puntos"
+            element={<ProtectedRoute><TablaPuntos /></ProtectedRoute>}
+          />
       </Routes>
     </>
   );
