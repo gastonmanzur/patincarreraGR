@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import LogoutButton from '../components/LogoutButton';
-import api from '../api.js';
+import api from '../api';
 
 export default function Dashboard() {
   const [rol, setRol] = useState('');

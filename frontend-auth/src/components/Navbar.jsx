@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api.js';
+import api from '../api';
 import LogoutButton from './LogoutButton';
 
 export default function Navbar() {
@@ -65,7 +65,6 @@ export default function Navbar() {
   const navItems = isLoggedIn
     ? [
         { label: 'Inicio', path: '/home' },
-        { label: 'Torneos', path: '/torneos' },
         ...(rol === 'Delegado' || rol === 'Tecnico'
           ? [
               {

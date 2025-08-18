@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '../api.js';
+import api from '../api';
 
 export default function EditarPatinador() {
   const { id } = useParams();

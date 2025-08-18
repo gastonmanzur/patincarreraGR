@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import api from '../api.js';
+import api from '../api';
 
 export default function CargarPatinador() {
   const [mensaje, setMensaje] = useState('');
