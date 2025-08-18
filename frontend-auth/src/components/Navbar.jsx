@@ -65,7 +65,6 @@ export default function Navbar() {
   const navItems = isLoggedIn
     ? [
         { label: 'Inicio', path: '/home' },
-        { label: 'Torneos', path: '/torneos' },
         ...(rol === 'Delegado' || rol === 'Tecnico'
           ? [
               {
