@@ -84,14 +84,30 @@ export default function Competencias() {
               <div>
                 <strong>{c.nombre}</strong> - {new Date(c.fecha).toLocaleDateString()}
               </div>
-              {rol === 'Delegado' && (
+              <div className="d-flex gap-2">
+                {rol === 'Delegado' && (
+                  <>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => navigate(`/competencias/${c._id}/lista`)}
+                    >
+                      Lista Buena Fe
+                    </button>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => navigate(`/competencias/${c._id}/importar-puntajes`)}
+                    >
+                      Importar Puntajes
+                    </button>
+                  </>
+                )}
                 <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => navigate(`/competencias/${c._id}/lista`)}
+                  className="btn btn-info btn-sm"
+                  onClick={() => navigate(`/competencias/${c._id}/resultados`)}
                 >
-                  Lista Buena Fe
+                  Ver Resultados
                 </button>
-              )}
+              </div>
             </li>
           ))}
         </ul>

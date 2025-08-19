@@ -16,6 +16,7 @@ import News from './models/News.js';
 import Notification from './models/Notification.js';
 import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
+import Resultado from './models/Resultado.js';
 import ExcelJS from 'exceljs';
 import importacionesRoutes from './routes/importaciones.js';
 
@@ -579,6 +580,16 @@ app.post(
   }
 );
 
+app.get('/api/competencias', protegerRuta, async (req, res) => {
+  try {
+    const comps = await Competencia.find().sort({ fecha: 1 });
+    res.json(comps);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener competencias' });
+  }
+});
+
 app.get('/api/tournaments/:id/competitions', protegerRuta, async (req, res) => {
   try {
     const comps = await Competencia.find({ torneo: req.params.id }).sort({ fecha: 1 });
@@ -586,6 +597,18 @@ app.get('/api/tournaments/:id/competitions', protegerRuta, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al obtener competencias' });
+  }
+});
+
+app.get('/api/competitions/:id/resultados', protegerRuta, async (req, res) => {
+  try {
+    const resultados = await Resultado.find({ competenciaId: req.params.id })
+      .populate('deportistaId', 'primerNombre segundoNombre apellido')
+      .sort({ categoria: 1, posicion: 1 });
+    res.json(resultados);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener resultados' });
   }
 });
 
