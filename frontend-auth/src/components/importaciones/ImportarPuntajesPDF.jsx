@@ -7,7 +7,6 @@ import usePDFExtraction from '../../hooks/usePDFExtraction.js';
 export default function ImportarPuntajesPDF() {
   const [step, setStep] = useState(1);
   const [competenciaId, setCompetenciaId] = useState(null);
-  const [columnMapping, setColumnMapping] = useState(null);
   const { extraction, loading, error, extract, confirm } = usePDFExtraction();
   const [summary, setSummary] = useState(null);
 
@@ -18,7 +17,6 @@ export default function ImportarPuntajesPDF() {
   };
 
   const handleConfirm = async (mapping) => {
-    setColumnMapping(mapping);
     const res = await confirm({ extractionId: extraction.extractionId, competenciaId, columnMapping: mapping });
     setSummary(res);
     setStep(3);
