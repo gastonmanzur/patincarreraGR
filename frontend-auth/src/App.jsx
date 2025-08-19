@@ -16,6 +16,8 @@ import Notificaciones from './pages/Notificaciones';
 import CrearNotificacion from './pages/CrearNotificacion';
 import ImportarPuntajesPDF from './pages/ImportarPuntajesPDF';
 import Torneos from './pages/Torneos';
+import Competencias from './pages/Competencias';
+import ListaBuenaFe from './pages/ListaBuenaFe';
 
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -31,6 +33,11 @@ function AppRoutes() {
         <Route path="/" element={<Auth />} />
         <Route path="/home" element={<Home />} />
         <Route path="/torneos" element={<ProtectedRoute><Torneos /></ProtectedRoute>} />
+        <Route path="/torneos/:id" element={<ProtectedRoute><Competencias /></ProtectedRoute>} />
+        <Route
+          path="/competencias/:id/lista"
+          element={<ProtectedRoute roles={['Delegado']}><ListaBuenaFe /></ProtectedRoute>}
+        />
         <Route path="/google-success" element={<GoogleSuccess />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route
