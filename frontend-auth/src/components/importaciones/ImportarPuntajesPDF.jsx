@@ -4,9 +4,9 @@ import PasoMapeo from './PasoMapeo.jsx';
 import PasoConfirmacion from './PasoConfirmacion.jsx';
 import usePDFExtraction from '../../hooks/usePDFExtraction.js';
 
-export default function ImportarPuntajesPDF() {
+export default function ImportarPuntajesPDF({ competenciaId: initialCompetenciaId }) {
   const [step, setStep] = useState(1);
-  const [competenciaId, setCompetenciaId] = useState(null);
+  const [competenciaId, setCompetenciaId] = useState(initialCompetenciaId || null);
   const { extraction, loading, error, extract, confirm } = usePDFExtraction();
   const [summary, setSummary] = useState(null);
 
@@ -26,7 +26,7 @@ export default function ImportarPuntajesPDF() {
     <div>
       {loading && <p>Cargando...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
-      {step === 1 && <PasoSubida onSubmit={handleUpload} />}
+      {step === 1 && <PasoSubida onSubmit={handleUpload} defaultCompetenciaId={competenciaId} />}
       {step === 2 && extraction && (
         <PasoMapeo
           detectedColumns={extraction.detectedColumns}

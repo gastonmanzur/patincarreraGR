@@ -18,6 +18,7 @@ import ImportarPuntajesPDF from './pages/ImportarPuntajesPDF';
 import Torneos from './pages/Torneos';
 import Competencias from './pages/Competencias';
 import ListaBuenaFe from './pages/ListaBuenaFe';
+import ResultadosCompetencia from './pages/ResultadosCompetencia';
 
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -37,6 +38,14 @@ function AppRoutes() {
         <Route
           path="/competencias/:id/lista"
           element={<ProtectedRoute roles={['Delegado']}><ListaBuenaFe /></ProtectedRoute>}
+        />
+        <Route
+          path="/competencias/:id/resultados"
+          element={<ProtectedRoute><ResultadosCompetencia /></ProtectedRoute>}
+        />
+        <Route
+          path="/competencias/:id/importar-puntajes"
+          element={<ProtectedRoute roles={['Delegado']}><ImportarPuntajesPDF /></ProtectedRoute>}
         />
         <Route path="/google-success" element={<GoogleSuccess />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
