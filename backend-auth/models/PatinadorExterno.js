@@ -5,7 +5,8 @@ const patinadorExternoSchema = new mongoose.Schema(
     primerNombre: { type: String, required: true },
     segundoNombre: { type: String },
     apellido: { type: String, required: true },
-    club: { type: String, required: true }
+    club: { type: String, required: true },
+    categoria: { type: String, required: true }
   },
   { timestamps: true }
 );

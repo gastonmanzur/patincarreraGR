@@ -354,7 +354,14 @@ app.get('/api/patinadores', async (req, res) => {
 
 app.get('/api/patinadores-externos', protegerRuta, async (req, res) => {
   try {
-    const externos = await PatinadorExterno.find().sort({ apellido: 1, primerNombre: 1 });
+    const filtro = {};
+    if (req.query.categoria) {
+      filtro.categoria = req.query.categoria;
+    }
+    const externos = await PatinadorExterno.find(filtro).sort({
+      apellido: 1,
+      primerNombre: 1
+    });
     res.json(externos);
   } catch (err) {
     console.error(err);
@@ -709,8 +716,12 @@ app.post(
             primerNombre,
             segundoNombre,
             apellido,
-            club
+            club,
+            categoria
           });
+        } else if (ext.categoria !== categoria) {
+          ext.categoria = categoria;
+          await ext.save();
         }
         filtro.invitadoId = ext._id;
       } else {
