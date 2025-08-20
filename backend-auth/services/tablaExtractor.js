@@ -3,16 +3,23 @@
 // Tabla de sinónimos para las columnas
 export const SINONIMOS = {
   // Posición dentro de la competencia (a veces abreviado como "pos")
-  posicion: ['puesto', 'posicion', 'rank', 'pos'],
+  posicion: ['puesto', 'posicion', 'rank', 'pos', 'orden'],
   // Número de atleta o dorsal
   dorsal: ['nº', 'numero', 'n°', 'bib', 'nro', 'nro atleta'],
   // Nombre completo del deportista
-  nombre: ['apellido y nombre', 'apellido y nombres', 'apellidos y nombres', 'nombre'],
+  nombre: [
+    'apellido y nombre',
+    'apellido y nombres',
+    'apellidos y nombres',
+    'apellido y nobres',
+    'apellidos y nobres',
+    'nombre'
+  ],
   categoria: ['categoria', 'cat', 'division', 'div'],
   club: ['club', 'equipo', 'institucion'],
   tiempo: ['tiempo', 'tiempo oficial'],
   // Puntos obtenidos (ptos, pts, score)
-  puntos: ['puntos', 'pts', 'score', 'ptos']
+  puntos: ['puntos', 'pts', 'score', 'ptos', 'ptos total', 'puntos total', 'pts total']
 };
 
 const normalizar = (str = '') =>
@@ -30,7 +37,9 @@ export function mapHeaders(headerRow = []) {
     const limpio = normalizar(col);
     for (const [campo, sinonimos] of Object.entries(SINONIMOS)) {
       if (limpio === campo || sinonimos.includes(limpio)) {
-        mapping[campo] = idx;
+        if (campo === 'puntos' || !(campo in mapping)) {
+          mapping[campo] = idx;
+        }
       }
     }
   });
