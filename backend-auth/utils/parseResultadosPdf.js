@@ -1,4 +1,4 @@
-import pdf from 'pdf-parse';
+import pdf from 'pdf-parse/lib/pdf-parse.js';
 
 function tiempoTextoAMs(t) {
   const match = t.match(/(?:(\d+):)?(\d{1,2})(?:\.(\d{1,3}))?/);
