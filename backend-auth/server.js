@@ -666,7 +666,6 @@ app.post(
           },
           {
             posicion: fila.posicion,
-            tiempoMs: fila.tiempoMs,
             puntos: fila.puntos,
             dorsal: fila.dorsal,
             fuenteImportacion: {

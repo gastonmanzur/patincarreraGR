@@ -373,7 +373,6 @@ export default function ResultadosCompetencia() {
                 <th>Categoría</th>
                 <th>Posición</th>
                 <th>Nombre</th>
-                <th>Tiempo (ms)</th>
                 <th>Puntos</th>
                 <th>N° de patinador</th>
               </tr>
@@ -388,7 +387,6 @@ export default function ResultadosCompetencia() {
                       ? `${r.deportistaId?.primerNombre || ''} ${r.deportistaId?.segundoNombre || ''} ${r.deportistaId?.apellido || ''}`.trim()
                       : `${r.invitadoId?.primerNombre || ''} ${r.invitadoId?.segundoNombre || ''} ${r.invitadoId?.apellido || ''}`.trim()}
                   </td>
-                  <td>{r.tiempoMs}</td>
                   <td>{r.puntos}</td>
                   <td>{r.dorsal}</td>
                 </tr>

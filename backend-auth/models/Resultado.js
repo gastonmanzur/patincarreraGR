@@ -24,7 +24,6 @@ const resultadoSchema = new mongoose.Schema(
     categoria: { type: String, required: true },
     clubId: { type: mongoose.Schema.Types.ObjectId, ref: 'Club' },
     posicion: Number,
-    tiempoMs: Number,
     puntos: Number,
     dorsal: String,
     fuenteImportacion: {
