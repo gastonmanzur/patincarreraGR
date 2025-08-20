@@ -55,7 +55,6 @@ export default function ResultadosCompetencia() {
 
   const [categoria, setCategoria] = useState('');
   const [posicion, setPosicion] = useState('');
-  const [tiempoMs, setTiempoMs] = useState('');
   const [puntos, setPuntos] = useState('');
   const [dorsal, setDorsal] = useState('');
   const [tipo, setTipo] = useState('local');
@@ -108,7 +107,7 @@ export default function ResultadosCompetencia() {
   const agregarManual = async (e) => {
     e.preventDefault();
     try {
-      const payload = { categoria, posicion, tiempoMs, puntos, dorsal };
+      const payload = { categoria, posicion, puntos, dorsal };
       if (tipo === 'local') {
         if (!patinadorId) {
           alert('Seleccione un patinador');
@@ -131,7 +130,6 @@ export default function ResultadosCompetencia() {
       setExternos(resExt.data);
       setCategoria('');
       setPosicion('');
-      setTiempoMs('');
       setPuntos('');
       setDorsal('');
       setPatinadorId('');
@@ -213,15 +211,6 @@ export default function ResultadosCompetencia() {
                 />
               </div>
               <div className="col-md-2">
-                <label className="form-label">Tiempo (ms)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={tiempoMs}
-                  onChange={(e) => setTiempoMs(e.target.value)}
-                />
-              </div>
-              <div className="col-md-2">
                 <label className="form-label">Puntos</label>
                 <input
                   type="number"
@@ -231,11 +220,12 @@ export default function ResultadosCompetencia() {
                 />
               </div>
               <div className="col-md-2">
-                <label className="form-label">Dorsal</label>
+                <label className="form-label">N° de patinador</label>
                 <input
                   className="form-control"
                   value={dorsal}
                   onChange={(e) => setDorsal(e.target.value)}
+                  readOnly={tipo === 'local'}
                 />
               </div>
               <div className="col-12 mt-2">
@@ -273,7 +263,13 @@ export default function ResultadosCompetencia() {
                   <select
                     className="form-select"
                     value={patinadorId}
-                    onChange={(e) => setPatinadorId(e.target.value)}
+                    onChange={(e) => {
+                      setPatinadorId(e.target.value);
+                      const seleccionado = patinadores.find(
+                        (p) => p._id === e.target.value
+                      );
+                      setDorsal(seleccionado ? seleccionado.numeroCorredor : '');
+                    }}
                     required
                   >
                     <option value="">Seleccione patinador</option>
@@ -366,7 +362,7 @@ export default function ResultadosCompetencia() {
                 <th>Nombre</th>
                 <th>Tiempo (ms)</th>
                 <th>Puntos</th>
-                <th>Dorsal</th>
+                <th>N° de patinador</th>
               </tr>
             </thead>
             <tbody>

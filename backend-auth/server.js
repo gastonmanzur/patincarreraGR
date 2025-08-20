@@ -679,7 +679,7 @@ app.post(
   protegerRuta,
   permitirRol('Delegado'),
   async (req, res) => {
-    const { categoria, posicion, tiempoMs, puntos, dorsal, patinadorId, invitado } =
+    const { categoria, posicion, puntos, dorsal, patinadorId, invitado } =
       req.body;
     try {
       const competencia = await Competencia.findById(req.params.id);
@@ -719,7 +719,7 @@ app.post(
           .json({ mensaje: 'Debe proporcionar patinadorId o datos de invitado' });
       }
 
-      const actualizacion = { posicion, tiempoMs, puntos, dorsal };
+      const actualizacion = { posicion, puntos, dorsal };
 
       const resultado = await Resultado.findOneAndUpdate(filtro, actualizacion, {
         upsert: true,
