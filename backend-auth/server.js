@@ -18,7 +18,6 @@ import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
 import ExcelJS from 'exceljs';
-import md5 from 'md5';
 import parseResultadosPdf from './utils/parseResultadosPdf.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -627,7 +626,7 @@ app.post(
       }
       const buffer = fs.readFileSync(req.file.path);
       fs.unlinkSync(req.file.path);
-      const hash = md5(buffer);
+      const hash = crypto.createHash('md5').update(buffer).digest('hex');
       const filas = await parseResultadosPdf(buffer);
       let count = 0;
       for (const fila of filas) {
