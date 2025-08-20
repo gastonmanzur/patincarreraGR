@@ -110,13 +110,19 @@ const ORDEN_CATEGORIAS = [
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
-const ordenarPorCategoria = (lista) => {
-  const pos = (cat) => {
-    const idx = ORDEN_CATEGORIAS.indexOf(cat);
-    return idx === -1 ? ORDEN_CATEGORIAS.length : idx;
-  };
-  return lista.sort((a, b) => pos(a.categoria) - pos(b.categoria));
+const posCategoria = (cat) => {
+  const idx = ORDEN_CATEGORIAS.indexOf(cat);
+  return idx === -1 ? ORDEN_CATEGORIAS.length : idx;
 };
+
+const ordenarPorCategoria = (lista) =>
+  lista.sort((a, b) => posCategoria(a.categoria) - posCategoria(b.categoria));
+
+const ordenarResultados = (lista) =>
+  lista.sort((a, b) => {
+    const diff = posCategoria(a.categoria) - posCategoria(b.categoria);
+    return diff !== 0 ? diff : (b.puntos || 0) - (a.puntos || 0);
+  });
 
 async function crearNotificacionesParaTodos(mensaje, competencia = null) {
   try {
@@ -620,9 +626,8 @@ app.get('/api/competitions/:id/resultados', protegerRuta, async (req, res) => {
   try {
     const resultados = await Resultado.find({ competenciaId: req.params.id })
       .populate('deportistaId', 'primerNombre segundoNombre apellido')
-      .populate('invitadoId', 'primerNombre segundoNombre apellido club')
-      .sort({ categoria: 1, posicion: 1 });
-    res.json(resultados);
+      .populate('invitadoId', 'primerNombre segundoNombre apellido club');
+    res.json(ordenarResultados(resultados));
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al obtener resultados' });
