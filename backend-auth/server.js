@@ -18,6 +18,8 @@ import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
 import ExcelJS from 'exceljs';
+import md5 from 'md5';
+import parseResultadosPdf from './utils/parseResultadosPdf.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -608,6 +610,58 @@ app.get('/api/competitions/:id/resultados', protegerRuta, async (req, res) => {
     res.status(500).json({ mensaje: 'Error al obtener resultados' });
   }
 });
+
+app.post(
+  '/api/competitions/:id/resultados/import-pdf',
+  protegerRuta,
+  permitirRol('Delegado'),
+  upload.single('archivo'),
+  async (req, res) => {
+    try {
+      const competencia = await Competencia.findById(req.params.id);
+      if (!competencia) {
+        return res.status(404).json({ mensaje: 'Competencia no encontrada' });
+      }
+      if (!req.file) {
+        return res.status(400).json({ mensaje: 'Archivo no proporcionado' });
+      }
+      const buffer = fs.readFileSync(req.file.path);
+      fs.unlinkSync(req.file.path);
+      const hash = md5(buffer);
+      const filas = await parseResultadosPdf(buffer);
+      let count = 0;
+      for (const fila of filas) {
+        const patinador = await Patinador.findOne({
+          numeroCorredor: Number(fila.dorsal)
+        });
+        if (!patinador) continue;
+        await Resultado.findOneAndUpdate(
+          {
+            competenciaId: competencia._id,
+            deportistaId: patinador._id,
+            categoria: fila.categoria
+          },
+          {
+            posicion: fila.posicion,
+            tiempoMs: fila.tiempoMs,
+            puntos: fila.puntos,
+            dorsal: fila.dorsal,
+            fuenteImportacion: {
+              archivo: req.file.originalname,
+              hash
+            }
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+        count++;
+      }
+      res.json({ mensaje: 'Importación completada', procesados: count });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al importar resultados' });
+    }
+  }
+);
 
 app.post('/api/competitions/:id/responder', protegerRuta, async (req, res) => {
   const { participa } = req.body;
