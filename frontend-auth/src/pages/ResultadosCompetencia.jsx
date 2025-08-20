@@ -69,6 +69,19 @@ export default function ResultadosCompetencia() {
   const rol = localStorage.getItem('rol');
 
   useEffect(() => {
+    setPatinadorId('');
+    setExternoSeleccionado('');
+  }, [categoria]);
+
+  const patinadoresFiltrados = categoria
+    ? patinadores.filter((p) => p.categoria === categoria)
+    : patinadores;
+
+  const externosFiltrados = categoria
+    ? externos.filter((e) => e.categoria === categoria)
+    : externos;
+
+  useEffect(() => {
     const cargar = async () => {
       try {
         const [resRes, resPat, resExt] = await Promise.all([
@@ -265,7 +278,7 @@ export default function ResultadosCompetencia() {
                     value={patinadorId}
                     onChange={(e) => {
                       setPatinadorId(e.target.value);
-                      const seleccionado = patinadores.find(
+                      const seleccionado = patinadoresFiltrados.find(
                         (p) => p._id === e.target.value
                       );
                       setDorsal(seleccionado ? seleccionado.numeroCorredor : '');
@@ -273,7 +286,7 @@ export default function ResultadosCompetencia() {
                     required
                   >
                     <option value="">Seleccione patinador</option>
-                    {patinadores.map((p) => (
+                    {patinadoresFiltrados.map((p) => (
                       <option key={p._id} value={p._id}>
                         {`${p.primerNombre} ${p.segundoNombre || ''} ${p.apellido}`.trim()}
                       </option>
@@ -288,7 +301,7 @@ export default function ResultadosCompetencia() {
                     onChange={(e) => handleSelectExterno(e.target.value)}
                   >
                     <option value="">Nuevo patinador</option>
-                    {externos.map((ex) => (
+                    {externosFiltrados.map((ex) => (
                       <option key={ex._id} value={ex._id}>
                         {`${ex.primerNombre} ${ex.segundoNombre || ''} ${ex.apellido} - ${ex.club}`.trim()}
                       </option>
