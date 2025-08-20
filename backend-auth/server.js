@@ -17,6 +17,7 @@ import Notification from './models/Notification.js';
 import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
+import PatinadorExterno from './models/PatinadorExterno.js';
 import ExcelJS from 'exceljs';
 import parseResultadosPdf from './utils/parseResultadosPdf.js';
 
@@ -351,6 +352,16 @@ app.get('/api/patinadores', async (req, res) => {
   }
 });
 
+app.get('/api/patinadores-externos', protegerRuta, async (req, res) => {
+  try {
+    const externos = await PatinadorExterno.find().sort({ apellido: 1, primerNombre: 1 });
+    res.json(externos);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener patinadores externos' });
+  }
+});
+
 app.get('/api/patinadores/:id', async (req, res) => {
   try {
     const patinador = await Patinador.findById(req.params.id);
@@ -602,6 +613,7 @@ app.get('/api/competitions/:id/resultados', protegerRuta, async (req, res) => {
   try {
     const resultados = await Resultado.find({ competenciaId: req.params.id })
       .populate('deportistaId', 'primerNombre segundoNombre apellido')
+      .populate('invitadoId', 'primerNombre segundoNombre apellido club')
       .sort({ categoria: 1, posicion: 1 });
     res.json(resultados);
   } catch (err) {
@@ -658,6 +670,67 @@ app.post(
     } catch (err) {
       console.error(err);
       res.status(500).json({ mensaje: 'Error al importar resultados' });
+    }
+  }
+);
+
+app.post(
+  '/api/competitions/:id/resultados/manual',
+  protegerRuta,
+  permitirRol('Delegado'),
+  async (req, res) => {
+    const { categoria, posicion, tiempoMs, puntos, dorsal, patinadorId, invitado } =
+      req.body;
+    try {
+      const competencia = await Competencia.findById(req.params.id);
+      if (!competencia) {
+        return res.status(404).json({ mensaje: 'Competencia no encontrada' });
+      }
+      const filtro = { competenciaId: competencia._id, categoria };
+      if (patinadorId) {
+        const pat = await Patinador.findById(patinadorId);
+        if (!pat) {
+          return res.status(404).json({ mensaje: 'Patinador no encontrado' });
+        }
+        filtro.deportistaId = pat._id;
+      } else if (invitado) {
+        const { primerNombre, segundoNombre, apellido, club } = invitado;
+        if (!primerNombre || !apellido || !club) {
+          return res.status(400).json({ mensaje: 'Datos de invitado incompletos' });
+        }
+        let ext = await PatinadorExterno.findOne({
+          primerNombre,
+          segundoNombre,
+          apellido,
+          club
+        });
+        if (!ext) {
+          ext = await PatinadorExterno.create({
+            primerNombre,
+            segundoNombre,
+            apellido,
+            club
+          });
+        }
+        filtro.invitadoId = ext._id;
+      } else {
+        return res
+          .status(400)
+          .json({ mensaje: 'Debe proporcionar patinadorId o datos de invitado' });
+      }
+
+      const actualizacion = { posicion, tiempoMs, puntos, dorsal };
+
+      const resultado = await Resultado.findOneAndUpdate(filtro, actualizacion, {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true
+      });
+
+      res.json(resultado);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al guardar resultado' });
     }
   }
 );
