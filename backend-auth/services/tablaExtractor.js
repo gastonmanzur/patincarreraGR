@@ -2,13 +2,17 @@
 
 // Tabla de sinónimos para las columnas
 export const SINONIMOS = {
-  posicion: ['puesto', 'posicion', 'rank'],
-  dorsal: ['nº', 'numero', 'n°', 'bib'],
-  nombre: ['apellido y nombre', 'nombre'],
+  // Posición dentro de la competencia (a veces abreviado como "pos")
+  posicion: ['puesto', 'posicion', 'rank', 'pos'],
+  // Número de atleta o dorsal
+  dorsal: ['nº', 'numero', 'n°', 'bib', 'nro', 'nro atleta'],
+  // Nombre completo del deportista
+  nombre: ['apellido y nombre', 'apellido y nombres', 'apellidos y nombres', 'nombre'],
   categoria: ['categoria', 'cat', 'division', 'div'],
   club: ['club', 'equipo', 'institucion'],
   tiempo: ['tiempo', 'tiempo oficial'],
-  puntos: ['puntos', 'pts', 'score']
+  // Puntos obtenidos (ptos, pts, score)
+  puntos: ['puntos', 'pts', 'score', 'ptos']
 };
 
 const normalizar = (str = '') =>
@@ -33,15 +37,22 @@ export function mapHeaders(headerRow = []) {
   return mapping;
 }
 
-// Extrae una tabla simple de texto usando separadores de | o espacios múltiples
+// Extrae una tabla simple de texto usando separadores de `|` o, si no existen,
+// columnas separadas por dos o más espacios. Esto preserva los valores que
+// contienen espacios internos como "Apellido y nombres".
 export function extractTableFromText(text) {
   const lines = text
     .split(/\r?\n/)
-    .map((l) => l.replace(/\s+/g, ' ').trim())
+    .map((l) => l.trim())
     .filter(Boolean);
   if (lines.length === 0) return { headers: [], rows: [] };
-  const delimiter = lines[0].includes('|') ? '|' : ' ';
-  const splitLine = (line) => line.split(delimiter).map((c) => c.trim());
+
+  const usesPipe = lines[0].includes('|');
+  const splitLine = (line) =>
+    usesPipe
+      ? line.split('|').map((c) => c.trim())
+      : line.split(/\s{2,}/).map((c) => c.trim()).filter(Boolean);
+
   const headers = splitLine(lines[0]);
   const rows = lines.slice(1).map(splitLine).filter((r) => r.some(Boolean));
   return { headers, rows };
