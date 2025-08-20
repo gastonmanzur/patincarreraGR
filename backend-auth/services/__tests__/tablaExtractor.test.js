@@ -34,7 +34,7 @@ test('reconoce encabezados abreviados y tabla separada por espacios', () => {
   assert.equal(mapping.nombre, 2);
   assert.equal(mapping.categoria, 3);
   assert.equal(mapping.club, 4);
-  assert.equal(mapping.posicion, 5);
+  assert.equal(mapping.posicion, 0);
   assert.equal(mapping.puntos, 6);
 
   assert.deepEqual(rows[0], [
@@ -46,4 +46,27 @@ test('reconoce encabezados abreviados y tabla separada por espacios', () => {
     '1',
     '10'
   ]);
+});
+
+test('maneja encabezados repetidos y variaciones tipográficas', () => {
+  const headers = [
+    'Orden',
+    'Nro Atleta',
+    'APELLIDO Y NOBRES',
+    'CATEGORIA',
+    'CLUB',
+    'Nro Atleta',
+    'POS',
+    'PTOS',
+    'Nro Atleta',
+    'POS',
+    'PTOS TOTAL'
+  ];
+  const mapping = mapHeaders(headers);
+  assert.equal(mapping.posicion, 0);
+  assert.equal(mapping.dorsal, 1); // primera ocurrencia
+  assert.equal(mapping.nombre, 2);
+  assert.equal(mapping.categoria, 3);
+  assert.equal(mapping.club, 4);
+  assert.equal(mapping.puntos, 10); // columna "PTOS TOTAL"
 });
