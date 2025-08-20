@@ -18,7 +18,6 @@ import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
 import ExcelJS from 'exceljs';
-import importacionesRoutes from './routes/importaciones.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -57,8 +56,6 @@ if (!fs.existsSync('uploads')) {
 }
 app.use('/uploads', express.static('uploads'));
 
-// Rutas de importación de puntajes desde PDF
-app.use('/api/importaciones/puntajes/pdf', importacionesRoutes);
 
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
