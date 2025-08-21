@@ -54,7 +54,6 @@ export default function ResultadosCompetencia() {
   const [archivo, setArchivo] = useState(null);
 
   const [categoria, setCategoria] = useState('');
-  const [posicion, setPosicion] = useState('');
   const [puntos, setPuntos] = useState('');
   const [dorsal, setDorsal] = useState('');
   const [tipo, setTipo] = useState('local');
@@ -120,7 +119,7 @@ export default function ResultadosCompetencia() {
   const agregarManual = async (e) => {
     e.preventDefault();
     try {
-      const payload = { categoria, posicion, puntos, dorsal };
+      const payload = { categoria, puntos, dorsal };
       if (tipo === 'local') {
         if (!patinadorId) {
           alert('Seleccione un patinador');
@@ -142,7 +141,6 @@ export default function ResultadosCompetencia() {
       setResultados(resRes.data);
       setExternos(resExt.data);
       setCategoria('');
-      setPosicion('');
       setPuntos('');
       setDorsal('');
       setPatinadorId('');
@@ -213,15 +211,6 @@ export default function ResultadosCompetencia() {
                     </option>
                   ))}
                 </select>
-              </div>
-              <div className="col-md-2">
-                <label className="form-label">Posición</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={posicion}
-                  onChange={(e) => setPosicion(e.target.value)}
-                />
               </div>
               <div className="col-md-2">
                 <label className="form-label">Puntos</label>
