@@ -47,7 +47,11 @@ const MONGODB_URI =
 
 mongoose
   .connect(MONGODB_URI)
-  .then(() => console.log('MongoDB conectado'))
+  .then(async () => {
+    console.log('MongoDB conectado');
+    // Ensure outdated indexes like `numeroCorredor_1` are removed
+    await PatinadorExterno.syncIndexes();
+  })
   .catch((err) => console.error('Error conectando a MongoDB:', err.message));
 
 const app = express();
