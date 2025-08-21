@@ -142,7 +142,6 @@ export default function ResultadosCompetencia() {
       ]);
       setResultados(resRes.data);
       setExternos(resExt.data);
-      setCategoria('');
       setPuntos('');
       setDorsal('');
       setPatinadorId('');
