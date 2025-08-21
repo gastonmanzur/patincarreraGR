@@ -10,6 +10,7 @@ export default function Navbar() {
   const foto = localStorage.getItem('foto');
   const isLoggedIn = localStorage.getItem('token');
   const [unread, setUnread] = useState(0);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
 
   useEffect(() => {
     let interval;
@@ -32,6 +33,11 @@ export default function Navbar() {
       window.removeEventListener('notificationsUpdated', cargar);
     };
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    document.body.classList.toggle('dark-mode', darkMode);
+    localStorage.setItem('darkMode', darkMode);
+  }, [darkMode]);
 
   const handleNavigate = (path) => navigate(path);
 
@@ -94,7 +100,7 @@ export default function Navbar() {
     : [];
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-light">
+    <nav className="navbar navbar-expand-lg navbar-dark">
       <div className="container">
         <a
           className="navbar-brand d-flex align-items-center"
@@ -161,43 +167,51 @@ export default function Navbar() {
               )
             ))}
           </ul>
-          {isLoggedIn && (
-            <div className="d-flex align-items-center gap-2 ms-auto">
-              <div className="position-relative me-2">
-                <i
-                  className="bi bi-bell"
-                  style={{ fontSize: '1.5rem', color: unread > 0 ? 'red' : 'gray', cursor: 'pointer' }}
-                  onClick={() => handleNavigate('/notificaciones')}
-                ></i>
-                {unread > 0 && (
-                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                    {unread}
-                  </span>
-                )}
-              </div>
-              <div className="position-relative">
-                <img
-                  src={foto || '/default-user.png'}
-                  alt="Foto perfil"
-                  width="40"
-                  height="40"
-                  className="rounded-circle"
-                  style={{ objectFit: 'cover', cursor: foto?.includes('googleusercontent') ? 'default' : 'pointer' }}
-                  onClick={!foto?.includes('googleusercontent') ? triggerFileSelect : undefined}
-                />
-                {!foto?.includes('googleusercontent') && (
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
+          <div className="d-flex align-items-center gap-2 ms-auto">
+            <button
+              className="btn btn-sm btn-outline-light"
+              onClick={() => setDarkMode(!darkMode)}
+            >
+              <i className={`bi ${darkMode ? 'bi-sun' : 'bi-moon'}`}></i>
+            </button>
+            {isLoggedIn && (
+              <>
+                <div className="position-relative me-2">
+                  <i
+                    className="bi bi-bell"
+                    style={{ fontSize: '1.5rem', color: unread > 0 ? 'red' : 'gray', cursor: 'pointer' }}
+                    onClick={() => handleNavigate('/notificaciones')}
+                  ></i>
+                  {unread > 0 && (
+                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                      {unread}
+                    </span>
+                  )}
+                </div>
+                <div className="position-relative">
+                  <img
+                    src={foto || '/default-user.png'}
+                    alt="Foto perfil"
+                    width="40"
+                    height="40"
+                    className="rounded-circle"
+                    style={{ objectFit: 'cover', cursor: foto?.includes('googleusercontent') ? 'default' : 'pointer' }}
+                    onClick={!foto?.includes('googleusercontent') ? triggerFileSelect : undefined}
                   />
-                )}
-              </div>
-              <LogoutButton />
-            </div>
-          )}
+                  {!foto?.includes('googleusercontent') && (
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      style={{ display: 'none' }}
+                      onChange={handleFileChange}
+                    />
+                  )}
+                </div>
+                <LogoutButton />
+              </>
+            )}
+          </div>
         </div>
       </div>
     </nav>
