@@ -49,7 +49,7 @@ mongoose
   .connect(MONGODB_URI)
   .then(async () => {
     console.log('MongoDB conectado');
-    // Ensure outdated indexes like `numeroCorredor_1` are removed
+    // Mantener los índices sincronizados con el esquema actual
     await PatinadorExterno.syncIndexes();
   })
   .catch((err) => console.error('Error conectando a MongoDB:', err.message));
@@ -748,11 +748,20 @@ app.post(
             segundoNombre,
             apellido,
             club,
-            categoria
+            categoria,
+            numeroCorredor: dorsal
           });
-        } else if (ext.categoria !== categoria) {
-          ext.categoria = categoria;
-          await ext.save();
+        } else {
+          let actualizado = false;
+          if (ext.categoria !== categoria) {
+            ext.categoria = categoria;
+            actualizado = true;
+          }
+          if (dorsal && ext.numeroCorredor !== Number(dorsal)) {
+            ext.numeroCorredor = Number(dorsal);
+            actualizado = true;
+          }
+          if (actualizado) await ext.save();
         }
         filtro.invitadoId = ext._id;
       } else {

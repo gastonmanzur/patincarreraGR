@@ -111,8 +111,10 @@ export default function ResultadosCompetencia() {
         apellido: ext.apellido,
         club: ext.club
       });
+      setDorsal(ext.numeroCorredor || '');
     } else {
       setInvitado({ primerNombre: '', segundoNombre: '', apellido: '', club: '' });
+      setDorsal('');
     }
   };
 
