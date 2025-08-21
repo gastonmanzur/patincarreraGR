@@ -57,3 +57,45 @@ body.dark-mode .btn-primary {
   background-color: var(--secondary-color);
   border-color: var(--secondary-color);
 }
+
+/* News card styles */
+.news-card {
+  background-color: #fff;
+}
+
+.news-card .news-title {
+  background-color: #000;
+  color: #fff;
+  padding: 0.5rem 1rem;
+}
+
+.news-card .news-title h5 {
+  margin: 0;
+}
+
+.news-card .news-content {
+  display: flex;
+}
+
+.news-card .news-image,
+.news-card .news-text {
+  flex: 1;
+}
+
+.news-card .news-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.news-card .news-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+}
+
+.news-card .news-footer {
+  padding: 0.5rem 1rem;
+}

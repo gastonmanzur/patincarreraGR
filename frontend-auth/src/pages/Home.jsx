@@ -73,16 +73,24 @@ export default function Home() {
       )}
       <h1 className="mb-4">Noticias</h1>
       {news.map((n) => (
-        <div className="card mb-3" key={n._id}>
-          {n.imagen && <img src={n.imagen} className="card-img-top" alt="imagen noticia" />}
-          <div className="card-body">
-            <h5 className="card-title">{n.titulo}</h5>
-            <p className="card-text">{n.contenido}</p>
-            <p className="card-text">
-              <small className="text-muted">
-                {n.autor} - {new Date(n.fecha).toLocaleDateString()}
-              </small>
-            </p>
+        <div className="card mb-3 news-card" key={n._id}>
+          <div className="news-title">
+            <h5>{n.titulo}</h5>
+          </div>
+          <div className="news-content">
+            {n.imagen && (
+              <div className="news-image">
+                <img src={n.imagen} alt="imagen noticia" />
+              </div>
+            )}
+            <div className="news-text">
+              <p>{n.contenido}</p>
+            </div>
+          </div>
+          <div className="news-footer">
+            <small className="text-muted">
+              {n.autor} - {new Date(n.fecha).toLocaleDateString()}
+            </small>
           </div>
         </div>
       ))}
