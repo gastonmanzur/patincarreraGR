@@ -124,6 +124,29 @@ const ordenarResultados = (lista) =>
     return diff !== 0 ? diff : (b.puntos || 0) - (a.puntos || 0);
   });
 
+const recalcularPosiciones = async (competenciaId, categoria = null) => {
+  const filtro = { competenciaId };
+  if (categoria) filtro.categoria = categoria;
+  const resultados = await Resultado.find(filtro);
+  const porCategoria = resultados.reduce((acc, r) => {
+    acc[r.categoria] = acc[r.categoria] || [];
+    acc[r.categoria].push(r);
+    return acc;
+  }, {});
+  const promesas = [];
+  for (const cat of Object.keys(porCategoria)) {
+    porCategoria[cat]
+      .sort((a, b) => (b.puntos || 0) - (a.puntos || 0))
+      .forEach((r, idx) => {
+        if (r.posicion !== idx + 1) {
+          r.posicion = idx + 1;
+          promesas.push(r.save());
+        }
+      });
+  }
+  await Promise.all(promesas);
+};
+
 async function crearNotificacionesParaTodos(mensaje, competencia = null) {
   try {
     const usuarios = await User.find({}, '_id');
@@ -624,6 +647,7 @@ app.get('/api/tournaments/:id/competitions', protegerRuta, async (req, res) => {
 
 app.get('/api/competitions/:id/resultados', protegerRuta, async (req, res) => {
   try {
+    await recalcularPosiciones(req.params.id);
     const resultados = await Resultado.find({ competenciaId: req.params.id })
       .populate('deportistaId', 'primerNombre segundoNombre apellido')
       .populate('invitadoId', 'primerNombre segundoNombre apellido club');
@@ -665,7 +689,6 @@ app.post(
             categoria: fila.categoria
           },
           {
-            posicion: fila.posicion,
             puntos: fila.puntos,
             dorsal: fila.dorsal,
             fuenteImportacion: {
@@ -677,6 +700,7 @@ app.post(
         );
         count++;
       }
+      await recalcularPosiciones(competencia._id);
       res.json({ mensaje: 'Importación completada', procesados: count });
     } catch (err) {
       console.error(err);
@@ -690,8 +714,7 @@ app.post(
   protegerRuta,
   permitirRol('Delegado'),
   async (req, res) => {
-    const { categoria, posicion, puntos, dorsal, patinadorId, invitado } =
-      req.body;
+    const { categoria, puntos, dorsal, patinadorId, invitado } = req.body;
     try {
       const competencia = await Competencia.findById(req.params.id);
       if (!competencia) {
@@ -734,7 +757,7 @@ app.post(
           .json({ mensaje: 'Debe proporcionar patinadorId o datos de invitado' });
       }
 
-      const actualizacion = { posicion, puntos, dorsal };
+      const actualizacion = { puntos, dorsal };
 
       const resultado = await Resultado.findOneAndUpdate(filtro, actualizacion, {
         upsert: true,
@@ -742,7 +765,9 @@ app.post(
         setDefaultsOnInsert: true
       });
 
-      res.json(resultado);
+      await recalcularPosiciones(competencia._id, categoria);
+      const actualizado = await Resultado.findById(resultado._id);
+      res.json(actualizado);
     } catch (err) {
       console.error(err);
       res.status(500).json({ mensaje: 'Error al guardar resultado' });
