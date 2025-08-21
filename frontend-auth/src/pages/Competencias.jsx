@@ -41,6 +41,35 @@ export default function Competencias() {
     }
   };
 
+  const editarCompetencia = async (comp) => {
+    const nuevoNombre = prompt('Nuevo nombre', comp.nombre);
+    if (!nuevoNombre) return;
+    const nuevaFecha = prompt('Nueva fecha', comp.fecha.slice(0, 10));
+    if (!nuevaFecha) return;
+    try {
+      await api.put(`/competitions/${comp._id}`, {
+        nombre: nuevoNombre,
+        fecha: nuevaFecha
+      });
+      const res = await api.get(`/tournaments/${id}/competitions`);
+      setCompetencias(res.data);
+    } catch (err) {
+      console.error(err);
+      alert('Error al actualizar competencia');
+    }
+  };
+
+  const eliminarCompetencia = async (compId) => {
+    if (!confirm('¿Eliminar competencia?')) return;
+    try {
+      await api.delete(`/competitions/${compId}`);
+      setCompetencias(competencias.filter((c) => c._id !== compId));
+    } catch (err) {
+      console.error(err);
+      alert('Error al eliminar competencia');
+    }
+  };
+
   if (loading) return <div className="container mt-3">Cargando competencias...</div>;
   if (error) return <div className="container mt-3 text-danger">{error}</div>;
 
@@ -86,12 +115,26 @@ export default function Competencias() {
               </div>
               <div className="d-flex gap-2">
                 {rol === 'Delegado' && (
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => navigate(`/competencias/${c._id}/lista`)}
-                  >
-                    Lista Buena Fe
-                  </button>
+                  <>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => navigate(`/competencias/${c._id}/lista`)}
+                    >
+                      Lista Buena Fe
+                    </button>
+                    <button
+                      className="btn btn-warning btn-sm"
+                      onClick={() => editarCompetencia(c)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => eliminarCompetencia(c._id)}
+                    >
+                      Eliminar
+                    </button>
+                  </>
                 )}
                 <button
                   className="btn btn-info btn-sm"

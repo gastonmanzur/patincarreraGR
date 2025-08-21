@@ -607,6 +607,37 @@ app.get('/api/tournaments', protegerRuta, async (req, res) => {
   }
 });
 
+app.put('/api/tournaments/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
+  const { nombre, fechaInicio, fechaFin } = req.body;
+  try {
+    const torneo = await Torneo.findByIdAndUpdate(
+      req.params.id,
+      { nombre, fechaInicio, fechaFin },
+      { new: true, runValidators: true }
+    );
+    if (!torneo) return res.status(404).json({ mensaje: 'Torneo no encontrado' });
+    res.json(torneo);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al actualizar torneo' });
+  }
+});
+
+app.delete('/api/tournaments/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
+  try {
+    const comps = await Competencia.find({ torneo: req.params.id }, '_id');
+    const compIds = comps.map((c) => c._id);
+    await Resultado.deleteMany({ competenciaId: { $in: compIds } });
+    await Competencia.deleteMany({ torneo: req.params.id });
+    const torneo = await Torneo.findByIdAndDelete(req.params.id);
+    if (!torneo) return res.status(404).json({ mensaje: 'Torneo no encontrado' });
+    res.json({ mensaje: 'Torneo eliminado' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al eliminar torneo' });
+  }
+});
+
 app.post(
   '/api/tournaments/:id/competitions',
   protegerRuta,
@@ -646,6 +677,34 @@ app.get('/api/tournaments/:id/competitions', protegerRuta, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al obtener competencias' });
+  }
+});
+
+app.put('/api/competitions/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
+  const { nombre, fecha } = req.body;
+  try {
+    const comp = await Competencia.findByIdAndUpdate(
+      req.params.id,
+      { nombre, fecha },
+      { new: true, runValidators: true }
+    );
+    if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
+    res.json(comp);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al actualizar competencia' });
+  }
+});
+
+app.delete('/api/competitions/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
+  try {
+    await Resultado.deleteMany({ competenciaId: req.params.id });
+    const comp = await Competencia.findByIdAndDelete(req.params.id);
+    if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
+    res.json({ mensaje: 'Competencia eliminada' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al eliminar competencia' });
   }
 });
 

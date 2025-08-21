@@ -42,6 +42,44 @@ export default function Torneos() {
     }
   };
 
+  const editarTorneo = async (torneo) => {
+    const nuevoNombre = prompt('Nuevo nombre', torneo.nombre);
+    if (!nuevoNombre) return;
+    const nuevaFechaInicio = prompt(
+      'Nueva fecha de inicio',
+      torneo.fechaInicio.slice(0, 10)
+    );
+    if (!nuevaFechaInicio) return;
+    const nuevaFechaFin = prompt(
+      'Nueva fecha de fin',
+      torneo.fechaFin.slice(0, 10)
+    );
+    if (!nuevaFechaFin) return;
+    try {
+      await api.put(`/tournaments/${torneo._id}`, {
+        nombre: nuevoNombre,
+        fechaInicio: nuevaFechaInicio,
+        fechaFin: nuevaFechaFin
+      });
+      const res = await api.get('/tournaments');
+      setTorneos(res.data);
+    } catch (err) {
+      console.error(err);
+      alert('Error al actualizar torneo');
+    }
+  };
+
+  const eliminarTorneo = async (id) => {
+    if (!confirm('¿Eliminar torneo?')) return;
+    try {
+      await api.delete(`/tournaments/${id}`);
+      setTorneos(torneos.filter((t) => t._id !== id));
+    } catch (err) {
+      console.error(err);
+      alert('Error al eliminar torneo');
+    }
+  };
+
   if (loading) return <div className="container mt-3">Cargando torneos...</div>;
   if (error) return <div className="container mt-3 text-danger">{error}</div>;
 
@@ -90,19 +128,41 @@ export default function Torneos() {
       ) : (
         <ul className="list-group">
           {torneos.map((t) => (
-            <li key={t._id} className="list-group-item d-flex justify-content-between align-items-center">
+            <li
+              key={t._id}
+              className="list-group-item d-flex justify-content-between align-items-center"
+            >
               <div>
                 <strong>{t.nombre}</strong>
                 <div>
-                  {new Date(t.fechaInicio).toLocaleDateString()} - {new Date(t.fechaFin).toLocaleDateString()}
+                  {new Date(t.fechaInicio).toLocaleDateString()} -
+                  {new Date(t.fechaFin).toLocaleDateString()}
                 </div>
               </div>
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={() => navigate(`/torneos/${t._id}`)}
-              >
-                Ver Competencias
-              </button>
+              <div className="d-flex gap-2">
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => navigate(`/torneos/${t._id}`)}
+                >
+                  Ver Competencias
+                </button>
+                {rol === 'Delegado' && (
+                  <>
+                    <button
+                      className="btn btn-warning btn-sm"
+                      onClick={() => editarTorneo(t)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => eliminarTorneo(t._id)}
+                    >
+                      Eliminar
+                    </button>
+                  </>
+                )}
+              </div>
             </li>
           ))}
         </ul>
