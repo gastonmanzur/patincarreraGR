@@ -63,11 +63,10 @@ body.dark-mode .btn-primary {
   background-color: #fff;
   width: 60vw;
   height: 100vh;
-  margin: 0 auto;
+  margin: 0 auto 1.5rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  margin-bottom: 0 !important;
 }
 
 .news-card .news-title {
@@ -126,7 +125,7 @@ body.dark-mode .btn-primary {
 /* Patinador card styles */
 .patinador-card {
   width: 60vw;
-  margin: 0 auto;
+  margin: 0 auto 1.5rem;
   display: flex;
   flex-direction: row;
   align-items: center;
