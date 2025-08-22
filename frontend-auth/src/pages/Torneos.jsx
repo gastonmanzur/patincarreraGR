@@ -144,7 +144,7 @@ export default function Torneos() {
                   className="btn btn-primary btn-sm"
                   onClick={() => navigate(`/torneos/${t._id}`)}
                 >
-                  Ver Competencias
+                  Ver
                 </button>
                 {rol === 'Delegado' && (
                   <>
