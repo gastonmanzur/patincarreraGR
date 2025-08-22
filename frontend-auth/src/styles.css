@@ -61,16 +61,25 @@ body.dark-mode .btn-primary {
 /* News card styles */
 .news-card {
   background-color: #fff;
+  width: 60vw;
+  height: 100vh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-bottom: 0 !important;
 }
 
 .news-card .news-title {
   background-color: #000;
   color: #fff;
   padding: 0.5rem 1rem;
+  text-align: center;
 }
 
 .news-card .news-title h5 {
   margin: 0;
+  font-size: 1.5rem;
 }
 
 .news-card .news-content {
@@ -94,6 +103,10 @@ body.dark-mode .btn-primary {
   justify-content: center;
   padding: 1rem;
   text-align: center;
+}
+
+.news-card .news-text p {
+  font-size: 1.25rem;
 }
 
 .news-card .news-footer {
