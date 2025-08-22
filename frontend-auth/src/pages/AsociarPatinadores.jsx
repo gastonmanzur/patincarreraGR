@@ -45,20 +45,14 @@ export default function AsociarPatinadores() {
       </form>
       {error && <div className="alert alert-danger">{error}</div>}
       {patinadores.map((p) => (
-        <div className="card mb-3" key={p._id}>
-          <div className="row g-0">
-            {p.foto && (
-              <div className="col-md-4">
-                <img src={p.foto} className="img-fluid rounded-start" alt="foto patinador" />
-              </div>
-            )}
-            <div className="col-md-8">
-              <div className="card-body">
-                <h5 className="card-title">{p.primerNombre} {p.apellido}</h5>
-                <p className="card-text"><strong>Categoría:</strong> {p.categoria}</p>
-                <p className="card-text"><strong>Edad:</strong> {p.edad}</p>
-              </div>
-            </div>
+        <div className="card patinador-card" key={p._id}>
+          {p.foto && (
+            <img src={p.foto} className="card-img-top" alt="foto patinador" />
+          )}
+          <div className="card-body">
+            <h5 className="card-title">{p.primerNombre} {p.apellido}</h5>
+            <p className="card-text"><strong>Categoría:</strong> {p.categoria}</p>
+            <p className="card-text"><strong>Edad:</strong> {p.edad}</p>
           </div>
         </div>
       ))}

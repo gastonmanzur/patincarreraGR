@@ -34,70 +34,63 @@ export default function Home() {
   const tienePatinadores = patinadores.length > 0;
 
   return (
-    <div className="container mt-4">
+    <>
       {localStorage.getItem('token') && !tienePatinadores && (
-        <div className="d-flex justify-content-end mb-3">
-          <Link to="/asociar-patinadores" className="btn btn-primary">
-            Asociar Patinadores
-          </Link>
+        <div className="container mt-4">
+          <div className="d-flex justify-content-end mb-3">
+            <Link to="/asociar-patinadores" className="btn btn-primary">
+              Asociar Patinadores
+            </Link>
+          </div>
         </div>
       )}
       {localStorage.getItem('token') && tienePatinadores && (
         <>
-          <h2 className="mb-4">Patinadores Asociados</h2>
-          <div className="row">
-            {patinadores.map((p) => (
-              <div className="col-12 col-lg-4 mb-3" key={p._id}>
-                <div className="card h-100">
-                  <div className="row g-0">
-                    {p.foto && (
-                      <div className="col-md-4">
-                        <img src={p.foto} className="img-fluid rounded-start" alt="foto patinador" />
-                      </div>
-                    )}
-                    <div className="col-md-8">
-                      <div className="card-body">
-                        <h5 className="card-title">
-                          {p.primerNombre} {p.apellido}
-                        </h5>
-                        <p className="card-text">
-                          <strong>Categoría:</strong> {p.categoria}
-                        </p>
-                        <p className="card-text">
-                          <strong>Edad:</strong> {p.edad}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+          {patinadores.map((p) => (
+            <div className="card patinador-card" key={p._id}>
+              {p.foto && (
+                <img src={p.foto} className="card-img-top" alt="foto patinador" />
+              )}
+              <div className="card-body">
+                <h5 className="card-title">
+                  {p.primerNombre} {p.apellido}
+                </h5>
+                <p className="card-text">
+                  <strong>Categoría:</strong> {p.categoria}
+                </p>
+                <p className="card-text">
+                  <strong>Edad:</strong> {p.edad}
+                </p>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </>
       )}
-      <h1 className="mb-4">Noticias</h1>
-      {news.map((n) => (
-        <div className="card mb-3 news-card" key={n._id}>
-          <div className="news-title">
-            <h5>{n.titulo}</h5>
-          </div>
-          <div className="news-content">
-            {n.imagen && (
-              <div className="news-image">
-                <img src={n.imagen} alt="imagen noticia" />
+      <div className="container mt-4">
+        <h1 className="mb-4">Noticias</h1>
+        {news.map((n) => (
+          <div className="card mb-3 news-card" key={n._id}>
+            <div className="news-title">
+              <h5>{n.titulo}</h5>
+            </div>
+            <div className="news-content">
+              {n.imagen && (
+                <div className="news-image">
+                  <img src={n.imagen} alt="imagen noticia" />
+                </div>
+              )}
+              <div className="news-text">
+                <p>{n.contenido}</p>
               </div>
-            )}
-            <div className="news-text">
-              <p>{n.contenido}</p>
+            </div>
+            <div className="news-footer">
+              <small className="text-muted">
+                {n.autor} - {new Date(n.fecha).toLocaleDateString()}
+              </small>
             </div>
           </div>
-          <div className="news-footer">
-            <small className="text-muted">
-              {n.autor} - {new Date(n.fecha).toLocaleDateString()}
-            </small>
-          </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }
