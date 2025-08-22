@@ -99,3 +99,13 @@ body.dark-mode .btn-primary {
 .news-card .news-footer {
   padding: 0.5rem 1rem;
 }
+
+@media (max-width: 576px) {
+  .news-card .news-content {
+    flex-direction: column;
+  }
+
+  .news-card .news-image {
+    margin-top: 0.5rem;
+  }
+}
