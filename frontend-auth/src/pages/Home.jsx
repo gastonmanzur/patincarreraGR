@@ -45,7 +45,7 @@ export default function Home() {
         </div>
       )}
       {localStorage.getItem('token') && tienePatinadores && (
-        <>
+        <div className="mt-4">
           {patinadores.map((p) => (
             <div className="card patinador-card" key={p._id}>
               {p.foto && (
@@ -64,7 +64,7 @@ export default function Home() {
               </div>
             </div>
           ))}
-        </>
+        </div>
       )}
       <div className="container mt-4">
         <h1 className="mb-4">Noticias</h1>
