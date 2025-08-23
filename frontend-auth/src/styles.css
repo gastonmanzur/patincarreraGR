@@ -44,13 +44,18 @@ body {
 }
 
 body.dark-mode {
-  --bg-color: #000000;
+  --bg-color: #1a1a1a;
   --text-color: #ffffff;
   --card-bg: #1e1e1e;
 }
 
 body.dark-mode .navbar {
-  background-color: #000000 !important;
+  background-color: var(--bg-color) !important;
+}
+
+body.dark-mode .navbar .nav-link,
+body.dark-mode .navbar-brand {
+  color: var(--text-color) !important;
 }
 
 body.dark-mode .btn-primary {
