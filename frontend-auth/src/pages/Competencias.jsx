@@ -120,7 +120,7 @@ export default function Competencias() {
                       className="btn btn-secondary btn-sm"
                       onClick={() => navigate(`/competencias/${c._id}/lista`)}
                     >
-                      Lista Buena Fe
+                      LBF
                     </button>
                     <button
                       className="btn btn-warning btn-sm"
@@ -140,7 +140,7 @@ export default function Competencias() {
                   className="btn btn-info btn-sm"
                   onClick={() => navigate(`/competencias/${c._id}/resultados`)}
                 >
-                  Ver Resultados
+                  VER
                 </button>
               </div>
             </li>
