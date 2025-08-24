@@ -135,6 +135,7 @@ body.dark-mode .btn-primary {
   flex-direction: row;
   align-items: center;
   text-align: left;
+  color: var(--text-color);
 }
 
 .patinador-card img {
@@ -160,8 +161,10 @@ body.dark-mode .btn-primary {
 
 .patinador-card .card-title {
   font-size: 2rem;
+  color: inherit;
 }
 
 .patinador-card .card-text {
   font-size: 1.5rem;
+  color: inherit;
 }
