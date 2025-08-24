@@ -124,7 +124,54 @@ export default function SolicitarSeguro() {
     try {
       const workbook = new ExcelJS.Workbook();
       const sheet = workbook.addWorksheet('Seguros');
+      sheet.addRow([]);
+
+      sheet.mergeCells('A2:F2');
+      const a2 = sheet.getCell('A2');
+      a2.value = 'NO COMPLETAR ESTAS COLUMNAS';
+      a2.font = { name: 'Calibri', size: 14, color: { argb: 'FF000000' } };
+      a2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      a2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } };
+
+      sheet.mergeCells('G2:K2');
+      const g2 = sheet.getCell('G2');
+      g2.value =
+        'COMPLETAR CON TODOS LOS APELLIDOS Y NOMBRES COMO FIGURAN EN EL DNI';
+      g2.font = { name: 'Calibri', size: 14, color: { argb: 'FF000000' } };
+      g2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      g2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00B0F0' } };
+
+      sheet.mergeCells('L2:O2');
+      const l2 = sheet.getCell('L2');
+      l2.value =
+        'SEXO IDENTIFICAR SOLO CON NUMEROS               (1 MASCULINO) - (2 FEMENINO)';
+      l2.font = { name: 'Calibri', size: 14, color: { argb: 'FF000000' } };
+      l2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      l2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00FF00' } };
+
+      sheet.mergeCells('P2:T2');
+      const p2 = sheet.getCell('P2');
+      p2.value =
+        'COMPLETAR CON TODOS LOS APELLIDOS Y NOMBRES COMO FIGURAN EN EL DNI';
+      p2.font = { name: 'Calibri', size: 14, color: { argb: 'FF000000' } };
+      p2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      p2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+
+      const u2 = sheet.getCell('U2');
+      u2.value = 'SEG. ANUAL O               LIC.  PROMOCIONAL O LIC. NACIONAL';
+      u2.font = { name: 'Calibri', size: 14, color: { argb: 'FF000000' } };
+      u2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      u2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC000' } };
+
+      sheet.getRow(2).height = 43.2;
+
       sheet.addRow([
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
         'DNI',
         'CUIL',
         'Apellido',
@@ -141,8 +188,15 @@ export default function SolicitarSeguro() {
         'Telefono',
         'Tipo de seguro'
       ]);
+
       lista.forEach((item) => {
         sheet.addRow([
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
           item.dni,
           item.cuil,
           item.apellido,
