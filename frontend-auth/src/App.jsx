@@ -18,6 +18,7 @@ import Torneos from './pages/Torneos';
 import Competencias from './pages/Competencias';
 import ListaBuenaFe from './pages/ListaBuenaFe';
 import ResultadosCompetencia from './pages/ResultadosCompetencia';
+import SolicitarSeguro from './pages/SolicitarSeguro';
 
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -71,6 +72,10 @@ function AppRoutes() {
         <Route path="/asociar-patinadores" element={<ProtectedRoute><AsociarPatinadores /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><PanelAdmin /></AdminRoute>} />
         <Route path="/notificaciones" element={<ProtectedRoute><Notificaciones /></ProtectedRoute>} />
+        <Route
+          path="/seguros"
+          element={<ProtectedRoute roles={['Delegado']}><SolicitarSeguro /></ProtectedRoute>}
+        />
       </Routes>
     </>
   );
