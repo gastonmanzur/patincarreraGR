@@ -36,6 +36,12 @@ body {
   border: none;
   border-radius: 0.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  color: var(--text-color);
+}
+
+.card-title,
+.card-text {
+  color: var(--text-color);
 }
 
 .btn-primary {
