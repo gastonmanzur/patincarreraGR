@@ -22,6 +22,11 @@ export default function VerPatinador() {
     return <div className="container mt-4">Cargando...</div>;
   }
 
+  const fechaNacimiento = new Date(patinador.fechaNacimiento).toLocaleDateString(
+    'es-AR',
+    { day: '2-digit', month: '2-digit', year: 'numeric' }
+  );
+
   return (
     <div className="container mt-4">
       <h1>
@@ -39,7 +44,7 @@ export default function VerPatinador() {
       <ul className="list-group mb-3">
         <li className="list-group-item">Edad: {patinador.edad}</li>
         <li className="list-group-item">
-          Fecha de Nacimiento: {new Date(patinador.fechaNacimiento).toLocaleDateString()}
+          <strong>Fecha de Nacimiento: {fechaNacimiento}</strong>
         </li>
         <li className="list-group-item">DNI: {patinador.dni}</li>
         <li className="list-group-item">CUIL: {patinador.cuil}</li>
