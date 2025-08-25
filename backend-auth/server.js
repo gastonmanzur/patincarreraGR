@@ -417,6 +417,43 @@ app.get('/api/patinadores/:id', async (req, res) => {
   }
 });
 
+app.post('/api/patinadores/:id/seguro', protegerRuta, async (req, res) => {
+  try {
+    const { tipo } = req.body;
+    if (!['SD', 'SA'].includes(tipo)) {
+      return res.status(400).json({ mensaje: 'Tipo de seguro inválido' });
+    }
+    const patinador = await Patinador.findById(req.params.id);
+    if (!patinador) {
+      return res.status(404).json({ mensaje: 'Patinador no encontrado' });
+    }
+    const anoActual = new Date().getFullYear();
+    const diarias = patinador.historialSeguros.filter(
+      (s) => s.tipo === 'SD' && new Date(s.fecha).getFullYear() === anoActual
+    ).length;
+    const anuales = patinador.historialSeguros.filter(
+      (s) => s.tipo === 'SA' && new Date(s.fecha).getFullYear() === anoActual
+    ).length;
+    if (anuales > 0) {
+      return res
+        .status(400)
+        .json({ mensaje: 'El seguro anual ya fue solicitado este año' });
+    }
+    if (tipo === 'SD' && diarias >= 2) {
+      return res.status(400).json({
+        mensaje: 'El seguro diario solo puede solicitarse dos veces por año'
+      });
+    }
+    patinador.seguro = tipo;
+    patinador.historialSeguros.push({ tipo, fecha: new Date() });
+    await patinador.save();
+    res.json(patinador);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al solicitar el seguro' });
+  }
+});
+
 app.put(
   '/api/patinadores/:id',
   protegerRuta,
