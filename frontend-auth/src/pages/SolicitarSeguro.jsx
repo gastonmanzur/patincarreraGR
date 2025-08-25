@@ -129,7 +129,7 @@ export default function SolicitarSeguro() {
       sheet.mergeCells('A2:F2');
       const a2 = sheet.getCell('A2');
       a2.value = 'NO COMPLETAR ESTAS COLUMNAS';
-      a2.font = { name: 'Calibri', size: 14, color: { argb: 'FF000000' } };
+      a2.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF000000' } };
       a2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       a2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } };
 
@@ -137,7 +137,7 @@ export default function SolicitarSeguro() {
       const g2 = sheet.getCell('G2');
       g2.value =
         'COMPLETAR CON TODOS LOS APELLIDOS Y NOMBRES COMO FIGURAN EN EL DNI';
-      g2.font = { name: 'Calibri', size: 14, color: { argb: 'FF000000' } };
+      g2.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF000000' } };
       g2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       g2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00B0F0' } };
 
@@ -145,7 +145,7 @@ export default function SolicitarSeguro() {
       const l2 = sheet.getCell('L2');
       l2.value =
         'SEXO IDENTIFICAR SOLO CON NUMEROS               (1 MASCULINO) - (2 FEMENINO)';
-      l2.font = { name: 'Calibri', size: 14, color: { argb: 'FF000000' } };
+      l2.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF000000' } };
       l2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       l2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00B050' } };
 
@@ -153,13 +153,13 @@ export default function SolicitarSeguro() {
       const p2 = sheet.getCell('P2');
       p2.value =
         'COMPLETAR CON TODOS LOS APELLIDOS Y NOMBRES COMO FIGURAN EN EL DNI';
-      p2.font = { name: 'Calibri', size: 14, color: { argb: 'FF000000' } };
+      p2.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF000000' } };
       p2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       p2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
       const u2 = sheet.getCell('U2');
       u2.value = 'SEG. ANUAL O               LIC.  PROMOCIONAL O LIC. NACIONAL';
-      u2.font = { name: 'Calibri', size: 14, color: { argb: 'FF000000' } };
+      u2.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF000000' } };
       u2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       u2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC000' } };
 
@@ -229,6 +229,8 @@ export default function SolicitarSeguro() {
         sheet.getColumn(i + 1).width = w;
       });
 
+      sheet.getColumn(11).numFmt = 'dd/mm/yyyy';
+
       lista.forEach((item) => {
         sheet.addRow([
           '',
@@ -241,7 +243,7 @@ export default function SolicitarSeguro() {
           item.cuil,
           item.apellido,
           item.nombres,
-          item.fechaNacimiento,
+          new Date(item.fechaNacimiento),
           item.sexo === 'M' ? 1 : 2,
           item.nacionalidad,
           item.club,
