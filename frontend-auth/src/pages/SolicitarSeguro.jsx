@@ -147,7 +147,7 @@ export default function SolicitarSeguro() {
         'SEXO IDENTIFICAR SOLO CON NUMEROS               (1 MASCULINO) - (2 FEMENINO)';
       l2.font = { name: 'Calibri', size: 14, color: { argb: 'FF000000' } };
       l2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-      l2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00FF00' } };
+      l2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF006400' } };
 
       sheet.mergeCells('P2:T2');
       const p2 = sheet.getCell('P2');
@@ -253,6 +253,17 @@ export default function SolicitarSeguro() {
           item.telefono,
           item.tipoSeguro
         ]);
+      });
+
+      sheet.eachRow({ includeEmpty: true }, (row) => {
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
       });
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
