@@ -24,6 +24,12 @@ const patinadorSchema = new mongoose.Schema(
       enum: ['S/S', 'SA', 'SD'],
       default: 'S/S'
     },
+    historialSeguros: [
+      {
+        tipo: { type: String, enum: ['SD', 'SA'], required: true },
+        fecha: { type: Date, default: Date.now }
+      }
+    ],
     numeroCorredor: { type: Number, required: true, unique: true },
     categoria: { type: String, required: true },
     fotoRostro: { type: String },

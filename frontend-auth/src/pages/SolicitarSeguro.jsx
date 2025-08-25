@@ -31,34 +31,46 @@ export default function SolicitarSeguro() {
     cargar();
   }, []);
 
-  const agregarPatinador = () => {
+  const agregarPatinador = async () => {
     if (!seleccion || !tipoSeguroPatinador) return;
     const pat = patinadores.find((p) => p._id === seleccion);
     if (!pat) return;
     if (lista.some((i) => i._id === pat._id)) return;
-    setLista([
-      ...lista,
-      {
-        _id: pat._id,
-        dni: pat.dni,
-        cuil: pat.cuil,
-        apellido: pat.apellido,
-        nombres: `${pat.primerNombre}${pat.segundoNombre ? ' ' + pat.segundoNombre : ''}`,
-        fechaNacimiento: new Date(pat.fechaNacimiento).toISOString().split('T')[0],
-        sexo: pat.sexo,
-        nacionalidad: 'Argentina',
-        club: 'General Rodriguez',
-        funcion: 'Patinador',
-        domicilio: pat.direccion,
-        codigoPostal: '1748',
-        localidad: 'General Rodriguez',
-        provincia: 'BS. AS',
-        telefono: pat.telefono,
-        tipoSeguro: tipoSeguroPatinador
-      }
-    ]);
-    setSeleccion('');
-    setTipoSeguroPatinador('');
+    try {
+      const { data } = await api.post(`/patinadores/${pat._id}/seguro`, {
+        tipo: tipoSeguroPatinador
+      });
+      setPatinadores((prev) =>
+        prev.map((p) => (p._id === data._id ? data : p))
+      );
+      setLista([
+        ...lista,
+        {
+          _id: data._id,
+          dni: data.dni,
+          cuil: data.cuil,
+          apellido: data.apellido,
+          nombres: `${data.primerNombre}${data.segundoNombre ? ' ' + data.segundoNombre : ''}`,
+          fechaNacimiento: new Date(data.fechaNacimiento)
+            .toISOString()
+            .split('T')[0],
+          sexo: data.sexo,
+          nacionalidad: 'Argentina',
+          club: 'General Rodriguez',
+          funcion: 'Patinador',
+          domicilio: data.direccion,
+          codigoPostal: '1748',
+          localidad: 'General Rodriguez',
+          provincia: 'BS. AS',
+          telefono: data.telefono,
+          tipoSeguro: tipoSeguroPatinador
+        }
+      ]);
+      setSeleccion('');
+      setTipoSeguroPatinador('');
+    } catch (err) {
+      alert(err.response?.data?.mensaje || 'Error al solicitar seguro');
+    }
   };
 
   const agregarDelegado = (e) => {
