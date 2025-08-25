@@ -19,6 +19,11 @@ const patinadorSchema = new mongoose.Schema(
       enum: ['Escuela', 'Transicion', 'Intermedia', 'Federados'],
       required: true
     },
+    seguro: {
+      type: String,
+      enum: ['S/S', 'SA', 'SD'],
+      default: 'S/S'
+    },
     numeroCorredor: { type: Number, required: true, unique: true },
     categoria: { type: String, required: true },
     fotoRostro: { type: String },

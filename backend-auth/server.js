@@ -324,6 +324,7 @@ app.post(
         telefono,
         sexo,
         nivel,
+        seguro,
         numeroCorredor,
         categoria
       } = req.body;
@@ -345,6 +346,7 @@ app.post(
         telefono,
         sexo,
         nivel,
+        seguro,
         numeroCorredor,
         categoria,
         fotoRostro: fotoRostroFile

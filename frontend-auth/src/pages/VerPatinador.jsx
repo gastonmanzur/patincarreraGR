@@ -54,6 +54,7 @@ export default function VerPatinador() {
         <li className="list-group-item">Teléfono: {patinador.telefono}</li>
         <li className="list-group-item">Sexo: {patinador.sexo}</li>
         <li className="list-group-item">Nivel: {patinador.nivel}</li>
+        <li className="list-group-item">Seguro: {patinador.seguro}</li>
         <li className="list-group-item">
           Número de Corredor: {patinador.numeroCorredor}
         </li>
