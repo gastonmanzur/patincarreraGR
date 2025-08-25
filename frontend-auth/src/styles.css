@@ -23,6 +23,11 @@ body {
   color: var(--bg-color) !important;
 }
 
+/* Logo styling */
+.navbar-brand img {
+  border: 1px solid #000;
+}
+
 .dropdown-menu {
   background-color: var(--card-bg);
 }
