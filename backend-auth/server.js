@@ -1071,7 +1071,7 @@ app.get(
       lista.forEach((p, idx) => {
         const row = sheet.getRow(rowNum++);
         row.getCell(1).value = idx + 1;
-        row.getCell(2).value = 'SA';
+        row.getCell(2).value = p.seguro;
         row.getCell(3).value = p.numeroCorredor;
         row.getCell(4).value = `${p.apellido} ${p.primerNombre}`;
         row.getCell(5).value = p.categoria;
