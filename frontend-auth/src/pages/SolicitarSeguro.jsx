@@ -147,7 +147,7 @@ export default function SolicitarSeguro() {
         'SEXO IDENTIFICAR SOLO CON NUMEROS               (1 MASCULINO) - (2 FEMENINO)';
       l2.font = { name: 'Calibri', size: 14, color: { argb: 'FF000000' } };
       l2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-      l2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF006400' } };
+      l2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00B050' } };
 
       sheet.mergeCells('P2:T2');
       const p2 = sheet.getCell('P2');
