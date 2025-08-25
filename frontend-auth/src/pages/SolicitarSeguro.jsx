@@ -165,29 +165,69 @@ export default function SolicitarSeguro() {
 
       sheet.getRow(2).height = 43.2;
 
-      sheet.addRow([
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
+      const headerRow = sheet.getRow(3);
+      headerRow.values = [
+        'seguro',
+        'CAP',
+        'FA',
+        'DNI',
+        'FM',
+        'Legajo',
         'DNI',
         'CUIL',
-        'Apellido',
-        'Nombres',
-        'Fecha de nacimiento',
+        'APELLIDO/S',
+        'NOMBRES',
+        'F. Nac',
         'Sexo',
         'Nacionalidad',
         'Club',
-        'Funcion',
+        'Función',
         'Domicilio',
-        'Codigo postal',
+        'CP',
         'Localidad',
         'Provincia',
-        'Telefono',
-        'Tipo de seguro'
-      ]);
+        'Teléfono',
+        'Tipo Lic. O Seg.'
+      ];
+      headerRow.eachCell((cell, col) => {
+        cell.font = { name: 'Arial', size: 11, bold: true };
+        if (col === 6) {
+          cell.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFF0000' } };
+        }
+        if (col >= 7) {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFFFF00' }
+          };
+        }
+      });
+      const widths = [
+        2.89,
+        2.89,
+        2.89,
+        2.89,
+        2.89,
+        2.89,
+        11.22,
+        13.89,
+        23.67,
+        34.89,
+        11.78,
+        6.22,
+        12.67,
+        18.22,
+        10.33,
+        23,
+        7.56,
+        15.89,
+        14.67,
+        13.11,
+        18.67
+      ];
+      widths.forEach((w, i) => {
+        sheet.getColumn(i + 1).width = w;
+      });
 
       lista.forEach((item) => {
         sheet.addRow([
