@@ -5,6 +5,8 @@ import api from '../api';
 export default function Home() {
   const [news, setNews] = useState([]);
   const [patinadores, setPatinadores] = useState([]);
+  const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
+  const [currentPatIndex, setCurrentPatIndex] = useState(0);
 
   useEffect(() => {
     const cargarNoticias = async () => {
@@ -31,11 +33,34 @@ export default function Home() {
     }
   }, []);
 
-  const tienePatinadores = patinadores.length > 0;
+  useEffect(() => {
+    if (news.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentNewsIndex((prev) => (prev + 5) % news.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [news]);
+
+  useEffect(() => {
+    if (patinadores.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentPatIndex((prev) => (prev + 1) % patinadores.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [patinadores]);
+
+  const displayedNews = [];
+  for (let i = 0; i < 5 && i < news.length; i += 1) {
+    displayedNews.push(news[(currentNewsIndex + i) % news.length]);
+  }
+
+  const currentPatinador = patinadores[currentPatIndex];
 
   return (
     <>
-      {localStorage.getItem('token') && !tienePatinadores && (
+      {localStorage.getItem('token') && patinadores.length === 0 && (
         <div className="container mt-4">
           <div className="d-flex justify-content-end mb-3">
             <Link to="/asociar-patinadores" className="btn btn-primary">
@@ -44,52 +69,78 @@ export default function Home() {
           </div>
         </div>
       )}
-      {localStorage.getItem('token') && tienePatinadores && (
-        <div className="mt-4">
-          {patinadores.map((p) => (
-            <div className="card patinador-card" key={p._id}>
-              {p.foto && (
-                <img src={p.foto} className="card-img-top" alt="foto patinador" />
-              )}
-              <div className="card-body">
-                <h5 className="card-title">
-                  {p.primerNombre} {p.apellido}
-                </h5>
-                <p className="card-text">
-                  <strong>Categoría:</strong> {p.categoria}
-                </p>
-                <p className="card-text">
-                  <strong>Edad:</strong> {p.edad}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
       <div className="container mt-4">
         <h1 className="mb-4">Noticias</h1>
-        {news.map((n) => (
-          <div className="card mb-3 news-card" key={n._id}>
-            <div className="news-title">
-              <h5>{n.titulo}</h5>
-            </div>
-            <div className="news-content">
-              {n.imagen && (
-                <div className="news-image">
-                  <img src={n.imagen} alt="imagen noticia" />
-                </div>
+        <div className="news-grid">
+          {displayedNews[0] && (
+            <div className="news-item large" key={displayedNews[0]._id}>
+              {displayedNews[0].imagen && (
+                <img src={displayedNews[0].imagen} alt="imagen noticia" />
               )}
-              <div className="news-text">
-                <p>{n.contenido}</p>
+              <div className="overlay">
+                <h5>{displayedNews[0].titulo}</h5>
               </div>
             </div>
-            <div className="news-footer">
-              <small className="text-muted">
-                {n.autor} - {new Date(n.fecha).toLocaleDateString()}
-              </small>
+          )}
+          {displayedNews[1] && (
+            <div className="news-item top-right" key={displayedNews[1]._id}>
+              {displayedNews[1].imagen && (
+                <img src={displayedNews[1].imagen} alt="imagen noticia" />
+              )}
+              <div className="overlay">
+                <h6>{displayedNews[1].titulo}</h6>
+              </div>
             </div>
+          )}
+          <div className="patinadores-card middle-right">
+            {currentPatinador ? (
+              <>
+                {currentPatinador.foto && (
+                  <img src={currentPatinador.foto} alt="foto patinador" />
+                )}
+                <div className="overlay">
+                  <h6>
+                    {currentPatinador.primerNombre} {currentPatinador.apellido}
+                  </h6>
+                </div>
+              </>
+            ) : (
+              <div className="overlay">
+                <p>No hay patinadores asociados</p>
+              </div>
+            )}
           </div>
-        ))}
+          {displayedNews[2] && (
+            <div className="news-item bottom-left" key={displayedNews[2]._id}>
+              {displayedNews[2].imagen && (
+                <img src={displayedNews[2].imagen} alt="imagen noticia" />
+              )}
+              <div className="overlay">
+                <h6>{displayedNews[2].titulo}</h6>
+              </div>
+            </div>
+          )}
+          {displayedNews[3] && (
+            <div className="news-item bottom-middle" key={displayedNews[3]._id}>
+              {displayedNews[3].imagen && (
+                <img src={displayedNews[3].imagen} alt="imagen noticia" />
+              )}
+              <div className="overlay">
+                <h6>{displayedNews[3].titulo}</h6>
+              </div>
+            </div>
+          )}
+          {displayedNews[4] && (
+            <div className="news-item bottom-right" key={displayedNews[4]._id}>
+              {displayedNews[4].imagen && (
+                <img src={displayedNews[4].imagen} alt="imagen noticia" />
+              )}
+              <div className="overlay">
+                <h6>{displayedNews[4].titulo}</h6>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
