@@ -1243,8 +1243,74 @@ app.get(
     }
   }
 );
+// ---- RANKINGS ----
 
+app.get('/api/tournaments/:id/ranking/individual', protegerRuta, async (req, res) => {
+  try {
+    const comps = await Competencia.find({ torneo: req.params.id }, '_id');
+    const compIds = comps.map((c) => c._id);
+    const resultados = await Resultado.find({ competenciaId: { $in: compIds } })
+      .populate('deportistaId', 'primerNombre segundoNombre apellido')
+      .populate('invitadoId', 'primerNombre segundoNombre apellido')
+      .populate('clubId', 'nombre');
+    const agrupado = {};
+    for (const r of resultados) {
+      const categoria = r.categoria;
+      const persona = r.deportistaId || r.invitadoId;
+      if (!persona) continue;
+      const id = String(persona._id);
+      if (!agrupado[categoria]) agrupado[categoria] = {};
+      if (!agrupado[categoria][id]) {
+        const nombre = `${persona.primerNombre}${
+          persona.segundoNombre ? ` ${persona.segundoNombre}` : ''
+        } ${persona.apellido}`;
+        agrupado[categoria][id] = {
+          id,
+          nombre,
+          puntos: 0,
+          club: r.clubId ? { _id: r.clubId._id, nombre: r.clubId.nombre } : null
+        };
+      }
+      agrupado[categoria][id].puntos += r.puntos || 0;
+    }
+    const respuesta = Object.keys(agrupado)
+      .sort((a, b) => posCategoria(a) - posCategoria(b))
+      .map((cat) => ({
+        categoria: cat,
+        patinadores: Object.values(agrupado[cat]).sort(
+          (a, b) => b.puntos - a.puntos
+        )
+      }));
+    res.json(respuesta);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener ranking individual' });
+  }
+});
 
+app.get('/api/tournaments/:id/ranking/club', protegerRuta, async (req, res) => {
+  try {
+    const comps = await Competencia.find({ torneo: req.params.id }, '_id');
+    const compIds = comps.map((c) => c._id);
+    const resultados = await Resultado.find({
+      competenciaId: { $in: compIds },
+      clubId: { $ne: null }
+    }).populate('clubId', 'nombre');
+    const ranking = {};
+    for (const r of resultados) {
+      const cid = String(r.clubId._id);
+      if (!ranking[cid]) {
+        ranking[cid] = { club: r.clubId, puntos: 0 };
+      }
+      ranking[cid].puntos += r.puntos || 0;
+    }
+    const respuesta = Object.values(ranking).sort((a, b) => b.puntos - a.puntos);
+    res.json(respuesta);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener ranking por club' });
+  }
+});
 
 // Inicio de sesión con Google (OAuth 2.0 sin dependencias externas)
 app.get('/api/auth/google', (req, res) => {

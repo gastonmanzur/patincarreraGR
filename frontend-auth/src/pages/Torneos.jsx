@@ -146,6 +146,12 @@ export default function Torneos() {
                 >
                   Ver
                 </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => navigate(`/torneos/${t._id}/ranking`)}
+                >
+                  Ranking
+                </button>
                 {rol === 'Delegado' && (
                   <>
                     <button
