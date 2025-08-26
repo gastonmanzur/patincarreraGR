@@ -184,7 +184,7 @@ body.dark-mode .btn-primary {
 .news-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(2, 200px);
+  grid-template-rows: 200px auto;
   gap: 1rem;
 }
 
@@ -241,4 +241,49 @@ body.dark-mode .btn-primary {
 .news-item.bottom-right {
   grid-column: 4;
   grid-row: 2;
+}
+
+/* Bottom row news card styles */
+.news-item .image-container {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+}
+
+.news-item .news-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 25%;
+  height: 30px;
+  background: #003366;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+  clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%);
+}
+
+.news-item .news-label-line {
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  width: 75%;
+  height: 3px;
+  background: #003366;
+}
+
+.news-item .news-info {
+  padding-top: 0.5rem;
+}
+
+.news-item .news-info h6 {
+  margin: 0 0 0.25rem 0;
+}
+
+.news-item .news-info p {
+  margin: 0;
+  font-size: 0.875rem;
 }
