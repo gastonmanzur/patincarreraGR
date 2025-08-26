@@ -50,6 +50,15 @@ body {
   color: var(--text-color);
 }
 
+.card-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.card-text {
+  margin-top: 0.5rem;
+}
+
 .btn-primary {
   background-color: var(--secondary-color);
   border-color: var(--secondary-color);
