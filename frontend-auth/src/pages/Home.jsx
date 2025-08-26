@@ -74,12 +74,17 @@ export default function Home() {
         <div className="news-grid">
           {displayedNews[0] && (
             <div className="news-item large" key={displayedNews[0]._id}>
-              {displayedNews[0].imagen && (
-                <img src={displayedNews[0].imagen} alt="imagen noticia" />
-              )}
-              <div className="overlay">
+              <div className="top-news-text">
+                <div className="news-label-top">NOTICIA</div>
+                <div className="news-label-top-line" />
                 <h5>{displayedNews[0].titulo}</h5>
+                <p>{displayedNews[0].contenido?.slice(0, 100)}...</p>
               </div>
+              {displayedNews[0].imagen && (
+                <div className="top-news-image">
+                  <img src={displayedNews[0].imagen} alt="imagen noticia" />
+                </div>
+              )}
             </div>
           )}
           <div className="patinadores-card top-right">
