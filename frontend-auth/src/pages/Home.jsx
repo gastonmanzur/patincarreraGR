@@ -82,17 +82,7 @@ export default function Home() {
               </div>
             </div>
           )}
-          {displayedNews[1] && (
-            <div className="news-item top-right" key={displayedNews[1]._id}>
-              {displayedNews[1].imagen && (
-                <img src={displayedNews[1].imagen} alt="imagen noticia" />
-              )}
-              <div className="overlay">
-                <h6>{displayedNews[1].titulo}</h6>
-              </div>
-            </div>
-          )}
-          <div className="patinadores-card middle-right">
+          <div className="patinadores-card top-right">
             {currentPatinador ? (
               <>
                 {currentPatinador.foto && (
@@ -110,8 +100,18 @@ export default function Home() {
               </div>
             )}
           </div>
+          {displayedNews[1] && (
+            <div className="news-item bottom-left" key={displayedNews[1]._id}>
+              {displayedNews[1].imagen && (
+                <img src={displayedNews[1].imagen} alt="imagen noticia" />
+              )}
+              <div className="overlay">
+                <h6>{displayedNews[1].titulo}</h6>
+              </div>
+            </div>
+          )}
           {displayedNews[2] && (
-            <div className="news-item bottom-left" key={displayedNews[2]._id}>
+            <div className="news-item bottom-middle-left" key={displayedNews[2]._id}>
               {displayedNews[2].imagen && (
                 <img src={displayedNews[2].imagen} alt="imagen noticia" />
               )}
@@ -121,7 +121,7 @@ export default function Home() {
             </div>
           )}
           {displayedNews[3] && (
-            <div className="news-item bottom-middle" key={displayedNews[3]._id}>
+            <div className="news-item bottom-middle-right" key={displayedNews[3]._id}>
               {displayedNews[3].imagen && (
                 <img src={displayedNews[3].imagen} alt="imagen noticia" />
               )}
