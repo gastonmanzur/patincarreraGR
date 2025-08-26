@@ -103,40 +103,60 @@ export default function Home() {
           {displayedNews[1] && (
             <div className="news-item bottom-left" key={displayedNews[1]._id}>
               {displayedNews[1].imagen && (
-                <img src={displayedNews[1].imagen} alt="imagen noticia" />
+                <div className="image-container">
+                  <img src={displayedNews[1].imagen} alt="imagen noticia" />
+                  <div className="news-label">NOTICIA</div>
+                  <div className="news-label-line" />
+                </div>
               )}
-              <div className="overlay">
+              <div className="news-info">
                 <h6>{displayedNews[1].titulo}</h6>
+                <p>{displayedNews[1].contenido?.slice(0, 80)}...</p>
               </div>
             </div>
           )}
           {displayedNews[2] && (
             <div className="news-item bottom-middle-left" key={displayedNews[2]._id}>
               {displayedNews[2].imagen && (
-                <img src={displayedNews[2].imagen} alt="imagen noticia" />
+                <div className="image-container">
+                  <img src={displayedNews[2].imagen} alt="imagen noticia" />
+                  <div className="news-label">NOTICIA</div>
+                  <div className="news-label-line" />
+                </div>
               )}
-              <div className="overlay">
+              <div className="news-info">
                 <h6>{displayedNews[2].titulo}</h6>
+                <p>{displayedNews[2].contenido?.slice(0, 80)}...</p>
               </div>
             </div>
           )}
           {displayedNews[3] && (
             <div className="news-item bottom-middle-right" key={displayedNews[3]._id}>
               {displayedNews[3].imagen && (
-                <img src={displayedNews[3].imagen} alt="imagen noticia" />
+                <div className="image-container">
+                  <img src={displayedNews[3].imagen} alt="imagen noticia" />
+                  <div className="news-label">NOTICIA</div>
+                  <div className="news-label-line" />
+                </div>
               )}
-              <div className="overlay">
+              <div className="news-info">
                 <h6>{displayedNews[3].titulo}</h6>
+                <p>{displayedNews[3].contenido?.slice(0, 80)}...</p>
               </div>
             </div>
           )}
           {displayedNews[4] && (
             <div className="news-item bottom-right" key={displayedNews[4]._id}>
               {displayedNews[4].imagen && (
-                <img src={displayedNews[4].imagen} alt="imagen noticia" />
+                <div className="image-container">
+                  <img src={displayedNews[4].imagen} alt="imagen noticia" />
+                  <div className="news-label">NOTICIA</div>
+                  <div className="news-label-line" />
+                </div>
               )}
-              <div className="overlay">
+              <div className="news-info">
                 <h6>{displayedNews[4].titulo}</h6>
+                <p>{displayedNews[4].contenido?.slice(0, 80)}...</p>
               </div>
             </div>
           )}
