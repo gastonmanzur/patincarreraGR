@@ -271,7 +271,7 @@ body.dark-mode .btn-primary {
   justify-content: center;
   font-size: 0.75rem;
   font-weight: bold;
-  clip-path: polygon(35% 0, 100% 0, 100% 100%, 0 100%);
+  clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 100%, 0 100%);
 }
 
 .news-item .news-label-line {
