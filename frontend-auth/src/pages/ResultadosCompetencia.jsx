@@ -49,6 +49,7 @@ export default function ResultadosCompetencia() {
   const [resultados, setResultados] = useState([]);
   const [patinadores, setPatinadores] = useState([]);
   const [externos, setExternos] = useState([]);
+  const [clubes, setClubes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [archivo, setArchivo] = useState(null);
@@ -83,14 +84,16 @@ export default function ResultadosCompetencia() {
   useEffect(() => {
     const cargar = async () => {
       try {
-        const [resRes, resPat, resExt] = await Promise.all([
+        const [resRes, resPat, resExt, resClubs] = await Promise.all([
           api.get(`/competitions/${id}/resultados`),
           api.get('/patinadores'),
-          api.get('/patinadores-externos')
+          api.get('/patinadores-externos'),
+          api.get('/clubs')
         ]);
         setResultados(resRes.data);
         setPatinadores(resPat.data);
         setExternos(resExt.data);
+        setClubes(resClubs.data);
       } catch (err) {
         console.error(err);
         setError('Error al cargar resultados');
@@ -136,12 +139,14 @@ export default function ResultadosCompetencia() {
         payload.invitado = invitado;
       }
       await api.post(`/competitions/${id}/resultados/manual`, payload);
-      const [resRes, resExt] = await Promise.all([
+      const [resRes, resExt, resClubs] = await Promise.all([
         api.get(`/competitions/${id}/resultados`),
-        api.get('/patinadores-externos')
+        api.get('/patinadores-externos'),
+        api.get('/clubs')
       ]);
       setResultados(resRes.data);
       setExternos(resExt.data);
+      setClubes(resClubs.data);
       setPuntos('');
       setDorsal('');
       setPatinadorId('');
@@ -334,12 +339,18 @@ export default function ResultadosCompetencia() {
                       <input
                         className="form-control"
                         placeholder="Club"
+                        list="lista-clubes"
                         value={invitado.club}
                         onChange={(e) =>
                           setInvitado({ ...invitado, club: e.target.value })
                         }
                         required
                       />
+                      <datalist id="lista-clubes">
+                        {clubes.map((c) => (
+                          <option key={c._id} value={c.nombre} />
+                        ))}
+                      </datalist>
                     </div>
                   </div>
                 </div>
