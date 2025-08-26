@@ -18,6 +18,7 @@ import Torneo from './models/Torneo.js';
 import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
 import PatinadorExterno from './models/PatinadorExterno.js';
+import Club from './models/Club.js';
 import ExcelJS from 'exceljs';
 import parseResultadosPdf from './utils/parseResultadosPdf.js';
 
@@ -401,6 +402,16 @@ app.get('/api/patinadores-externos', protegerRuta, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al obtener patinadores externos' });
+  }
+});
+
+app.get('/api/clubs', protegerRuta, async (req, res) => {
+  try {
+    const clubs = await Club.find().sort({ nombre: 1 });
+    res.json(clubs);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener clubes' });
   }
 });
 
@@ -840,6 +851,7 @@ app.post(
         return res.status(404).json({ mensaje: 'Competencia no encontrada' });
       }
       const filtro = { competenciaId: competencia._id, categoria };
+      let clubDoc;
       if (patinadorId) {
         const pat = await Patinador.findById(patinadorId);
         if (!pat) {
@@ -851,18 +863,23 @@ app.post(
         if (!primerNombre || !apellido || !club) {
           return res.status(400).json({ mensaje: 'Datos de invitado incompletos' });
         }
+        const clubNombre = club.trim().toUpperCase();
+        clubDoc = await Club.findOne({ nombre: clubNombre });
+        if (!clubDoc) {
+          clubDoc = await Club.create({ nombre: clubNombre });
+        }
         let ext = await PatinadorExterno.findOne({
           primerNombre,
           segundoNombre,
           apellido,
-          club
+          club: clubNombre
         });
         if (!ext) {
           ext = await PatinadorExterno.create({
             primerNombre,
             segundoNombre,
             apellido,
-            club,
+            club: clubNombre,
             categoria,
             numeroCorredor: dorsal
           });
@@ -886,6 +903,9 @@ app.post(
       }
 
       const actualizacion = { puntos, dorsal };
+      if (clubDoc) {
+        actualizacion.clubId = clubDoc._id;
+      }
 
       const resultado = await Resultado.findOneAndUpdate(filtro, actualizacion, {
         upsert: true,

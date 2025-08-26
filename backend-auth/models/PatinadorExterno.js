@@ -17,4 +17,11 @@ patinadorExternoSchema.index(
   { unique: true }
 );
 
+patinadorExternoSchema.pre('save', function (next) {
+  if (this.club) {
+    this.club = this.club.trim().toUpperCase();
+  }
+  next();
+});
+
 export default mongoose.model('PatinadorExterno', patinadorExternoSchema);
