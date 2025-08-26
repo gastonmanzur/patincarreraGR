@@ -620,6 +620,21 @@ app.put('/api/notifications/:id/read', protegerRuta, async (req, res) => {
   }
 });
 
+app.delete('/api/notifications/:id', protegerRuta, permitirRol('Delegado', 'Tecnico'), async (req, res) => {
+  try {
+    const notif = await Notification.findById(req.params.id);
+    if (!notif) return res.status(404).json({ mensaje: 'Notificación no encontrada' });
+    if (String(notif.destinatario) !== req.usuario.id) {
+      return res.status(403).json({ mensaje: 'No autorizado' });
+    }
+    await Notification.deleteMany({ mensaje: notif.mensaje, leido: false });
+    res.json({ mensaje: 'Notificaciones eliminadas' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al eliminar notificaciones' });
+  }
+});
+
 // ---- TORNEOS Y COMPETENCIAS ----
 
 app.post('/api/tournaments', protegerRuta, permitirRol('Delegado'), async (req, res) => {
@@ -738,6 +753,8 @@ app.put('/api/competitions/:id', protegerRuta, permitirRol('Delegado'), async (r
 app.delete('/api/competitions/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
   try {
     await Resultado.deleteMany({ competenciaId: req.params.id });
+    // Elimina notificaciones no leídas asociadas a la competencia
+    await Notification.deleteMany({ competencia: req.params.id, leido: false });
     const comp = await Competencia.findByIdAndDelete(req.params.id);
     if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
     res.json({ mensaje: 'Competencia eliminada' });
