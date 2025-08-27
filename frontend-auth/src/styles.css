@@ -343,6 +343,8 @@ body.dark-mode .btn-primary {
   width: 20px;
   height: 20px;
   object-fit: contain;
+  border-radius: 50%;
+  border: 1px solid #ccc;
 }
 
 /* Top news card styles */
@@ -430,7 +432,7 @@ body.dark-mode .btn-primary {
 
 .mini-news-card {
   display: flex;
-  background-color: var(--card-bg);
+  background-color: #EBEBEB;
   border-radius: 0.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   text-decoration: none;
@@ -461,9 +463,11 @@ body.dark-mode .btn-primary {
 }
 
 .mini-news-logo {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   object-fit: contain;
+  border-radius: 50%;
+  border: 1px solid #ccc;
 }
 
 .mini-news-info h6 {
