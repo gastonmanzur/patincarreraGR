@@ -1,7 +1,7 @@
 :root {
   --primary-color: #007bff;
   --secondary-color: #28a745;
-  --bg-color: #ffffff;
+  --bg-color: #EBEBEB;
   --text-color: #000000;
   --card-bg: #ffffff;
 }
@@ -417,7 +417,66 @@ body.dark-mode .btn-primary {
     height: auto;
   }
 
-  .news-item.large .top-news-image {
+.news-item.large .top-news-image {
     height: 200px;
+  }
+}
+
+/* Mini news cards */
+.mini-news-container {
+  display: flex;
+  gap: 1rem;
+}
+
+.mini-news-card {
+  display: flex;
+  background-color: var(--card-bg);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+  color: inherit;
+  flex: 1;
+}
+
+.mini-news-card img {
+  width: 40%;
+  object-fit: cover;
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+}
+
+.mini-news-info {
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+}
+
+.mini-news-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.mini-news-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.mini-news-info h6 {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .mini-news-container {
+    flex-direction: column;
+  }
+
+  .mini-news-card img {
+    width: 30%;
   }
 }
