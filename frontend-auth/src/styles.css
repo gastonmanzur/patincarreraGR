@@ -193,7 +193,7 @@ body.dark-mode .btn-primary {
 .news-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: 630px auto;
+  grid-template-rows: 400px auto;
   gap: 1rem;
   align-items: start;
 }
@@ -279,7 +279,7 @@ body.dark-mode .btn-primary {
   grid-column: 4;
   grid-row: 2;
   height: 200px;
-  align-self: end;
+  align-self: start;
 }
 
 /* Bottom row news card styles */
