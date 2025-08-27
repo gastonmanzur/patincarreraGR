@@ -217,6 +217,7 @@ body.dark-mode .btn-primary {
   cursor: pointer;
   text-decoration: none;
   color: inherit;
+  background-color: #fff;
 }
 
 .news-item:hover {
@@ -428,6 +429,8 @@ body.dark-mode .btn-primary {
 .mini-news-container {
   display: flex;
   gap: 1rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 
 .mini-news-card {
