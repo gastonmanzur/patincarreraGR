@@ -224,7 +224,7 @@ export default function Home() {
           )}
         </div>
       </div>
-      <div className="container mt-4">
+      <div className="container mt-5 mb-5">
         <div className="mini-news-container">
           {latestNews.map((item) => (
             <Link
