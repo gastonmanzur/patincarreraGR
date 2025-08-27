@@ -73,7 +73,11 @@ export default function Home() {
         <h1 className="mb-4">Noticias</h1>
         <div className="news-grid">
           {displayedNews[0] && (
-            <div className="news-item large" key={displayedNews[0]._id}>
+            <Link
+              to={`/noticias/${displayedNews[0]._id}`}
+              className="news-item large"
+              key={displayedNews[0]._id}
+            >
               <div className="top-news-text">
                 <div className="news-label-top">NOTICIA</div>
                 <div className="news-label-top-line" />
@@ -85,7 +89,7 @@ export default function Home() {
                   <img src={displayedNews[0].imagen} alt="imagen noticia" />
                 </div>
               )}
-            </div>
+            </Link>
           )}
           <div className="patinadores-card top-right">
             {currentPatinador ? (
@@ -106,7 +110,11 @@ export default function Home() {
             )}
           </div>
           {displayedNews[1] && (
-            <div className="news-item bottom-left" key={displayedNews[1]._id}>
+            <Link
+              to={`/noticias/${displayedNews[1]._id}`}
+              className="news-item bottom-left"
+              key={displayedNews[1]._id}
+            >
               {displayedNews[1].imagen && (
                 <div className="image-container">
                   <img src={displayedNews[1].imagen} alt="imagen noticia" />
@@ -120,17 +128,21 @@ export default function Home() {
                 <div className="news-divider" />
                 <div className="news-footer">
                   <img
-                    src="/APM.png"
+                    src="/vite.svg"
                     alt="logo patín carrera"
                     className="news-footer-logo"
                   />
                   <span>Patín carrera General Rodríguez</span>
                 </div>
               </div>
-            </div>
+            </Link>
           )}
           {displayedNews[2] && (
-            <div className="news-item bottom-middle-left" key={displayedNews[2]._id}>
+            <Link
+              to={`/noticias/${displayedNews[2]._id}`}
+              className="news-item bottom-middle-left"
+              key={displayedNews[2]._id}
+            >
               {displayedNews[2].imagen && (
                 <div className="image-container">
                   <img src={displayedNews[2].imagen} alt="imagen noticia" />
@@ -144,17 +156,21 @@ export default function Home() {
                 <div className="news-divider" />
                 <div className="news-footer">
                   <img
-                    src="/APM.png"
+                    src="/vite.svg"
                     alt="logo patín carrera"
                     className="news-footer-logo"
                   />
                   <span>Patín carrera General Rodríguez</span>
                 </div>
               </div>
-            </div>
+            </Link>
           )}
           {displayedNews[3] && (
-            <div className="news-item bottom-middle-right" key={displayedNews[3]._id}>
+            <Link
+              to={`/noticias/${displayedNews[3]._id}`}
+              className="news-item bottom-middle-right"
+              key={displayedNews[3]._id}
+            >
               {displayedNews[3].imagen && (
                 <div className="image-container">
                   <img src={displayedNews[3].imagen} alt="imagen noticia" />
@@ -168,17 +184,21 @@ export default function Home() {
                 <div className="news-divider" />
                 <div className="news-footer">
                   <img
-                    src="/APM.png"
+                    src="/vite.svg"
                     alt="logo patín carrera"
                     className="news-footer-logo"
                   />
                   <span>Patín carrera General Rodríguez</span>
                 </div>
               </div>
-            </div>
+            </Link>
           )}
           {displayedNews[4] && (
-            <div className="news-item bottom-right" key={displayedNews[4]._id}>
+            <Link
+              to={`/noticias/${displayedNews[4]._id}`}
+              className="news-item bottom-right"
+              key={displayedNews[4]._id}
+            >
               {displayedNews[4].imagen && (
                 <div className="image-container">
                   <img src={displayedNews[4].imagen} alt="imagen noticia" />
@@ -192,14 +212,14 @@ export default function Home() {
                 <div className="news-divider" />
                 <div className="news-footer">
                   <img
-                    src="/APM.png"
+                    src="/vite.svg"
                     alt="logo patín carrera"
                     className="news-footer-logo"
                   />
                   <span>Patín carrera General Rodríguez</span>
                 </div>
               </div>
-            </div>
+            </Link>
           )}
         </div>
       </div>
