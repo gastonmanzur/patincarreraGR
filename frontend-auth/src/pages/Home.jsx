@@ -117,6 +117,15 @@ export default function Home() {
               <div className="news-info">
                 <h6>{displayedNews[1].titulo}</h6>
                 <p>{displayedNews[1].contenido?.slice(0, 80)}...</p>
+                <div className="news-divider" />
+                <div className="news-footer">
+                  <img
+                    src="/APM.png"
+                    alt="logo patín carrera"
+                    className="news-footer-logo"
+                  />
+                  <span>Patín carrera General Rodríguez</span>
+                </div>
               </div>
             </div>
           )}
@@ -132,6 +141,15 @@ export default function Home() {
               <div className="news-info">
                 <h6>{displayedNews[2].titulo}</h6>
                 <p>{displayedNews[2].contenido?.slice(0, 80)}...</p>
+                <div className="news-divider" />
+                <div className="news-footer">
+                  <img
+                    src="/APM.png"
+                    alt="logo patín carrera"
+                    className="news-footer-logo"
+                  />
+                  <span>Patín carrera General Rodríguez</span>
+                </div>
               </div>
             </div>
           )}
@@ -147,6 +165,15 @@ export default function Home() {
               <div className="news-info">
                 <h6>{displayedNews[3].titulo}</h6>
                 <p>{displayedNews[3].contenido?.slice(0, 80)}...</p>
+                <div className="news-divider" />
+                <div className="news-footer">
+                  <img
+                    src="/APM.png"
+                    alt="logo patín carrera"
+                    className="news-footer-logo"
+                  />
+                  <span>Patín carrera General Rodríguez</span>
+                </div>
               </div>
             </div>
           )}
@@ -162,6 +189,15 @@ export default function Home() {
               <div className="news-info">
                 <h6>{displayedNews[4].titulo}</h6>
                 <p>{displayedNews[4].contenido?.slice(0, 80)}...</p>
+                <div className="news-divider" />
+                <div className="news-footer">
+                  <img
+                    src="/APM.png"
+                    alt="logo patín carrera"
+                    className="news-footer-logo"
+                  />
+                  <span>Patín carrera General Rodríguez</span>
+                </div>
               </div>
             </div>
           )}
