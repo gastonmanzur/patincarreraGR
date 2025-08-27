@@ -216,13 +216,14 @@ export default function Home() {
           )}
           {nextCompetition && (
             <div className="news-item bottom-right">
-              {nextCompetition.imagen && (
-                <div className="image-container">
-                  <img src={nextCompetition.imagen} alt="imagen competencia" />
-                  <div className="news-label">COMPETENCIA</div>
-                  <div className="news-label-line" />
-                </div>
-              )}
+              <div className="image-container">
+                <img
+                  src={nextCompetition.imagen || '/vite.svg'}
+                  alt="imagen competencia"
+                />
+                <div className="news-label">COMPETENCIA</div>
+                <div className="news-label-line" />
+              </div>
               <div className="news-info">
                 <h6>{nextCompetition.nombre}</h6>
                 <p>{new Date(nextCompetition.fecha).toLocaleDateString()}</p>
