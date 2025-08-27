@@ -193,7 +193,7 @@ body.dark-mode .btn-primary {
 .news-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: 450px auto;
+  grid-template-rows: 630px auto;
   gap: 1rem;
 }
 
@@ -256,7 +256,7 @@ body.dark-mode .btn-primary {
 .patinadores-card.top-right {
   grid-column: 4;
   grid-row: 1;
-  height: 630px; /* 40% taller to showcase skater photos */
+  height: 100%;
 }
 
 .news-item.bottom-left {
@@ -356,7 +356,7 @@ body.dark-mode .btn-primary {
 /* Top news card styles */
 .news-item.large {
   display: flex;
-  height: 450px;
+  height: 100%;
 }
 
 .news-item.large .top-news-text {
@@ -481,6 +481,13 @@ body.dark-mode .btn-primary {
 .mini-news-info h6 {
   margin: 0.25rem 0 0;
   font-size: 0.875rem;
+}
+
+.competencia-img {
+  width: 80px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 0.25rem;
 }
 
 @media (max-width: 768px) {
