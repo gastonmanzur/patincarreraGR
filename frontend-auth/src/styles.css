@@ -209,6 +209,7 @@ body.dark-mode .btn-primary {
 
 .news-item {
   overflow: visible;
+  border: 1px solid #003366;
 }
 
 .news-item img,
@@ -306,6 +307,26 @@ body.dark-mode .btn-primary {
 .news-item .news-info p {
   margin: 0;
   font-size: 0.875rem;
+}
+
+.news-item .news-info .news-divider {
+  margin-top: 0.5rem;
+  height: 1px;
+  background: #003366;
+  width: 100%;
+}
+
+.news-item .news-info .news-footer {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.news-item .news-info .news-footer-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
 }
 
 /* Top news card styles */
