@@ -256,7 +256,7 @@ body.dark-mode .btn-primary {
 .patinadores-card.top-right {
   grid-column: 4;
   grid-row: 1;
-  height: 450px;
+  height: 630px; /* 40% taller to showcase skater photos */
 }
 
 .news-item.bottom-left {
