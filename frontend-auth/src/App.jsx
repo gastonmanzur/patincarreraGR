@@ -20,6 +20,7 @@ import ListaBuenaFe from './pages/ListaBuenaFe';
 import ResultadosCompetencia from './pages/ResultadosCompetencia';
 import SolicitarSeguro from './pages/SolicitarSeguro';
 import RankingTorneo from './pages/RankingTorneo';
+import VerNoticia from './pages/VerNoticia';
 
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -34,6 +35,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Auth />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/noticias/:id" element={<VerNoticia />} />
         <Route path="/torneos" element={<ProtectedRoute><Torneos /></ProtectedRoute>} />
         <Route path="/torneos/:id" element={<ProtectedRoute><Competencias /></ProtectedRoute>} />
         <Route
