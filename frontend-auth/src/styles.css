@@ -399,3 +399,25 @@ body.dark-mode .btn-primary {
   height: 5px;
   background: #003366;
 }
+
+@media (max-width: 768px) {
+  .news-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .news-item,
+  .patinadores-card {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+
+  .news-item.large {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .news-item.large .top-news-image {
+    height: 200px;
+  }
+}
