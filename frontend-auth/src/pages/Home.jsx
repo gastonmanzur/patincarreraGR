@@ -57,6 +57,7 @@ export default function Home() {
   }
 
   const currentPatinador = patinadores[currentPatIndex];
+  const latestNews = news.slice(0, 4);
 
   return (
     <>
@@ -221,6 +222,36 @@ export default function Home() {
               </div>
             </Link>
           )}
+        </div>
+      </div>
+      <div className="container mt-4">
+        <div className="mini-news-container">
+          {latestNews.map((item) => (
+            <Link
+              key={item._id}
+              to={`/noticias/${item._id}`}
+              className="mini-news-card"
+            >
+              {item.imagen && (
+                <img src={item.imagen} alt="imagen noticia" />
+              )}
+              <div className="mini-news-info">
+                <div className="mini-news-header">
+                  <img
+                    src="/vite.svg"
+                    alt="logo patín carrera"
+                    className="mini-news-logo"
+                  />
+                  <span>Patín carrera General Rodríguez</span>
+                </div>
+                <h6>
+                  {item.titulo.length > 60
+                    ? `${item.titulo.slice(0, 60)}...`
+                    : item.titulo}
+                </h6>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </>
