@@ -120,8 +120,13 @@ export default function Competencias() {
         <ul className="list-group">
           {competencias.map((c) => (
             <li key={c._id} className="list-group-item d-flex justify-content-between align-items-center">
-              <div>
-                <strong>{c.nombre}</strong> - {new Date(c.fecha).toLocaleDateString()}
+              <div className="d-flex align-items-center gap-3">
+                {c.imagen && (
+                  <img src={c.imagen} alt="imagen competencia" className="competencia-img" />
+                )}
+                <div>
+                  <strong>{c.nombre}</strong> - {new Date(c.fecha).toLocaleDateString()}
+                </div>
               </div>
               <div className="d-flex gap-2">
                 {rol === 'Delegado' && (
