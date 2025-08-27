@@ -193,7 +193,7 @@ body.dark-mode .btn-primary {
 .news-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: 400px auto;
+  grid-template-rows: 450px auto;
   gap: 1rem;
 }
 
@@ -256,6 +256,7 @@ body.dark-mode .btn-primary {
 .patinadores-card.top-right {
   grid-column: 4;
   grid-row: 1;
+  height: 450px;
 }
 
 .news-item.bottom-left {
@@ -276,9 +277,13 @@ body.dark-mode .btn-primary {
 .news-item.bottom-right {
   grid-column: 4;
   grid-row: 2;
+  height: 200px;
 }
 
 /* Bottom row news card styles */
+.news-item.bottom-right .image-container {
+  height: 100px;
+}
 .news-item .image-container {
   position: relative;
   height: 200px;
@@ -351,7 +356,7 @@ body.dark-mode .btn-primary {
 /* Top news card styles */
 .news-item.large {
   display: flex;
-  height: 400px;
+  height: 450px;
 }
 
 .news-item.large .top-news-text {
