@@ -278,6 +278,7 @@ body.dark-mode .btn-primary {
   grid-column: 4;
   grid-row: 2;
   height: 200px;
+  align-self: end;
 }
 
 /* Bottom row news card styles */
