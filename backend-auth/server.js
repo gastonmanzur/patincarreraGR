@@ -565,6 +565,32 @@ app.get('/api/news', async (req, res) => {
   }
 });
 
+app.get('/api/news/:id', async (req, res) => {
+  try {
+    const noticia = await News.findById(req.params.id).populate(
+      'autor',
+      'nombre apellido'
+    );
+    if (!noticia) {
+      return res.status(404).json({ mensaje: 'Noticia no encontrada' });
+    }
+    const respuesta = {
+      _id: noticia._id,
+      titulo: noticia.titulo,
+      contenido: noticia.contenido,
+      imagen: noticia.imagen,
+      autor: noticia.autor
+        ? `${noticia.autor.nombre} ${noticia.autor.apellido}`
+        : 'Anónimo',
+      fecha: noticia.fecha
+    };
+    res.json(respuesta);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener la noticia' });
+  }
+});
+
 app.post(
   '/api/news',
   protegerRuta,
