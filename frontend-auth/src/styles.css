@@ -193,7 +193,7 @@ body.dark-mode .btn-primary {
 .news-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: 200px auto;
+  grid-template-rows: 400px auto;
   gap: 1rem;
 }
 
@@ -311,7 +311,7 @@ body.dark-mode .btn-primary {
 /* Top news card styles */
 .news-item.large {
   display: flex;
-  height: 200px;
+  height: 400px;
 }
 
 .news-item.large .top-news-text {
@@ -325,7 +325,7 @@ body.dark-mode .btn-primary {
 }
 
 .news-item.large .top-news-image {
-  flex: 2;
+  flex: 1.5;
   height: 100%;
 }
 
