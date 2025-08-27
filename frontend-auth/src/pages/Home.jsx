@@ -217,10 +217,9 @@ export default function Home() {
           {nextCompetition && (
             <div className="news-item bottom-right">
               <div className="image-container">
-                <img
-                  src={nextCompetition.imagen || '/vite.svg'}
-                  alt="imagen competencia"
-                />
+                {nextCompetition.imagen && (
+                  <img src={nextCompetition.imagen} alt="imagen competencia" />
+                )}
                 <div className="news-label">COMPETENCIA</div>
                 <div className="news-label-line" />
               </div>
