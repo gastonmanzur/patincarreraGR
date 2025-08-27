@@ -30,9 +30,16 @@ export default function Competencias() {
   const crearCompetencia = async (e) => {
     e.preventDefault();
     try {
-      await api.post(`/tournaments/${id}/competitions`, { nombre, fecha });
+      const formData = new FormData();
+      formData.append('nombre', nombre);
+      formData.append('fecha', fecha);
+      if (e.target.imagen.files[0]) {
+        formData.append('imagen', e.target.imagen.files[0]);
+      }
+      await api.post(`/tournaments/${id}/competitions`, formData);
       setNombre('');
       setFecha('');
+      e.target.imagen.value = '';
       const res = await api.get(`/tournaments/${id}/competitions`);
       setCompetencias(res.data);
     } catch (err) {
@@ -77,8 +84,8 @@ export default function Competencias() {
     <div className="container mt-3">
       <h2>Competencias</h2>
       {rol === 'Delegado' && (
-        <form onSubmit={crearCompetencia} className="row g-2 mb-3">
-          <div className="col-md-5">
+        <form onSubmit={crearCompetencia} className="row g-2 mb-3" encType="multipart/form-data">
+          <div className="col-md-4">
             <input
               type="text"
               className="form-control"
@@ -88,7 +95,7 @@ export default function Competencias() {
               required
             />
           </div>
-          <div className="col-md-4">
+          <div className="col-md-3">
             <input
               type="date"
               className="form-control"
@@ -98,6 +105,9 @@ export default function Competencias() {
             />
           </div>
           <div className="col-md-3">
+            <input type="file" name="imagen" className="form-control" accept="image/*" />
+          </div>
+          <div className="col-md-2">
             <button type="submit" className="btn btn-primary w-100">
               Crear
             </button>

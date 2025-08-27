@@ -7,6 +7,7 @@ export default function Home() {
   const [patinadores, setPatinadores] = useState([]);
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
   const [currentPatIndex, setCurrentPatIndex] = useState(0);
+  const [nextCompetition, setNextCompetition] = useState(null);
 
   useEffect(() => {
     const cargarNoticias = async () => {
@@ -27,16 +28,35 @@ export default function Home() {
       }
     };
 
+    const cargarCompetencia = async () => {
+      try {
+        const compRes = await api.get('/competencias');
+        const comps = compRes.data;
+        if (comps.length > 0) {
+          const now = new Date();
+          const upcoming = comps.filter((c) => new Date(c.fecha) >= now);
+          if (upcoming.length > 0) {
+            setNextCompetition(upcoming[0]);
+          } else {
+            setNextCompetition(comps[comps.length - 1]);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
     cargarNoticias();
     if (localStorage.getItem('token')) {
       cargarPatinadores();
     }
+    cargarCompetencia();
   }, []);
 
   useEffect(() => {
     if (news.length > 0) {
       const interval = setInterval(() => {
-        setCurrentNewsIndex((prev) => (prev + 5) % news.length);
+        setCurrentNewsIndex((prev) => (prev + 4) % news.length);
       }, 5000);
       return () => clearInterval(interval);
     }
@@ -52,7 +72,7 @@ export default function Home() {
   }, [patinadores]);
 
   const displayedNews = [];
-  for (let i = 0; i < 5 && i < news.length; i += 1) {
+  for (let i = 0; i < 4 && i < news.length; i += 1) {
     displayedNews.push(news[(currentNewsIndex + i) % news.length]);
   }
 
@@ -194,22 +214,18 @@ export default function Home() {
               </div>
             </Link>
           )}
-          {displayedNews[4] && (
-            <Link
-              to={`/noticias/${displayedNews[4]._id}`}
-              className="news-item bottom-right"
-              key={displayedNews[4]._id}
-            >
-              {displayedNews[4].imagen && (
+          {nextCompetition && (
+            <div className="news-item bottom-right">
+              {nextCompetition.imagen && (
                 <div className="image-container">
-                  <img src={displayedNews[4].imagen} alt="imagen noticia" />
-                  <div className="news-label">NOTICIA</div>
+                  <img src={nextCompetition.imagen} alt="imagen competencia" />
+                  <div className="news-label">COMPETENCIA</div>
                   <div className="news-label-line" />
                 </div>
               )}
               <div className="news-info">
-                <h6>{displayedNews[4].titulo}</h6>
-                <p>{displayedNews[4].contenido?.slice(0, 80)}...</p>
+                <h6>{nextCompetition.nombre}</h6>
+                <p>{new Date(nextCompetition.fecha).toLocaleDateString()}</p>
                 <div className="news-divider" />
                 <div className="news-footer">
                   <img
@@ -220,7 +236,7 @@ export default function Home() {
                   <span>Patín carrera General Rodríguez</span>
                 </div>
               </div>
-            </Link>
+            </div>
           )}
         </div>
       </div>

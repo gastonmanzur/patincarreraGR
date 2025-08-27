@@ -733,6 +733,7 @@ app.post(
   '/api/tournaments/:id/competitions',
   protegerRuta,
   permitirRol('Delegado'),
+  upload.single('imagen'),
   async (req, res) => {
     const { nombre, fecha } = req.body;
     if (!nombre || !fecha) {
@@ -741,7 +742,15 @@ app.post(
     try {
       const torneo = await Torneo.findById(req.params.id);
       if (!torneo) return res.status(404).json({ mensaje: 'Torneo no encontrado' });
-      const competencia = await Competencia.create({ nombre, fecha, torneo: torneo._id });
+      const imagen = req.file
+        ? `${BACKEND_URL}/uploads/${req.file.filename}`
+        : undefined;
+      const competencia = await Competencia.create({
+        nombre,
+        fecha,
+        torneo: torneo._id,
+        ...(imagen ? { imagen } : {})
+      });
       await crearNotificacionesParaTodos(`Nueva competencia ${nombre}`, competencia._id);
       res.status(201).json(competencia);
     } catch (err) {
@@ -751,7 +760,7 @@ app.post(
   }
 );
 
-app.get('/api/competencias', protegerRuta, async (req, res) => {
+app.get('/api/competencias', async (req, res) => {
   try {
     const comps = await Competencia.find().sort({ fecha: 1 });
     res.json(comps);
@@ -771,21 +780,30 @@ app.get('/api/tournaments/:id/competitions', protegerRuta, async (req, res) => {
   }
 });
 
-app.put('/api/competitions/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
-  const { nombre, fecha } = req.body;
-  try {
-    const comp = await Competencia.findByIdAndUpdate(
-      req.params.id,
-      { nombre, fecha },
-      { new: true, runValidators: true }
-    );
-    if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
-    res.json(comp);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ mensaje: 'Error al actualizar competencia' });
+app.put(
+  '/api/competitions/:id',
+  protegerRuta,
+  permitirRol('Delegado'),
+  upload.single('imagen'),
+  async (req, res) => {
+    const { nombre, fecha } = req.body;
+    const update = { nombre, fecha };
+    if (req.file) {
+      update.imagen = `${BACKEND_URL}/uploads/${req.file.filename}`;
+    }
+    try {
+      const comp = await Competencia.findByIdAndUpdate(req.params.id, update, {
+        new: true,
+        runValidators: true
+      });
+      if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
+      res.json(comp);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al actualizar competencia' });
+    }
   }
-});
+);
 
 app.delete('/api/competitions/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
   try {
