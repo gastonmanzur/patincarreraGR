@@ -33,13 +33,10 @@ export default function Home() {
         const compRes = await api.get('/competencias');
         const comps = compRes.data;
         if (comps.length > 0) {
-          const now = new Date();
-          const upcoming = comps.filter((c) => new Date(c.fecha) >= now);
-          if (upcoming.length > 0) {
-            setNextCompetition(upcoming[0]);
-          } else {
-            setNextCompetition(comps[comps.length - 1]);
-          }
+          const sorted = comps.sort(
+            (a, b) => new Date(a.fecha) - new Date(b.fecha)
+          );
+          setNextCompetition(sorted[sorted.length - 1]);
         }
       } catch (err) {
         console.error(err);
