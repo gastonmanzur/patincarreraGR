@@ -220,7 +220,7 @@ export default function Home() {
                 {nextCompetition.imagen && (
                   <img src={nextCompetition.imagen} alt="imagen competencia" />
                 )}
-                <div className="news-label">COMPETENCIA</div>
+                <div className="news-label competition-label">COMPETENCIA</div>
                 <div className="news-label-line" />
               </div>
               <div className="news-info">

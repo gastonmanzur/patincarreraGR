@@ -320,6 +320,15 @@ body.dark-mode .btn-primary {
   background: #003366;
 }
 
+.news-item .competition-label {
+  width: 40%;
+}
+
+.news-item .competition-label + .news-label-line {
+  left: 40%;
+  width: 60%;
+}
+
 .news-item .news-info {
   padding: 0.5rem;
 }
