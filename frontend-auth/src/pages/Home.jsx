@@ -77,6 +77,8 @@ export default function Home() {
 
   const currentPatinador = patinadores[currentPatIndex];
   const latestNews = news.slice(0, 4);
+  const wideNews = news.slice(4, 7);
+  const additionalNews = news.slice(7, 11);
 
   return (
     <>
@@ -269,6 +271,74 @@ export default function Home() {
           ))}
         </div>
       </div>
+      {wideNews.length > 0 && (
+        <div className="container mb-5">
+          <div className="wide-news-container">
+            {wideNews.map((item) => (
+              <Link
+                key={item._id}
+                to={`/noticias/${item._id}`}
+                className="news-item"
+              >
+                {item.imagen && (
+                  <div className="image-container">
+                    <img src={item.imagen} alt="imagen noticia" />
+                    <div className="news-label">NOTICIA</div>
+                    <div className="news-label-line" />
+                  </div>
+                )}
+                <div className="news-info">
+                  <h6>{item.titulo}</h6>
+                  <p>{item.contenido?.slice(0, 80)}...</p>
+                  <div className="news-divider" />
+                  <div className="news-footer">
+                    <img
+                      src="/vite.svg"
+                      alt="logo patín carrera"
+                      className="news-footer-logo"
+                    />
+                    <span>Patín carrera General Rodríguez</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+      {additionalNews.length > 0 && (
+        <div className="container mb-5">
+          <div className="additional-news-grid">
+            {additionalNews.map((item) => (
+              <Link
+                key={item._id}
+                to={`/noticias/${item._id}`}
+                className="news-item"
+              >
+                {item.imagen && (
+                  <div className="image-container">
+                    <img src={item.imagen} alt="imagen noticia" />
+                    <div className="news-label">NOTICIA</div>
+                    <div className="news-label-line" />
+                  </div>
+                )}
+                <div className="news-info">
+                  <h6>{item.titulo}</h6>
+                  <p>{item.contenido?.slice(0, 80)}...</p>
+                  <div className="news-divider" />
+                  <div className="news-footer">
+                    <img
+                      src="/vite.svg"
+                      alt="logo patín carrera"
+                      className="news-footer-logo"
+                    />
+                    <span>Patín carrera General Rodríguez</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 }
