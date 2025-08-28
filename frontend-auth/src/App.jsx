@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import PanelAdmin from './pages/PanelAdmin';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import CargarPatinador from './pages/CargarPatinador';
 import CrearNoticia from './pages/CrearNoticia';
 import ListaPatinadores from './pages/ListaPatinadores';
@@ -84,6 +85,7 @@ function AppRoutes() {
           element={<ProtectedRoute roles={['Delegado']}><SolicitarSeguro /></ProtectedRoute>}
         />
       </Routes>
+      <Footer />
     </>
   );
 }

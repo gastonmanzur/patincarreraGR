@@ -582,3 +582,27 @@ body.dark-mode .btn-primary {
     grid-template-columns: 1fr;
   }
 }
+/* Footer styles */
+.history-bubble {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: 10px;
+  width: 220px;
+  background-color: #fff;
+  color: #000;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.history-bubble::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: -10px;
+  border-width: 10px;
+  border-style: solid;
+  border-color: transparent #fff transparent transparent;
+}
