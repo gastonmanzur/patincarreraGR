@@ -500,8 +500,8 @@ body.dark-mode .btn-primary {
 }
 
 .mini-news-logo {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
   border-radius: 50%;
   border: 1px solid #ccc;
@@ -524,8 +524,13 @@ body.dark-mode .btn-primary {
     flex-direction: column;
   }
 
-.mini-news-card img {
+  .mini-news-card img {
     width: 30%;
+  }
+
+  .mini-news-logo {
+    width: 20px;
+    height: 20px;
   }
 }
 
