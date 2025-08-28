@@ -36,7 +36,11 @@ export default function Competencias() {
       if (e.target.imagen.files[0]) {
         formData.append('imagen', e.target.imagen.files[0]);
       }
-      await api.post(`/tournaments/${id}/competitions`, formData);
+      await api.post(`/tournaments/${id}/competitions`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       setNombre('');
       setFecha('');
       e.target.imagen.value = '';
