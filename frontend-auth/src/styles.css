@@ -477,7 +477,7 @@ body.dark-mode .btn-primary {
   flex: 1;
 }
 
-.mini-news-card img {
+.mini-news-card > img {
   width: 40%;
   object-fit: cover;
   border-top-left-radius: 0.5rem;
