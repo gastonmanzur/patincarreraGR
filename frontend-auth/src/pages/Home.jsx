@@ -51,6 +51,8 @@ export default function Home() {
       cargarPatinadores();
     }
     cargarCompetencia();
+    const interval = setInterval(cargarCompetencia, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
