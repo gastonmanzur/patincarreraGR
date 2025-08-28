@@ -278,13 +278,12 @@ body.dark-mode .btn-primary {
 .news-item.bottom-right {
   grid-column: 4;
   grid-row: 2;
-  height: 200px;
-  align-self: start;
+  align-self: stretch;
 }
 
 /* Bottom row news card styles */
 .news-item.bottom-right .image-container {
-  height: 100px;
+  height: 200px;
 }
 .news-item .image-container {
   position: relative;
