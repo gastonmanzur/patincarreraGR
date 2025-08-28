@@ -524,7 +524,33 @@ body.dark-mode .btn-primary {
     flex-direction: column;
   }
 
-  .mini-news-card img {
+.mini-news-card img {
     width: 30%;
+  }
+}
+
+.wide-news-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  width: 80%;
+  margin: 0 auto 2rem auto;
+}
+
+.additional-news-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+  .wide-news-container {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .additional-news-grid {
+    grid-template-columns: 1fr;
   }
 }
