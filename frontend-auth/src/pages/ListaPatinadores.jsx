@@ -4,6 +4,7 @@ import api from '../api';
 
 export default function ListaPatinadores() {
   const [patinadores, setPatinadores] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const rol = localStorage.getItem('rol');
 
   useEffect(() => {
@@ -28,22 +29,57 @@ export default function ListaPatinadores() {
     }
   };
 
+  const nextCard = () => {
+    if (patinadores.length === 0) return;
+    setCurrentIndex((prev) => (prev + 1) % patinadores.length);
+  };
+
+  const prevCard = () => {
+    if (patinadores.length === 0) return;
+    setCurrentIndex((prev) => (prev - 1 + patinadores.length) % patinadores.length);
+  };
+
   if (rol === 'Deportista') {
     return (
       <div className="container mt-4 deportista-container">
-        {patinadores.map((p) => (
-          <div className="deportista-card mb-4" key={p._id}>
-            {p.foto && (
-              <img src={p.foto} alt={`${p.primerNombre} ${p.apellido}`} />
-            )}
-            <div className="category-label">{p.categoria}</div>
-            <div className="category-label-line" />
-            <div className="name-label">
-              {p.primerNombre} {p.apellido}
+        {patinadores.length > 1 && (
+          <button
+            type="button"
+            className="carousel-btn prev"
+            onClick={prevCard}
+            aria-label="Anterior"
+          >
+            ‹
+          </button>
+        )}
+        <div
+          className="deportista-wrapper"
+          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+        >
+          {patinadores.map((p) => (
+            <div className="deportista-card mb-4" key={p._id}>
+              {p.foto && (
+                <img src={p.foto} alt={`${p.primerNombre} ${p.apellido}`} />
+              )}
+              <div className="category-label">{p.categoria}</div>
+              <div className="category-label-line" />
+              <div className="name-label">
+                {p.primerNombre} {p.apellido}
+              </div>
+              <div className="name-label-line" />
             </div>
-            <div className="name-label-line" />
-          </div>
-        ))}
+          ))}
+        </div>
+        {patinadores.length > 1 && (
+          <button
+            type="button"
+            className="carousel-btn next"
+            onClick={nextCard}
+            aria-label="Siguiente"
+          >
+            ›
+          </button>
+        )}
       </div>
     );
   }
