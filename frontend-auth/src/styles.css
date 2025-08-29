@@ -64,6 +64,10 @@ body {
   border-color: var(--secondary-color);
 }
 
+.footer-custom {
+  background-color: #202527;
+}
+
 body.dark-mode {
   --bg-color: #2a2a2a;
   --text-color: #ffffff;
