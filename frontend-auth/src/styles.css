@@ -615,13 +615,18 @@ body.dark-mode .btn-primary {
 
 /* Deportista patinador cards */
 .deportista-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.deportista-wrapper {
   display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  transition: transform 0.5s ease;
 }
 
 .deportista-card {
   position: relative;
+  flex: 0 0 100%;
   width: 100%;
   height: 80vh;
   overflow: hidden;
@@ -686,4 +691,28 @@ body.dark-mode .btn-primary {
   width: 70%;
   height: 10px;
   background: #003366;
+}
+
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.carousel-btn.prev {
+  left: 10px;
+}
+
+.carousel-btn.next {
+  right: 10px;
 }
