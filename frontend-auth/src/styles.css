@@ -612,3 +612,78 @@ body.dark-mode .btn-primary {
   border-style: solid;
   border-color: transparent #fff transparent transparent;
 }
+
+/* Deportista patinador cards */
+.deportista-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.deportista-card {
+  position: relative;
+  width: 100%;
+  height: 80vh;
+  overflow: hidden;
+  border-radius: 0.5rem;
+}
+
+.deportista-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.deportista-card .name-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60%;
+  height: 60px;
+  background: #003366;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 100%, 0 100%);
+  border-top-left-radius: 0.25rem;
+  border-bottom-left-radius: 0.25rem;
+}
+
+.deportista-card .name-label-line {
+  position: absolute;
+  bottom: 0;
+  left: 60%;
+  width: 40%;
+  height: 10px;
+  background: #003366;
+}
+
+.deportista-card .category-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 30%;
+  height: 60px;
+  background: #003366;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 20px) 100%, 0 100%);
+  border-top-left-radius: 0.25rem;
+  border-top-right-radius: 0.25rem;
+}
+
+.deportista-card .category-label-line {
+  position: absolute;
+  top: 0;
+  left: 30%;
+  width: 70%;
+  height: 10px;
+  background: #003366;
+}
