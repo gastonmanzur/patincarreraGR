@@ -42,7 +42,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-dark text-light mt-5">
+    <footer className="footer-custom text-light mt-5">
       <div className="container py-5">
         <div className="row">
           <div className="col-md-3 mb-4">
@@ -146,7 +146,7 @@ export default function Footer() {
           </div>
         </div>
       </div>
-      <div className="bg-secondary text-center py-2">
+      <div className="footer-custom text-center py-2">
         <small>© {new Date().getFullYear()} Todos los derechos reservados</small>
       </div>
     </footer>
