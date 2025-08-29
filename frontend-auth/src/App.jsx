@@ -59,7 +59,7 @@ function AppRoutes() {
         />
         <Route
           path="/patinadores"
-          element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><ListaPatinadores /></ProtectedRoute>}
+          element={<ProtectedRoute roles={['Delegado', 'Tecnico', 'Deportista']}><ListaPatinadores /></ProtectedRoute>}
         />
         <Route
           path="/patinadores/:id"

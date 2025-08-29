@@ -4,6 +4,7 @@ import api from '../api';
 
 export default function ListaPatinadores() {
   const [patinadores, setPatinadores] = useState([]);
+  const rol = localStorage.getItem('rol');
 
   useEffect(() => {
     const obtenerPatinadores = async () => {
@@ -26,6 +27,26 @@ export default function ListaPatinadores() {
       console.error(err);
     }
   };
+
+  if (rol === 'Deportista') {
+    return (
+      <div className="container mt-4 deportista-container">
+        {patinadores.map((p) => (
+          <div className="deportista-card mb-4" key={p._id}>
+            {p.foto && (
+              <img src={p.foto} alt={`${p.primerNombre} ${p.apellido}`} />
+            )}
+            <div className="category-label">{p.categoria}</div>
+            <div className="category-label-line" />
+            <div className="name-label">
+              {p.primerNombre} {p.apellido}
+            </div>
+            <div className="name-label-line" />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="container mt-4">
@@ -54,18 +75,22 @@ export default function ListaPatinadores() {
                   >
                     Ver
                   </Link>
-                  <Link
-                    to={`/patinadores/${p._id}/editar`}
-                    className="btn btn-secondary me-2"
-                  >
-                    Editar
-                  </Link>
-                  <button
-                    onClick={() => eliminarPatinador(p._id)}
-                    className="btn btn-danger"
-                  >
-                    Eliminar
-                  </button>
+                  {rol === 'Delegado' && (
+                    <>
+                      <Link
+                        to={`/patinadores/${p._id}/editar`}
+                        className="btn btn-secondary me-2"
+                      >
+                        Editar
+                      </Link>
+                      <button
+                        onClick={() => eliminarPatinador(p._id)}
+                        className="btn btn-danger"
+                      >
+                        Eliminar
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

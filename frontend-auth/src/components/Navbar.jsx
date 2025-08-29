@@ -87,7 +87,9 @@ export default function Navbar() {
                 ]
               }
             ]
-          : []),
+          : rol === 'Deportista'
+            ? [{ label: 'Patinadores', path: '/patinadores' }]
+            : []),
         ...(rol === 'Delegado' || rol === 'Tecnico'
           ? [
               {
