@@ -21,6 +21,8 @@ body {
 .navbar .nav-link,
 .navbar-brand {
   color: var(--bg-color) !important;
+  font-size: 1.125rem;
+  line-height: 1;
 }
 
 /* Logo styling */
