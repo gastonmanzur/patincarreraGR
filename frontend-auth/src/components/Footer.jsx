@@ -53,7 +53,9 @@ export default function Footer() {
               onClick={togglePinned}
               style={{ cursor: 'pointer' }}
             >
-              <img src="/robot.webp" alt="Logo" width="200" height="200" className="mb-3" />
+
+              <img src="/robot.svg" alt="Logo" width="300" height="400" className="mb-3" />
+
               {historyVisible && (
                 <div className="history-bubble">
                   <p className="mb-0 small">
