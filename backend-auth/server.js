@@ -1450,16 +1450,36 @@ app.post('/api/progresos', protegerRuta, permitirRol('Tecnico'), async (req, res
       descripcion,
       fecha: fecha || Date.now()
     });
-    const usuarios = await User.find({ patinadores: patinador });
-    const pat = await Patinador.findById(patinador);
-    const mensaje = `Nuevo progreso de ${pat.primerNombre} ${pat.apellido}`;
-    await Promise.all(
-      usuarios.map((u) => Notification.create({ destinatario: u._id, mensaje }))
-    );
     res.status(201).json(nuevo);
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al crear progreso' });
+  }
+});
+
+app.post('/api/progresos/:id/enviar', protegerRuta, permitirRol('Tecnico'), async (req, res) => {
+  try {
+    const prog = await Progreso.findById(req.params.id).populate(
+      'patinador',
+      'primerNombre apellido'
+    );
+    if (!prog) {
+      return res.status(404).json({ mensaje: 'Progreso no encontrado' });
+    }
+    if (prog.enviado) {
+      return res.status(400).json({ mensaje: 'Progreso ya enviado' });
+    }
+    const usuarios = await User.find({ patinadores: prog.patinador._id });
+    const mensaje = `Nuevo progreso de ${prog.patinador.primerNombre} ${prog.patinador.apellido}`;
+    await Promise.all(
+      usuarios.map((u) => Notification.create({ destinatario: u._id, mensaje }))
+    );
+    prog.enviado = true;
+    await prog.save();
+    res.json({ mensaje: 'Reporte enviado' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al enviar reporte' });
   }
 });
 
