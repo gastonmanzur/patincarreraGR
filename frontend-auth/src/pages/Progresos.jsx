@@ -40,10 +40,20 @@ export default function Progresos() {
     if (!patinadorId || !descripcion) return;
     try {
       await api.post('/progresos', { patinador: patinadorId, descripcion });
-      window.dispatchEvent(new Event('notificationsUpdated'));
       setDescripcion('');
       await cargarProgresos(patinadorId);
       alert('Progreso registrado');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const enviarReporte = async (id) => {
+    try {
+      await api.post(`/progresos/${id}/enviar`);
+      window.dispatchEvent(new Event('notificationsUpdated'));
+      await cargarProgresos(patinadorId);
+      alert('Reporte enviado');
     } catch (err) {
       console.error(err);
     }
@@ -78,8 +88,21 @@ export default function Progresos() {
           </button>
           <ul className="list-group">
             {progresos.map((p) => (
-              <li key={p._id} className="list-group-item">
-                <strong>{new Date(p.fecha).toLocaleDateString('es-AR')}:</strong> {p.descripcion}
+              <li
+                key={p._id}
+                className="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>
+                  <strong>{new Date(p.fecha).toLocaleDateString('es-AR')}:</strong> {p.descripcion}
+                </span>
+                {!p.enviado && (
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => enviarReporte(p._id)}
+                  >
+                    Enviar reporte
+                  </button>
+                )}
               </li>
             ))}
           </ul>
