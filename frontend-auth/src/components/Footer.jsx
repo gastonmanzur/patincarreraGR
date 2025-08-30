@@ -70,7 +70,15 @@ export default function Footer() {
                 <i className="bi bi-envelope me-2"></i> patincarreragr25@gmail.com
               </li>
               <li className="mb-2">
-                <i className="bi bi-geo-alt me-2"></i> Leandro N. Alem, B1748 Gran Buenos Aires, Provincia de Buenos Aires
+                <i className="bi bi-geo-alt me-2"></i>
+                <a
+                  href="https://maps.app.goo.gl/t7Wb4ci6P9zZrtGB8"
+                  className="text-light text-decoration-none"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Leandro N. Alem, B1748 Gran Buenos Aires, Provincia de Buenos Aires
+                </a>
               </li>
             </ul>
           </div>
