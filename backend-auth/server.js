@@ -274,6 +274,34 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.post('/api/contacto', protegerRuta, async (req, res) => {
+  const { mensaje } = req.body;
+  if (!mensaje) {
+    return res.status(400).json({ mensaje: 'Mensaje requerido' });
+  }
+  try {
+    const usuario = await User.findById(req.usuario.id).select('nombre email');
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+    await transporter.sendMail({
+      from: `"${usuario.nombre}" <${usuario.email}>`,
+      to: process.env.EMAIL_USER,
+      subject: 'Nuevo mensaje de contacto',
+      text: mensaje,
+      html: `<p>${mensaje}</p>`
+    });
+    res.json({ mensaje: 'Mensaje enviado' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al enviar el mensaje' });
+  }
+});
+
 app.get('/api/protegido/usuario', protegerRuta, async (req, res) => {
   try {
     const usuario = await User.findById(req.usuario.id)
