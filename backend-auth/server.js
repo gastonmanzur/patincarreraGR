@@ -290,7 +290,7 @@ app.post('/api/contacto', protegerRuta, async (req, res) => {
     });
     await transporter.sendMail({
       from: `"${usuario.nombre}" <${usuario.email}>`,
-      to: process.env.EMAIL_USER,
+      to: 'patincarreragr25@gmail.com',
       subject: 'Nuevo mensaje de contacto',
       text: mensaje,
       html: `<p>${mensaje}</p>`
