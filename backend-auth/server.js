@@ -20,6 +20,7 @@ import Resultado from './models/Resultado.js';
 import PatinadorExterno from './models/PatinadorExterno.js';
 import Club from './models/Club.js';
 import Entrenamiento from './models/Entrenamiento.js';
+import Progreso from './models/Progreso.js';
 import ExcelJS from 'exceljs';
 import parseResultadosPdf from './utils/parseResultadosPdf.js';
 
@@ -1433,6 +1434,52 @@ app.delete('/api/entrenamientos/:id', protegerRuta, permitirRol('Tecnico'), asyn
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al eliminar entrenamiento' });
+  }
+});
+
+// Progresos: registro y consulta
+app.post('/api/progresos', protegerRuta, permitirRol('Tecnico'), async (req, res) => {
+  try {
+    const { patinador, descripcion, fecha } = req.body;
+    if (!patinador || !descripcion) {
+      return res.status(400).json({ mensaje: 'Patinador y descripcion son obligatorios' });
+    }
+    const nuevo = await Progreso.create({
+      patinador,
+      tecnico: req.usuario.id,
+      descripcion,
+      fecha: fecha || Date.now()
+    });
+    const usuarios = await User.find({ patinadores: patinador });
+    const pat = await Patinador.findById(patinador);
+    const mensaje = `Nuevo progreso de ${pat.primerNombre} ${pat.apellido}`;
+    await Promise.all(
+      usuarios.map((u) => Notification.create({ destinatario: u._id, mensaje }))
+    );
+    res.status(201).json(nuevo);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al crear progreso' });
+  }
+});
+
+app.get('/api/progresos/:patinadorId', protegerRuta, async (req, res) => {
+  try {
+    const { patinadorId } = req.params;
+    const usuario = await User.findById(req.usuario.id);
+    if (
+      usuario.rol !== 'Tecnico' &&
+      !(usuario.patinadores || []).some((id) => id.toString() === patinadorId)
+    ) {
+      return res.status(403).json({ mensaje: 'Acceso denegado' });
+    }
+    const progresos = await Progreso.find({ patinador: patinadorId })
+      .sort({ fecha: -1 })
+      .populate('tecnico', 'nombre apellido');
+    res.json(progresos);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener progresos' });
   }
 });
 
