@@ -19,6 +19,7 @@ import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
 import PatinadorExterno from './models/PatinadorExterno.js';
 import Club from './models/Club.js';
+import Entrenamiento from './models/Entrenamiento.js';
 import ExcelJS from 'exceljs';
 import parseResultadosPdf from './utils/parseResultadosPdf.js';
 
@@ -1353,6 +1354,79 @@ app.get('/api/tournaments/:id/ranking/club', protegerRuta, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al obtener ranking por club' });
+  }
+});
+
+// Entrenamientos
+app.get('/api/entrenamientos', protegerRuta, permitirRol('Tecnico'), async (req, res) => {
+  try {
+    const entrenamientos = await Entrenamiento.find().sort({ fecha: -1 });
+    res.json(entrenamientos);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener entrenamientos' });
+  }
+});
+
+app.get('/api/entrenamientos/:id', protegerRuta, permitirRol('Tecnico'), async (req, res) => {
+  try {
+    const entrenamiento = await Entrenamiento.findById(req.params.id).populate(
+      'asistencias.patinador',
+      'primerNombre apellido'
+    );
+    if (!entrenamiento) {
+      return res.status(404).json({ mensaje: 'Entrenamiento no encontrado' });
+    }
+    res.json(entrenamiento);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener entrenamiento' });
+  }
+});
+
+app.post('/api/entrenamientos', protegerRuta, permitirRol('Tecnico'), async (req, res) => {
+  try {
+    const { fecha, asistencias } = req.body;
+    const nuevo = await Entrenamiento.create({
+      fecha: fecha || new Date(),
+      asistencias,
+      tecnico: req.usuario.id
+    });
+    res.status(201).json(nuevo);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al crear entrenamiento' });
+  }
+});
+
+app.put('/api/entrenamientos/:id', protegerRuta, permitirRol('Tecnico'), async (req, res) => {
+  try {
+    const { asistencias, fecha } = req.body;
+    const actualizado = await Entrenamiento.findByIdAndUpdate(
+      req.params.id,
+      { asistencias, fecha },
+      { new: true }
+    );
+    if (!actualizado) {
+      return res.status(404).json({ mensaje: 'Entrenamiento no encontrado' });
+    }
+    res.json(actualizado);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al actualizar entrenamiento' });
+  }
+});
+
+app.delete('/api/entrenamientos/:id', protegerRuta, permitirRol('Tecnico'), async (req, res) => {
+  try {
+    const eliminado = await Entrenamiento.findByIdAndDelete(req.params.id);
+    if (!eliminado) {
+      return res.status(404).json({ mensaje: 'Entrenamiento no encontrado' });
+    }
+    res.json({ mensaje: 'Entrenamiento eliminado' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al eliminar entrenamiento' });
   }
 });
 
