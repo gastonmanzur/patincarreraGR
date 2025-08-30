@@ -14,7 +14,7 @@ const asistenciaSchema = new mongoose.Schema(
 
 const entrenamientoSchema = new mongoose.Schema(
   {
-    fecha: { type: Date, default: Date.now },
+    fecha: { type: Date, required: true },
     asistencias: [asistenciaSchema],
     tecnico: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
   },
