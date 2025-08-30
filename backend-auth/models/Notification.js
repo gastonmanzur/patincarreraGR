@@ -6,6 +6,7 @@ const notificationSchema = new mongoose.Schema(
     mensaje: { type: String, required: true },
     leido: { type: Boolean, default: false },
     competencia: { type: mongoose.Schema.Types.ObjectId, ref: 'Competencia' },
+    progreso: { type: mongoose.Schema.Types.ObjectId, ref: 'Progreso' },
     estadoRespuesta: {
       type: String,
       enum: ['Pendiente', 'Participo', 'No Participo'],
