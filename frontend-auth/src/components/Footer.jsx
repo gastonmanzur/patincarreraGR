@@ -64,13 +64,13 @@ export default function Footer() {
             </div>
             <ul className="list-unstyled mt-3">
               <li className="mb-2">
-                <i className="bi bi-telephone me-2"></i> 647-754-0472
+                <i className="bi bi-telephone me-2"></i> +54 9 11 9999-9999
               </li>
               <li className="mb-2">
-                <i className="bi bi-envelope me-2"></i> GaelMakioblight@aol.com
+                <i className="bi bi-envelope me-2"></i> patincarreragr25@gmail.com
               </li>
               <li className="mb-2">
-                <i className="bi bi-geo-alt me-2"></i> 1719 Park Boulevard Marshalltown, IA 50158
+                <i className="bi bi-geo-alt me-2"></i> Leandro N. Alem, B1748 Gran Buenos Aires, Provincia de Buenos Aires
               </li>
             </ul>
           </div>
@@ -90,18 +90,33 @@ export default function Footer() {
             </ul>
           </div>
           <div className="col-md-3 mb-4">
-            <h5>Redes Sociales</h5>
             <div className="d-flex gap-3">
-              <a href="#" className="text-light" aria-label="Facebook">
+              <a
+                href="https://www.facebook.com/"
+                className="text-light"
+                aria-label="Facebook"
+              >
                 <i className="bi bi-facebook fs-4"></i>
               </a>
-              <a href="#" className="text-light" aria-label="Instagram">
+              <a
+                href="https://www.instagram.com/stories/patincarrerag.r/"
+                className="text-light"
+                aria-label="Instagram"
+              >
                 <i className="bi bi-instagram fs-4"></i>
               </a>
-              <a href="#" className="text-light" aria-label="WhatsApp">
+              <a
+                href="https://wa.me/5491199999999"
+                className="text-light"
+                aria-label="WhatsApp"
+              >
                 <i className="bi bi-whatsapp fs-4"></i>
               </a>
-              <a href="#" className="text-light" aria-label="X">
+              <a
+                href="https://x.com/?lang=es"
+                className="text-light"
+                aria-label="X"
+              >
                 <i className="bi bi-twitter-x fs-4"></i>
               </a>
             </div>
