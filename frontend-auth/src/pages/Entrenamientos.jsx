@@ -5,6 +5,8 @@ export default function Entrenamientos() {
   const [entrenamientos, setEntrenamientos] = useState([]);
   const [asistencias, setAsistencias] = useState([]);
   const [editandoId, setEditandoId] = useState(null);
+  const [fecha, setFecha] = useState('');
+  const [soloVer, setSoloVer] = useState(false);
 
   const cargarEntrenamientos = async () => {
     try {
@@ -29,6 +31,8 @@ export default function Entrenamientos() {
       }));
       setAsistencias(listado);
       setEditandoId(null);
+      setFecha(new Date().toISOString().slice(0, 10));
+      setSoloVer(false);
     } catch (err) {
       console.error(err);
     }
@@ -44,6 +48,24 @@ export default function Entrenamientos() {
       }));
       setAsistencias(listado);
       setEditandoId(id);
+      setFecha(new Date(res.data.fecha).toISOString().slice(0, 10));
+      setSoloVer(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const verEntrenamiento = async (id) => {
+    try {
+      const res = await api.get(`/entrenamientos/${id}`);
+      const listado = res.data.asistencias.map((a) => ({
+        patinador: a.patinador._id,
+        nombre: `${a.patinador.primerNombre} ${a.patinador.apellido}`,
+        estado: a.estado
+      }));
+      setAsistencias(listado);
+      setFecha(new Date(res.data.fecha).toISOString().slice(0, 10));
+      setSoloVer(true);
     } catch (err) {
       console.error(err);
     }
@@ -57,7 +79,12 @@ export default function Entrenamientos() {
 
   const guardar = async () => {
     try {
+      if (!fecha) {
+        alert('Selecciona una fecha');
+        return;
+      }
       const payload = {
+        fecha,
         asistencias: asistencias.map((a) => ({
           patinador: a.patinador,
           estado: a.estado
@@ -70,6 +97,8 @@ export default function Entrenamientos() {
       }
       setAsistencias([]);
       setEditandoId(null);
+      setFecha('');
+      setSoloVer(false);
       cargarEntrenamientos();
     } catch (err) {
       console.error(err);
@@ -79,6 +108,8 @@ export default function Entrenamientos() {
   const cancelar = () => {
     setAsistencias([]);
     setEditandoId(null);
+    setFecha('');
+    setSoloVer(false);
   };
 
   const eliminar = async (id) => {
@@ -108,6 +139,12 @@ export default function Entrenamientos() {
                 {new Date(e.fecha).toLocaleDateString('es-AR')}
                 <div>
                   <button
+                    className="btn btn-sm btn-info me-2"
+                    onClick={() => verEntrenamiento(e._id)}
+                  >
+                    Ver
+                  </button>
+                  <button
                     className="btn btn-sm btn-secondary me-2"
                     onClick={() => iniciarEdicion(e._id)}
                   >
@@ -126,6 +163,21 @@ export default function Entrenamientos() {
         </>
       ) : (
         <div>
+          {soloVer ? (
+            <p>
+              <strong>Fecha:</strong> {new Date(fecha).toLocaleDateString('es-AR')}
+            </p>
+          ) : (
+            <div className="mb-3">
+              <label className="form-label">Fecha</label>
+              <input
+                type="date"
+                className="form-control"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+              />
+            </div>
+          )}
           <table className="table">
             <thead>
               <tr>
@@ -138,29 +190,41 @@ export default function Entrenamientos() {
                 <tr key={a.patinador}>
                   <td>{a.nombre}</td>
                   <td>
-                    {['Presente', 'Ausente', 'No entrena'].map((opt) => (
-                      <label key={opt} className="me-2">
-                        <input
-                          type="radio"
-                          name={`estado-${idx}`}
-                          value={opt}
-                          checked={a.estado === opt}
-                          onChange={() => manejarCambio(idx, opt)}
-                        />
-                        {opt}
-                      </label>
-                    ))}
+                    {soloVer ? (
+                      a.estado
+                    ) : (
+                      ['Presente', 'Ausente', 'No entrena'].map((opt) => (
+                        <label key={opt} className="me-2">
+                          <input
+                            type="radio"
+                            name={`estado-${idx}`}
+                            value={opt}
+                            checked={a.estado === opt}
+                            onChange={() => manejarCambio(idx, opt)}
+                          />
+                          {opt}
+                        </label>
+                      ))
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <button className="btn btn-primary me-2" onClick={guardar}>
-            Guardar
-          </button>
-          <button className="btn btn-secondary" onClick={cancelar}>
-            Cancelar
-          </button>
+          {soloVer ? (
+            <button className="btn btn-secondary" onClick={cancelar}>
+              Volver
+            </button>
+          ) : (
+            <>
+              <button className="btn btn-primary me-2" onClick={guardar}>
+                Guardar
+              </button>
+              <button className="btn btn-secondary" onClick={cancelar}>
+                Cancelar
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
