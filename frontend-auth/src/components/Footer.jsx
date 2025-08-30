@@ -5,8 +5,6 @@ import api from '../api';
 export default function Footer() {
   const [historyVisible, setHistoryVisible] = useState(false);
   const [pinned, setPinned] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
 
   const togglePinned = () => {
@@ -27,13 +25,9 @@ export default function Footer() {
     e.preventDefault();
     try {
       await api.post('/contacto', {
-        nombre: name,
-        email,
         mensaje: message
       });
       alert('Mensaje enviado');
-      setName('');
-      setEmail('');
       setMessage('');
     } catch (err) {
       console.error(err);
@@ -134,26 +128,6 @@ export default function Footer() {
           <div className="col-md-3 mb-4">
             <h5>Contacto</h5>
             <form onSubmit={handleSubmit}>
-              <div className="mb-2">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Nombre"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="mb-2">
-                <input
-                  type="email"
-                  className="form-control"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
               <div className="mb-2">
                 <textarea
                   className="form-control"
