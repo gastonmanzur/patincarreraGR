@@ -78,6 +78,9 @@ export default function Navbar() {
               { label: 'Progresos', path: '/progresos' }
             ]
           : []),
+        ...(rol === 'Delegado' || rol === 'Deportista'
+          ? [{ label: 'Reportes', path: '/reportes' }]
+          : []),
         ...(rol === 'Delegado'
           ? [{ label: 'Seguros', path: '/seguros' }]
           : []),

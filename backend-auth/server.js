@@ -1469,11 +1469,15 @@ app.post('/api/progresos/:id/enviar', protegerRuta, permitirRol('Tecnico'), asyn
     if (prog.enviado) {
       return res.status(400).json({ mensaje: 'Progreso ya enviado' });
     }
-    const usuarios = await User.find({ patinadores: prog.patinador._id });
+    const usuario = await User.findOne({ patinadores: prog.patinador._id });
     const mensaje = `Nuevo progreso de ${prog.patinador.primerNombre} ${prog.patinador.apellido}`;
-    await Promise.all(
-      usuarios.map((u) => Notification.create({ destinatario: u._id, mensaje }))
-    );
+    if (usuario) {
+      await Notification.create({
+        destinatario: usuario._id,
+        mensaje,
+        progreso: prog._id
+      });
+    }
     prog.enviado = true;
     await prog.save();
     res.json({ mensaje: 'Reporte enviado' });
@@ -1500,6 +1504,28 @@ app.get('/api/progresos/:patinadorId', protegerRuta, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al obtener progresos' });
+  }
+});
+
+app.get('/api/progreso/:id', protegerRuta, async (req, res) => {
+  try {
+    const prog = await Progreso.findById(req.params.id)
+      .populate('tecnico', 'nombre apellido')
+      .populate('patinador', 'primerNombre apellido');
+    if (!prog) {
+      return res.status(404).json({ mensaje: 'Progreso no encontrado' });
+    }
+    const usuario = await User.findById(req.usuario.id);
+    if (
+      usuario.rol !== 'Tecnico' &&
+      !(usuario.patinadores || []).some((id) => id.toString() === prog.patinador._id.toString())
+    ) {
+      return res.status(403).json({ mensaje: 'Acceso denegado' });
+    }
+    res.json(prog);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener progreso' });
   }
 });
 
