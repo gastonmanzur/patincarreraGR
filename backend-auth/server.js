@@ -1387,8 +1387,11 @@ app.get('/api/entrenamientos/:id', protegerRuta, permitirRol('Tecnico'), async (
 app.post('/api/entrenamientos', protegerRuta, permitirRol('Tecnico'), async (req, res) => {
   try {
     const { fecha, asistencias } = req.body;
+    if (!fecha) {
+      return res.status(400).json({ mensaje: 'La fecha es obligatoria' });
+    }
     const nuevo = await Entrenamiento.create({
-      fecha: fecha || new Date(),
+      fecha,
       asistencias,
       tecnico: req.usuario.id
     });
@@ -1402,6 +1405,9 @@ app.post('/api/entrenamientos', protegerRuta, permitirRol('Tecnico'), async (req
 app.put('/api/entrenamientos/:id', protegerRuta, permitirRol('Tecnico'), async (req, res) => {
   try {
     const { asistencias, fecha } = req.body;
+    if (!fecha) {
+      return res.status(400).json({ mensaje: 'La fecha es obligatoria' });
+    }
     const actualizado = await Entrenamiento.findByIdAndUpdate(
       req.params.id,
       { asistencias, fecha },
