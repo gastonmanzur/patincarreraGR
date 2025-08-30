@@ -1469,7 +1469,10 @@ app.post('/api/progresos/:id/enviar', protegerRuta, permitirRol('Tecnico'), asyn
     if (prog.enviado) {
       return res.status(400).json({ mensaje: 'Progreso ya enviado' });
     }
-    const usuario = await User.findOne({ patinadores: prog.patinador._id });
+    const usuario = await User.findOne({
+      patinadores: prog.patinador._id,
+      rol: 'Deportista'
+    });
     const mensaje = `Nuevo progreso de ${prog.patinador.primerNombre} ${prog.patinador.apellido}`;
     if (usuario) {
       await Notification.create({
