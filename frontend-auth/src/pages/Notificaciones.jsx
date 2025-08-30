@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
 export default function Notificaciones() {
   const [notificaciones, setNotificaciones] = useState([]);
+  const navigate = useNavigate();
 
   const cargar = async () => {
     try {
@@ -45,6 +47,19 @@ export default function Notificaciones() {
     }
   };
 
+  const verReporte = async (notif) => {
+    try {
+      await api.put(`/notifications/${notif._id}/read`);
+      setNotificaciones((prev) =>
+        prev.map((n) => (n._id === notif._id ? { ...n, leido: true } : n))
+      );
+      window.dispatchEvent(new Event('notificationsUpdated'));
+      navigate(`/reportes/${notif.progreso}`);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (notificaciones.length === 0) {
     return (
       <div className="container mt-4 text-black fw-normal">
@@ -61,7 +76,17 @@ export default function Notificaciones() {
         {notificaciones.map((n) => (
           <li key={n._id} className={`list-group-item ${n.leido ? '' : 'list-group-item-warning'}`}>
             <div className="d-flex justify-content-between align-items-center">
-              <span className="text-black fw-normal">{n.mensaje}</span>
+              {n.progreso ? (
+                <span
+                  className="text-black fw-normal"
+                  style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                  onClick={() => verReporte(n)}
+                >
+                  {n.mensaje}
+                </span>
+              ) : (
+                <span className="text-black fw-normal">{n.mensaje}</span>
+              )}
               {n.competencia && n.estadoRespuesta !== 'Pendiente' && (
                 <span className="badge bg-secondary">{n.estadoRespuesta}</span>
               )}
@@ -82,7 +107,7 @@ export default function Notificaciones() {
                 </button>
               </div>
             )}
-            {!n.competencia && !n.leido && (
+            {!n.competencia && !n.progreso && !n.leido && (
               <div className="mt-2">
                 <button className="btn btn-sm btn-primary" onClick={() => marcarLeida(n._id)}>
                   Marcar como leída
