@@ -23,6 +23,7 @@ import SolicitarSeguro from './pages/SolicitarSeguro';
 import RankingTorneo from './pages/RankingTorneo';
 import VerNoticia from './pages/VerNoticia';
 import Entrenamientos from './pages/Entrenamientos';
+import Progresos from './pages/Progresos';
 
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -82,6 +83,10 @@ function AppRoutes() {
           <Route
             path="/entrenamientos"
             element={<ProtectedRoute roles={['Tecnico']}><Entrenamientos /></ProtectedRoute>}
+          />
+          <Route
+            path="/progresos"
+            element={<ProtectedRoute roles={['Tecnico']}><Progresos /></ProtectedRoute>}
           />
           <Route path="/asociar-patinadores" element={<ProtectedRoute><AsociarPatinadores /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><PanelAdmin /></AdminRoute>} />
