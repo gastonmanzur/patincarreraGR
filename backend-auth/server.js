@@ -1469,18 +1469,21 @@ app.post('/api/progresos/:id/enviar', protegerRuta, permitirRol('Tecnico'), asyn
     if (prog.enviado) {
       return res.status(400).json({ mensaje: 'Progreso ya enviado' });
     }
-    const usuario = await User.findOne({
-      patinadores: prog.patinador._id,
-      rol: 'Deportista'
+    const usuarios = await User.find({
+      patinadores: prog.patinador._id
     });
-    const mensaje = `Nuevo progreso de ${prog.patinador.primerNombre} ${prog.patinador.apellido}`;
-    if (usuario) {
-      await Notification.create({
-        destinatario: usuario._id,
-        mensaje,
-        progreso: prog._id
-      });
+    if (usuarios.length === 0) {
+      return res
+        .status(404)
+        .json({ mensaje: 'No se encontró destinatario para el progreso' });
     }
+    const mensaje = `Nuevo progreso de ${prog.patinador.primerNombre} ${prog.patinador.apellido}`;
+    const notificaciones = usuarios.map((u) => ({
+      destinatario: u._id,
+      mensaje,
+      progreso: prog._id
+    }));
+    await Notification.insertMany(notificaciones);
     prog.enviado = true;
     await prog.save();
     res.json({ mensaje: 'Reporte enviado' });
