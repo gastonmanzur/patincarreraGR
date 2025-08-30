@@ -72,7 +72,12 @@ export default function Navbar() {
     ? [
         { label: 'Inicio', path: '/home' },
         { label: 'Torneos', path: '/torneos' },
-        ...(rol === 'Tecnico' ? [{ label: 'Entrenamientos', path: '/entrenamientos' }] : []),
+        ...(rol === 'Tecnico'
+          ? [
+              { label: 'Entrenamientos', path: '/entrenamientos' },
+              { label: 'Progresos', path: '/progresos' }
+            ]
+          : []),
         ...(rol === 'Delegado'
           ? [{ label: 'Seguros', path: '/seguros' }]
           : []),
