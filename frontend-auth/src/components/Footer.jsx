@@ -60,7 +60,7 @@ export default function Footer() {
             </div>
             <ul className="list-unstyled mt-3">
               <li className="mb-2">
-                <i className="bi bi-telephone me-2"></i> +54 9 11 9999-9999
+                <i className="bi bi-telephone me-2"></i> +54 9 117372-6166
               </li>
               <li className="mb-2">
                 <i className="bi bi-envelope me-2"></i> patincarreragr25@gmail.com
@@ -110,7 +110,7 @@ export default function Footer() {
                 <i className="bi bi-instagram fs-4"></i>
               </a>
               <a
-                href="https://wa.me/5491199999999"
+                href="https://wa.me/5491173726166"
                 className="text-light"
                 aria-label="WhatsApp"
               >
