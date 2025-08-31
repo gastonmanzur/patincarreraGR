@@ -21,6 +21,7 @@ import ListaBuenaFe from './pages/ListaBuenaFe';
 import ResultadosCompetencia from './pages/ResultadosCompetencia';
 import SolicitarSeguro from './pages/SolicitarSeguro';
 import RankingTorneo from './pages/RankingTorneo';
+import RankingClubes from './pages/RankingClubes';
 import VerNoticia from './pages/VerNoticia';
 import Entrenamientos from './pages/Entrenamientos';
 import Progresos from './pages/Progresos';
@@ -47,6 +48,10 @@ function AppRoutes() {
           <Route
             path="/torneos/:id/ranking"
             element={<ProtectedRoute><RankingTorneo /></ProtectedRoute>}
+          />
+          <Route
+            path="/torneos/:id/ranking-clubes"
+            element={<ProtectedRoute><RankingClubes /></ProtectedRoute>}
           />
           <Route
             path="/competencias/:id/lista"
