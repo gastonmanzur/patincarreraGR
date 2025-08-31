@@ -113,7 +113,7 @@ export default function Footer() {
               </li>
             </ul>
           </div>
-          <div className="col-md-4 mb-4">
+          <div className="col-md-4 mb-4 text-center">
             <h5>Enlaces</h5>
             <ul className="list-unstyled">
               <li>
