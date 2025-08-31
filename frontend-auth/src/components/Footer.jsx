@@ -46,25 +46,54 @@ export default function Footer() {
   return (
     <footer className="footer-custom text-light mt-5">
       <div className="container py-5">
-        <div className="row">
-          <div className="col-md-3 mb-4">
+        <div className="row align-items-center mb-4">
+          <div className="col-md-9 d-flex justify-content-center mb-4 mb-md-0">
             <div
-              className="position-relative d-inline-block"
+              className="robot-container"
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
               onClick={togglePinned}
               style={{ cursor: 'pointer' }}
             >
-              <img src="/robot.svg" alt="Logo" width="400" height="400" className="mb-3" />
+              <img
+                src="/robot.svg"
+                alt="Logo"
+                width="400"
+                height="400"
+                className={`robot-image mb-3 ${historyVisible ? 'shift-left' : ''}`}
+              />
               {historyVisible && (
                 <div className="history-bubble">
                   <p className="mb-0 small">
-                    El club fue fundado en 1980 con el objetivo de promover el patín carrera en la región.
+                    En 2021, el Municipio de General Rodríguez creó la Escuela de Patín Carrera como respuesta solidaria al fallecimiento del entrenador que formaba chicos en el Polideportivo Municipal y los llevaba a competir representando al club Social de Paso del Rey. Muchos de esos jóvenes quedaron sin club, y así nació un espacio propio para continuar su desarrollo. Desde entonces, la escuela no dejó de crecer: se afilió a la Asociación de Patinadores Metropolitanos (APM) y participó en torneos nacionales, logrando destacados resultados como el 2.º puesto en el Encuentro Nacional de Escuela y Transición (Moreno, octubre de 2024) y el 3.º puesto en el primer Encuentro Nacional de Escuela y Transición estilo INDOOR (CABA, abril de 2025). Hoy, la Escuela de Patín Carrera de General Rodríguez sigue formando deportistas y consolidando una comunidad en torno al esfuerzo y la velocidad.
                   </p>
                 </div>
               )}
             </div>
-            <ul className="list-unstyled mt-3">
+          </div>
+          <div className="col-md-3">
+            <h5>Contacto</h5>
+            <form onSubmit={handleSubmit}>
+              <div className="mb-2">
+                <textarea
+                  className="form-control"
+                  rows="3"
+                  placeholder="Mensaje"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  required
+                ></textarea>
+              </div>
+              <button type="submit" className="btn btn-primary w-100">
+                Enviar
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div className="row">
+          <div className="col-md-4 mb-4">
+            <ul className="list-unstyled">
               <li className="mb-2">
                 <i className="bi bi-telephone me-2"></i> +54 9 117372-6166
               </li>
@@ -84,7 +113,7 @@ export default function Footer() {
               </li>
             </ul>
           </div>
-          <div className="col-md-3 mb-4">
+          <div className="col-md-4 mb-4">
             <h5>Enlaces</h5>
             <ul className="list-unstyled">
               <li>
@@ -99,7 +128,7 @@ export default function Footer() {
               </li>
             </ul>
           </div>
-          <div className="col-md-3 mb-4">
+          <div className="col-md-4 mb-4">
             <div className="d-flex gap-3">
               <a
                 href="https://www.facebook.com/"
@@ -132,24 +161,6 @@ export default function Footer() {
                 <i className="bi bi-twitter-x fs-4"></i>
               </a>
             </div>
-          </div>
-          <div className="col-md-3 mb-4">
-            <h5>Contacto</h5>
-            <form onSubmit={handleSubmit}>
-              <div className="mb-2">
-                <textarea
-                  className="form-control"
-                  rows="3"
-                  placeholder="Mensaje"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  required
-                ></textarea>
-              </div>
-              <button type="submit" className="btn btn-primary w-100">
-                Enviar
-              </button>
-            </form>
           </div>
         </div>
       </div>
