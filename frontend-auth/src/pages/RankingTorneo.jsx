@@ -5,19 +5,14 @@ import api from '../api';
 export default function RankingTorneo() {
   const { id } = useParams();
   const [individual, setIndividual] = useState([]);
-  const [clubes, setClubes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const cargar = async () => {
       try {
-        const [resInd, resClub] = await Promise.all([
-          api.get(`/tournaments/${id}/ranking/individual`),
-          api.get(`/tournaments/${id}/ranking/club`)
-        ]);
-        setIndividual(resInd.data);
-        setClubes(resClub.data);
+        const res = await api.get(`/tournaments/${id}/ranking/individual`);
+        setIndividual(res.data);
       } catch (err) {
         console.error(err);
         setError('Error al cargar ranking');
@@ -48,7 +43,7 @@ export default function RankingTorneo() {
                   className="list-group-item d-flex justify-content-between"
                 >
                   <span>
-                    {idx + 1}. {p.nombre}
+                    {idx + 1}. {p.nombre} - {p.club ? p.club.nombre : 'Sin club'}
                   </span>
                   <span>{p.puntos}</span>
                 </li>
@@ -56,24 +51,6 @@ export default function RankingTorneo() {
             </ul>
           </div>
         ))
-      )}
-      <h4>Ranking por Club</h4>
-      {clubes.length === 0 ? (
-        <p>No hay datos.</p>
-      ) : (
-        <ul className="list-group">
-          {clubes.map((c, idx) => (
-            <li
-              key={c.club._id}
-              className="list-group-item d-flex justify-content-between"
-            >
-              <span>
-                {idx + 1}. {c.club.nombre}
-              </span>
-              <span>{c.puntos}</span>
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   );
