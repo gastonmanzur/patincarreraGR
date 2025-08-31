@@ -932,6 +932,10 @@ app.post(
           return res.status(404).json({ mensaje: 'Patinador no encontrado' });
         }
         filtro.deportistaId = pat._id;
+        clubDoc = await Club.findOne({ nombre: 'GENERAL RODRIGUEZ' });
+        if (!clubDoc) {
+          clubDoc = await Club.create({ nombre: 'GENERAL RODRIGUEZ' });
+        }
       } else if (invitado) {
         const { primerNombre, segundoNombre, apellido, club } = invitado;
         if (!primerNombre || !apellido || !club) {
@@ -1327,6 +1331,10 @@ app.get('/api/tournaments/:id/ranking/individual', protegerRuta, async (req, res
       .populate('deportistaId', 'primerNombre segundoNombre apellido')
       .populate('invitadoId', 'primerNombre segundoNombre apellido')
       .populate('clubId', 'nombre');
+    const clubGR = await Club.findOne({ nombre: 'GENERAL RODRIGUEZ' });
+    const clubDefault = clubGR
+      ? { _id: clubGR._id, nombre: 'General Rodriguez' }
+      : { nombre: 'General Rodriguez' };
     const agrupado = {};
     for (const r of resultados) {
       const categoria = r.categoria;
@@ -1342,7 +1350,9 @@ app.get('/api/tournaments/:id/ranking/individual', protegerRuta, async (req, res
           id,
           nombre,
           puntos: 0,
-          club: r.clubId ? { _id: r.clubId._id, nombre: r.clubId.nombre } : null
+          club: r.clubId
+            ? { _id: r.clubId._id, nombre: r.clubId.nombre }
+            : clubDefault
         };
       }
       agrupado[categoria][id].puntos += r.puntos || 0;
@@ -1367,14 +1377,20 @@ app.get('/api/tournaments/:id/ranking/club', protegerRuta, async (req, res) => {
     const comps = await Competencia.find({ torneo: req.params.id }, '_id');
     const compIds = comps.map((c) => c._id);
     const resultados = await Resultado.find({
-      competenciaId: { $in: compIds },
-      clubId: { $ne: null }
+      competenciaId: { $in: compIds }
     }).populate('clubId', 'nombre');
+    const clubGR = await Club.findOne({ nombre: 'GENERAL RODRIGUEZ' });
+    const clubDefault = clubGR
+      ? { _id: clubGR._id, nombre: 'General Rodriguez' }
+      : { nombre: 'General Rodriguez' };
     const ranking = {};
     for (const r of resultados) {
-      const cid = String(r.clubId._id);
+      const clubDoc = r.clubId
+        ? { _id: r.clubId._id, nombre: r.clubId.nombre }
+        : clubDefault;
+      const cid = String(clubDoc._id || 'default');
       if (!ranking[cid]) {
-        ranking[cid] = { club: r.clubId, puntos: 0 };
+        ranking[cid] = { club: clubDoc, puntos: 0 };
       }
       ranking[cid].puntos += r.puntos || 0;
     }
