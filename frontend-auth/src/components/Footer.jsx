@@ -49,7 +49,7 @@ export default function Footer() {
         <div className="row align-items-center mb-4">
           <div className="col-md-9 d-flex justify-content-center mb-4 mb-md-0">
             <div
-              className="robot-container"
+              className={`robot-container ${historyVisible ? 'shift-left' : ''}`}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
               onClick={togglePinned}
@@ -60,7 +60,7 @@ export default function Footer() {
                 alt="Logo"
                 width="400"
                 height="400"
-                className={`robot-image mb-3 ${historyVisible ? 'shift-left' : ''}`}
+                className="robot-image mb-3"
               />
               {historyVisible && (
                 <div className="history-bubble">
