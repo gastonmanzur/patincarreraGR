@@ -7,6 +7,14 @@ export default function Footer() {
   const [pinned, setPinned] = useState(false);
   const [message, setMessage] = useState('');
 
+  const phoneNumber = '5491173726166';
+  const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(
+    navigator.userAgent
+  );
+  const whatsappLink = isMobile
+    ? `https://api.whatsapp.com/send?phone=${phoneNumber}`
+    : `https://web.whatsapp.com/send?phone=${phoneNumber}`;
+
   const togglePinned = () => {
     const newPinned = !pinned;
     setPinned(newPinned);
@@ -108,9 +116,11 @@ export default function Footer() {
                 <i className="bi bi-instagram fs-4"></i>
               </a>
               <a
-                href="https://wa.me/5491173726166"
+                href={whatsappLink}
                 className="text-light"
                 aria-label="WhatsApp"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <i className="bi bi-whatsapp fs-4"></i>
               </a>
