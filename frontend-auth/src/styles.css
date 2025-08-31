@@ -591,10 +591,11 @@ body.dark-mode .btn-primary {
 /* Footer styles */
 .history-bubble {
   position: absolute;
-  top: 0;
+  top: 50%;
   left: 100%;
+  transform: translateY(-50%);
   margin-left: 10px;
-  width: 220px;
+  width: 350px;
   background-color: #fff;
   color: #000;
   padding: 0.75rem;
@@ -606,8 +607,9 @@ body.dark-mode .btn-primary {
 .history-bubble::before {
   content: '';
   position: absolute;
-  top: 20px;
+  top: 50%;
   left: -10px;
+  transform: translateY(-50%);
   border-width: 10px;
   border-style: solid;
   border-color: transparent #fff transparent transparent;
@@ -617,14 +619,11 @@ body.dark-mode .btn-primary {
   position: relative;
   display: inline-block;
   width: 400px;
-}
-
-.robot-image {
   transition: transform 0.3s ease;
 }
 
-.robot-image.shift-left {
-  transform: translateX(-150px);
+.robot-container.shift-left {
+  transform: translateX(-200px);
 }
 
 /* Deportista patinador cards */
