@@ -613,6 +613,20 @@ body.dark-mode .btn-primary {
   border-color: transparent #fff transparent transparent;
 }
 
+.robot-container {
+  position: relative;
+  display: inline-block;
+  width: 400px;
+}
+
+.robot-image {
+  transition: transform 0.3s ease;
+}
+
+.robot-image.shift-left {
+  transform: translateX(-150px);
+}
+
 /* Deportista patinador cards */
 .deportista-container {
   position: relative;
