@@ -1,7 +1,11 @@
-import pdf from 'pdf-parse/lib/pdf-parse.js';
+// Use default pdf-parse export to ensure built-in configuration
+// that avoids "TT: undefined function" font warnings during parsing.
+import pdf from 'pdf-parse';
 
 export default async function parseResultadosPdf(buffer) {
-  const data = await pdf(buffer);
+  // Parse the entire PDF. Using the packaged parser helps prevent
+  // issues with TrueType fonts that previously triggered warnings.
+  const data = await pdf(buffer, { max: 0 });
   const lines = data.text
     .split(/\r?\n/)
     .map((l) => l.trim())
