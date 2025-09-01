@@ -1,11 +1,10 @@
 import pdf from 'pdf-parse/lib/pdf-parse.js';
-import pdfjs from 'pdf-parse/lib/pdf.js/v1.10.100/build/pdf.js';
 import fs from 'fs';
 import path from 'path';
 
-// Reducimos la verbosidad de pdf.js para evitar advertencias como
-// "TT: undefined function" que se muestran en consola al procesar algunos PDF.
-pdfjs.setVerbosityLevel(pdfjs.VERBOSITY_LEVELS.errors);
+// Nota: pdf-parse usa internamente pdf.js. Intentar ajustar la verbosidad
+// provocaba errores en tiempo de ejecución, por lo que se utiliza la
+// configuración predeterminada sin modificar la salida de logs de pdf.js.
 
 // Convierte el contenido de un PDF a un objeto JSON y opcionalmente lo guarda en disco.
 //
