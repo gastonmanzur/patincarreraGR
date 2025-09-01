@@ -38,7 +38,7 @@ function AppRoutes() {
   return (
     <div className="d-flex flex-column min-vh-100">
       <Navbar />
-      <div className="flex-fill">
+      <div className="flex-fill pb-5">
         <Routes>
           <Route path="/" element={<Auth />} />
           <Route path="/home" element={<Home />} />
