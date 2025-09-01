@@ -44,7 +44,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="footer-custom text-light mt-5">
+    <footer className="footer-custom text-light mt-auto pt-5">
       <div className="container py-5">
         <div className="row align-items-center mb-4">
           <div className="col-md-9 d-flex justify-content-center mb-4 mb-md-0">

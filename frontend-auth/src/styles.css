@@ -6,6 +6,12 @@
   --card-bg: #ffffff;
 }
 
+html,
+body,
+#root {
+  min-height: 100vh;
+}
+
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
