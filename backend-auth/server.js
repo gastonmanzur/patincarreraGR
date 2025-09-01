@@ -878,9 +878,10 @@ app.post(
         return res.status(400).json({ mensaje: 'Archivo no proporcionado' });
       }
       const buffer = fs.readFileSync(req.file.path);
+      const jsonPath = req.file.path.replace(/\.[^./]+$/, '.json');
+      const json = await pdfToJson(buffer, jsonPath);
       fs.unlinkSync(req.file.path);
       const hash = crypto.createHash('md5').update(buffer).digest('hex');
-      const json = await pdfToJson(buffer);
       const filas = parseResultadosJson(json);
       let count = 0;
       for (const fila of filas) {
@@ -907,7 +908,12 @@ app.post(
         count++;
       }
       await recalcularPosiciones(competencia._id);
-      res.json({ mensaje: 'Importación completada', procesados: count });
+      res.json({
+        mensaje: 'Importación completada',
+        procesados: count,
+        archivoJson: path.basename(jsonPath),
+        resultados: filas
+      });
     } catch (err) {
       console.error(err);
       res.status(500).json({ mensaje: 'Error al importar resultados' });
