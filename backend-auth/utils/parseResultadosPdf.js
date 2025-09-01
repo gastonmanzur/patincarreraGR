@@ -1,33 +1,66 @@
-import pdf from 'pdf-parse/lib/pdf-parse.js';
+// Use default pdf-parse export to ensure built-in configuration
+// that avoids "TT: undefined function" font warnings during parsing.
+import pdf from 'pdf-parse';
 
 export default async function parseResultadosPdf(buffer) {
-  const data = await pdf(buffer);
+  // Parse the full PDF using the bundled parser to avoid font warnings.
+  const data = await pdf(buffer, { max: 0 });
   const lines = data.text
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean);
-  const headerIdx = lines.findIndex(
-    (l) => /dorsal/i.test(l) && /puntos/i.test(l)
-  );
-  if (headerIdx === -1) return [];
-  const rows = lines.slice(headerIdx + 1).filter((l) => /^\d+/.test(l));
-  return rows
-    .map((line) => {
-      const parts = line.split(/\s+/);
-      if (parts.length < 5) return null;
-      const pos = parseInt(parts[0], 10);
-      const dorsal = parts[1];
-      const puntos = parseFloat(parts[parts.length - 1]);
-      const trailing = parts.length > 5 ? 3 : 2;
-      const categoria = parts[parts.length - trailing];
-      const nombre = parts.slice(2, parts.length - trailing).join(' ');
-      return {
-        posicion: pos,
-        dorsal,
-        nombre,
-        categoria,
-        puntos
-      };
-    })
-    .filter(Boolean);
+
+  const results = [];
+  let currentCategoria = null;
+
+  for (const line of lines) {
+    // Detect header rows that include the category name, e.g.
+    // "Orden Nro Atleta APELLIDO Y NOMBRES CATEGORIA PDE CLUB ...".
+    const headerMatch = line.match(
+      /orden.*categor[ií]a\s+([^\s]+)\s+club/i
+    );
+    if (headerMatch) {
+      currentCategoria = headerMatch[1];
+      continue;
+    }
+
+    if (!currentCategoria) continue; // Skip lines until a category header is found
+
+    // Each data row begins with an order number followed by at least two spaces.
+    if (!/^\d+\s{2,}/.test(line)) continue;
+
+    // Split by two or more spaces to preserve names and club names containing spaces.
+    const columns = line.split(/\s{2,}/).map((c) => c.trim()).filter(Boolean);
+    if (columns.length < 4) continue;
+
+    const [orden, dorsal, nombre, maybeCategoriaOrClub, ...rest] = columns;
+    if (!orden || !dorsal || rest.length === 0) continue;
+
+    // Determine if the row includes an explicit category column. Some PDFs place
+    // the category only in the header, while others repeat it for each row.
+    let club = maybeCategoriaOrClub;
+    if (
+      currentCategoria &&
+      maybeCategoriaOrClub.toUpperCase() === currentCategoria.toUpperCase()
+    ) {
+      club = rest.shift();
+    }
+
+    if (!club || rest.length === 0) continue;
+
+    // The last element of `rest` is the total points. Intermediate values
+    // correspond to per-prueba details which we ignore for this import.
+    const total = parseFloat(rest[rest.length - 1]);
+
+    results.push({
+      posicion: parseInt(orden, 10),
+      dorsal,
+      nombre,
+      categoria: currentCategoria,
+      club,
+      puntos: total
+    });
+  }
+
+  return results;
 }
