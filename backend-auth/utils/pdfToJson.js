@@ -5,7 +5,7 @@ import path from 'path';
 
 // Reducimos la verbosidad de pdf.js para evitar advertencias como
 // "TT: undefined function" que se muestran en consola al procesar algunos PDF.
-pdfjs.setVerbosityLevel(pdfjs.VerbosityLevel.ERRORS);
+pdfjs.setVerbosityLevel(pdfjs.VERBOSITY_LEVELS.errors);
 
 // Convierte el contenido de un PDF a un objeto JSON y opcionalmente lo guarda en disco.
 //
