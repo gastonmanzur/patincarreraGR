@@ -22,7 +22,8 @@ import Club from './models/Club.js';
 import Entrenamiento from './models/Entrenamiento.js';
 import Progreso from './models/Progreso.js';
 import ExcelJS from 'exceljs';
-import parseResultadosPdf from './utils/parseResultadosPdf.js';
+import pdfToJson from './utils/pdfToJson.js';
+import parseResultadosJson from './utils/parseResultadosJson.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -879,7 +880,8 @@ app.post(
       const buffer = fs.readFileSync(req.file.path);
       fs.unlinkSync(req.file.path);
       const hash = crypto.createHash('md5').update(buffer).digest('hex');
-      const filas = await parseResultadosPdf(buffer);
+      const json = await pdfToJson(buffer);
+      const filas = parseResultadosJson(json);
       let count = 0;
       for (const fila of filas) {
         const patinador = await Patinador.findOne({
