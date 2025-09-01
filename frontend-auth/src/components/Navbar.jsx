@@ -210,6 +210,7 @@ export default function Navbar() {
                     height="40"
                     className="rounded-circle"
                     style={{ objectFit: 'cover', cursor: foto?.includes('googleusercontent') ? 'default' : 'pointer' }}
+                    referrerPolicy="no-referrer"
                     onClick={!foto?.includes('googleusercontent') ? triggerFileSelect : undefined}
                   />
                   {!foto?.includes('googleusercontent') && (
