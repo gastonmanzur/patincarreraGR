@@ -1,6 +1,9 @@
-// Use default pdf-parse export to ensure built-in configuration
-// that avoids "TT: undefined function" font warnings during parsing.
-import pdf from 'pdf-parse';
+// Import the underlying pdf-parse implementation directly. The package's
+// root entry file enables a "debug" mode when loaded as an ES module,
+// attempting to read a non-existent test PDF and crashing the server.
+// Importing from "lib/pdf-parse.js" bypasses that behaviour while
+// retaining the default configuration that avoids font warnings.
+import pdf from 'pdf-parse/lib/pdf-parse.js';
 
 export default async function parseResultadosPdf(buffer) {
   // Parse the full PDF using the bundled parser to avoid font warnings.
