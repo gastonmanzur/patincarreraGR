@@ -38,7 +38,7 @@ function AppRoutes() {
   return (
     <div className="d-flex flex-column min-vh-100">
       <Navbar />
-      <div className="flex-fill pb-5">
+      <main className="flex-fill pb-5">
         <Routes>
           <Route path="/" element={<Auth />} />
           <Route path="/home" element={<Home />} />
@@ -111,7 +111,7 @@ function AppRoutes() {
             element={<ProtectedRoute roles={['Delegado']}><SolicitarSeguro /></ProtectedRoute>}
           />
         </Routes>
-      </div>
+      </main>
       <Footer />
     </div>
   );
