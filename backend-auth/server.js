@@ -1659,7 +1659,21 @@ app.get('/api/auth/google/callback', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Servidor escuchando en puerto ${PORT}`);
-});
+const PORT = parseInt(process.env.PORT, 10) || 5000;
+
+function startServer(port) {
+  const server = app.listen(port, () => {
+    console.log(`Servidor escuchando en puerto ${port}`);
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`Puerto ${port} en uso, intentando con ${port + 1}...`);
+      startServer(port + 1);
+    } else {
+      throw err;
+    }
+  });
+}
+
+startServer(PORT);
