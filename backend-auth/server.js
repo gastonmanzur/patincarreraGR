@@ -1590,7 +1590,7 @@ app.get('/api/progreso/:id', protegerRuta, async (req, res) => {
 // Inicio de sesión con Google (OAuth 2.0 sin dependencias externas)
 app.get('/api/auth/google', (req, res) => {
   const redirectUri =
-    process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback';
+    process.env.GOOGLE_REDIRECT_URI || 'http://patincarrera.net/api/auth/google/callback';
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID || '',
     redirect_uri: redirectUri,
@@ -1611,7 +1611,7 @@ app.get('/api/auth/google/callback', async (req, res) => {
   }
   try {
     const redirectUri =
-      process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback';
+      process.env.GOOGLE_REDIRECT_URI || 'http://patincarrera.net/api/auth/google/callback';
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1659,21 +1659,7 @@ app.get('/api/auth/google/callback', async (req, res) => {
   }
 });
 
-const PORT = parseInt(process.env.PORT, 10) || 5000;
-
-function startServer(port) {
-  const server = app.listen(port, () => {
-    console.log(`Servidor escuchando en puerto ${port}`);
-  });
-
-  server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.warn(`Puerto ${port} en uso, intentando con ${port + 1}...`);
-      startServer(port + 1);
-    } else {
-      throw err;
-    }
-  });
-}
-
-startServer(PORT);
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Servidor escuchando en puerto ${PORT}`);
+});
