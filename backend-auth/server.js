@@ -58,8 +58,15 @@ mongoose
   })
   .catch((err) => console.error('Error conectando a MongoDB:', err.message));
 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FRONTEND_URL_WWW = process.env.FRONTEND_URL_WWW;
+
 const app = express();
-app.use(cors());
+const corsOptions = {
+  origin: [FRONTEND_URL, FRONTEND_URL_WWW].filter(Boolean),
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
@@ -70,7 +77,6 @@ app.use('/uploads', express.static('uploads'));
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 const CLUB_LOCAL = process.env.CLUB_LOCAL || 'Gral. Rodríguez';
 
