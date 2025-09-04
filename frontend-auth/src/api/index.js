@@ -1,13 +1,17 @@
 import axios from 'axios';
 
 // Axios instance that automatically attaches the JWT token from localStorage.
-// Use the API URL from environment variables when available. If not provided,
-// build a default URL using the current page's protocol and hostname. This
-// avoids mixed-content errors when the frontend is served over HTTPS by
-// matching the protocol used by the page while still defaulting to port 5000
-// for local development. The port can be overridden via `VITE_BACKEND_PORT`.
-const port = import.meta.env.VITE_BACKEND_PORT || 5000;
-const defaultBaseUrl = `${window.location.protocol}//${window.location.hostname}:${port}/api`;
+// Use the API URL from environment variables when available. Otherwise, build
+// a default URL using the page's protocol and hostname. For local development
+// (`localhost`/`127.0.0.1`) default to port 5000, but in other environments use
+// the current page's port (or the default port for the protocol). The port can
+// always be overridden via `VITE_BACKEND_PORT`.
+const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const port =
+  import.meta.env.VITE_BACKEND_PORT ||
+  (isLocalhost ? 5000 : window.location.port);
+const defaultBaseUrl =
+  `${window.location.protocol}//${window.location.hostname}${port ? `:${port}` : ''}/api`;
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || defaultBaseUrl
 });
