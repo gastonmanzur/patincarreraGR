@@ -32,6 +32,14 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Ensure request URLs are relative so the `/api` prefix in `baseURL` is
+  // preserved. Axios will drop the path portion of `baseURL` when the request
+  // `url` starts with `/`, leading to requests like
+  // `https://api.example.com/auth/login` instead of
+  // `https://api.example.com/api/auth/login`.
+  if (config.url?.startsWith('/')) {
+    config.url = config.url.slice(1);
+  }
   return config;
 });
 
