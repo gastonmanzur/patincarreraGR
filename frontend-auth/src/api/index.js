@@ -12,8 +12,19 @@ const port =
   (isLocalhost ? 5000 : window.location.port);
 const defaultBaseUrl =
   `${window.location.protocol}//${window.location.hostname}${port ? `:${port}` : ''}/api`;
+
+// When an explicit API URL is provided, ensure it always targets the
+// `/api` prefix expected by the backend. This avoids subtle deployment
+// bugs where `VITE_API_URL` lacks the `/api` suffix and requests end up
+// hitting the wrong path (e.g. `https://api.example.com/auth/registro`
+// instead of `https://api.example.com/api/auth/registro`).
+const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || defaultBaseUrl
+  baseURL: envUrl
+    ? envUrl.endsWith('/api')
+      ? envUrl
+      : `${envUrl}/api`
+    : defaultBaseUrl
 });
 
 api.interceptors.request.use((config) => {
