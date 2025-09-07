@@ -260,6 +260,12 @@ app.post('/api/auth/login', async (req, res) => {
     if (!usuario.confirmado) {
       return res.status(403).json({ mensaje: 'Tenés que confirmar tu cuenta primero' });
     }
+    if (!usuario.password) {
+      return res.status(400).json({
+        mensaje:
+          'Este usuario se registró con Google y no tiene una contraseña local. Iniciá sesión con Google.'
+      });
+    }
     const valido = bcrypt.compareSync(password, usuario.password);
     if (!valido) {
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
