@@ -60,7 +60,7 @@ export default function Footer() {
                 alt="Logo"
                 width="400"
                 height="400"
-                className="robot-image mb-3"
+                className={`robot-image mb-3 ${historyVisible ? 'shift-left' : ''}`}
               />
               {historyVisible && (
                 <div className="history-bubble">
