@@ -18,22 +18,14 @@ const defaultBaseUrl =
 // bugs where `VITE_API_URL` lacks the `/api` suffix and requests end up
 // hitting the wrong path (e.g. `https://api.example.com/auth/registro`
 // instead of `https://api.example.com/api/auth/registro`).
-/*const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
+const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
 const api = axios.create({
   baseURL: envUrl
     ? envUrl.endsWith('/api')
       ? envUrl
       : `${envUrl}/api`
     : defaultBaseUrl
-});*/
-
-// axios
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true, // si usás cookies
 });
-
-await api.post('/api/auth/login', { email, password });
 
 
 api.interceptors.request.use((config) => {
