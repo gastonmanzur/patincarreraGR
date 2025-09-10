@@ -58,8 +58,12 @@ mongoose
   })
   .catch((err) => console.error('Error conectando a MongoDB:', err.message));
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const FRONTEND_URL_WWW = process.env.FRONTEND_URL_WWW;
+// Normalizamos las URLs del frontend para evitar problemas con barras finales
+// que pueden causar que la comparación exacta de CORS falle. Esto permite que
+// valores como `https://patincarrera.net/` y `https://patincarrera.net` se
+// consideren equivalentes.
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+const FRONTEND_URL_WWW = process.env.FRONTEND_URL_WWW?.replace(/\/+$/, '');
 
 const app = express();
 const corsOptions = {
