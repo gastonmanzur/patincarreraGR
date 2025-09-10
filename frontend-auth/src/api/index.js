@@ -1,58 +1,32 @@
 import axios from 'axios';
 
-// Axios instance that automatically attaches the JWT token from localStorage.
-// Use the API URL from environment variables when available. Otherwise, build
-// a default URL using the page's protocol and hostname. For local development
-// (`localhost`/`127.0.0.1`) default to port 5000, but in other environments use
-// the current page's port (or the default port for the protocol). The port can
-// always be overridden via `VITE_BACKEND_PORT`.
-const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-const port =
-  import.meta.env.VITE_BACKEND_PORT ||
-  (isLocalhost ? 5000 : window.location.port);
-const defaultBaseUrl =
-  `${window.location.protocol}//${window.location.hostname}${port ? `:${port}` : ''}/api`;
+// Determine the base URL for API requests. If an explicit URL is provided via
+// `VITE_API_URL`, ensure it includes the `/api` prefix expected by the backend.
+// Otherwise, default to the current origin with the `/api` path.
+const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
+const baseURL = envUrl
+  ? envUrl.endsWith('/api')
+    ? envUrl
+    : `${envUrl}/api`
+  : `${window.location.origin}/api`;
 
-// When an explicit API URL is provided, ensure it always targets the
-// `/api` prefix expected by the backend. This avoids subtle deployment
-// bugs where `VITE_API_URL` lacks the `/api` suffix and requests end up
-// hitting the wrong path (e.g. `https://api.example.com/auth/registro`
-// instead of `https://api.example.com/api/auth/registro`).
-/*const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
 const api = axios.create({
-  baseURL: envUrl
-    ? envUrl.endsWith('/api')
-      ? envUrl
-      : `${envUrl}/api`
-    : defaultBaseUrl
-});*/
-
-// axios
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true, // si usás cookies
+  baseURL,
+  withCredentials: true,
 });
-
-await api.post('/api/auth/login', { email, password });
-
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  // Ensure request URLs are relative so the `/api` prefix in `baseURL` is
-  // preserved. Axios will drop the path portion of `baseURL` when the request
-  // `url` starts with `/`, leading to requests like
-  // `https://api.example.com/auth/login` instead of
-  // `https://api.example.com/api/auth/login`.
+  // Ensure request URLs are relative so the `/api` prefix in `baseURL` remains.
   if (config.url?.startsWith('/')) {
     config.url = config.url.slice(1);
   }
   return config;
 });
 
-// Si el servidor responde 401, limpiamos los datos y redirigimos al inicio
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -63,7 +37,7 @@ api.interceptors.response.use(
       window.location.href = '/';
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;
