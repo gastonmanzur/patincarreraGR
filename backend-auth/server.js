@@ -67,8 +67,16 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'https://www.patincarrera.net'
 ].map((url) => url.replace(/\/+$/, ''));
 
-const FRONTEND_URL = process.env.FRONTEND_URL?.replace(/\/+$/, '');
-const FRONTEND_URL_WWW = process.env.FRONTEND_URL_WWW?.replace(/\/+$/, '');
+// Provide sensible defaults for frontend URLs so redirects don't point to
+// `/undefined/...` when environment variables are missing. This keeps Google
+// OAuth working out of the box in production deployments where these variables
+// might not be explicitly defined.
+const FRONTEND_URL = (
+  process.env.FRONTEND_URL || 'https://patincarrera.net'
+).replace(/\/+$/, '');
+const FRONTEND_URL_WWW = (
+  process.env.FRONTEND_URL_WWW || 'https://www.patincarrera.net'
+).replace(/\/+$/, '');
 
 const allowedOrigins = [
   ...DEFAULT_ALLOWED_ORIGINS,
