@@ -3,7 +3,12 @@ import axios from 'axios';
 // Determine the base URL for API requests. If an explicit URL is provided via
 // `VITE_API_URL`, ensure it includes the `/api` prefix expected by the backend.
 // Otherwise, default to the current origin with the `/api` path.
+
 /*const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
+
+// Strip any trailing slashes from the provided API URL to avoid "//" in requests.
+const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
+
 const baseURL = envUrl
   ? envUrl.endsWith('/api')
     ? envUrl
@@ -59,3 +64,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+

@@ -67,8 +67,16 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'https://www.patincarrera.net'
 ].map((url) => url.replace(/\/+$/, ''));
 
-const FRONTEND_URL = process.env.FRONTEND_URL?.replace(/\/+$/, '');
-const FRONTEND_URL_WWW = process.env.FRONTEND_URL_WWW?.replace(/\/+$/, '');
+// Provide sensible defaults for frontend URLs so redirects don't point to
+// `/undefined/...` when environment variables are missing. This keeps Google
+// OAuth working out of the box in production deployments where these variables
+// might not be explicitly defined.
+const FRONTEND_URL = (
+  process.env.FRONTEND_URL || 'https://patincarrera.net'
+).replace(/\/+$/, '');
+const FRONTEND_URL_WWW = (
+  process.env.FRONTEND_URL_WWW || 'https://www.patincarrera.net'
+).replace(/\/+$/, '');
 
 const allowedOrigins = [
   ...DEFAULT_ALLOWED_ORIGINS,
@@ -1649,7 +1657,8 @@ app.get('/api/progreso/:id', protegerRuta, async (req, res) => {
 // Inicio de sesión con Google (OAuth 2.0 sin dependencias externas)
 app.get('/api/auth/google', (req, res) => {
   const redirectUri =
-    process.env.GOOGLE_REDIRECT_URI || 'http://patincarrera.net/api/auth/google/callback';
+    process.env.GOOGLE_REDIRECT_URI ||
+    'https://patincarrera.net/api/auth/google/callback';
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID || '',
     redirect_uri: redirectUri,
@@ -1670,7 +1679,8 @@ app.get('/api/auth/google/callback', async (req, res) => {
   }
   try {
     const redirectUri =
-      process.env.GOOGLE_REDIRECT_URI || 'http://patincarrera.net/api/auth/google/callback';
+      process.env.GOOGLE_REDIRECT_URI ||
+      'https://patincarrera.net/api/auth/google/callback';
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
