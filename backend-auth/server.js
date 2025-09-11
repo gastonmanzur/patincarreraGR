@@ -59,18 +59,25 @@ mongoose
   .catch((err) => console.error('Error conectando a MongoDB:', err.message));
 
 // Normalizamos las URLs del frontend para evitar problemas con barras finales
-// que pueden causar que la comparación exacta de CORS falle. Esto permite que
-// valores como `https://patincarrera.net/` y `https://patincarrera.net` se
-// consideren equivalentes.
-const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+// y añadimos orígenes permitidos por defecto. Esto evita que un valor
+// incorrecto de las variables de entorno deje a producción sin cabeceras CORS.
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'https://patincarrera.net',
+  'https://www.patincarrera.net'
+].map((url) => url.replace(/\/+$/, ''));
+
+const FRONTEND_URL = process.env.FRONTEND_URL?.replace(/\/+$/, '');
 const FRONTEND_URL_WWW = process.env.FRONTEND_URL_WWW?.replace(/\/+$/, '');
 
+const allowedOrigins = [
+  ...DEFAULT_ALLOWED_ORIGINS,
+  FRONTEND_URL,
+  FRONTEND_URL_WWW
+].filter(Boolean);
+
 const app = express();
-const corsOptions = {
-  origin: [FRONTEND_URL, FRONTEND_URL_WWW].filter(Boolean),
-  credentials: true
-};
-app.use(cors(corsOptions));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
