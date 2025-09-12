@@ -22,6 +22,7 @@ const baseURL = envUrl
 // hitting the wrong path (e.g. `https://api.example.com/auth/registro`
 // instead of `https://api.example.com/api/auth/registro`).
 const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
+const defaultBaseUrl = `${window.location.origin}/api`;
 const api = axios.create({
   baseURL: envUrl
     ? envUrl.endsWith('/api')
