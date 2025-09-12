@@ -94,7 +94,7 @@ export default function Home() {
       )}
       <div className="container mt-4">
 
-        <h1 className="mb-4">Noticias Falsas</h1>
+        <h1 className="mb-4 text-center">Noticias</h1>
 
         <div className="news-grid">
           {displayedNews[0] && (
