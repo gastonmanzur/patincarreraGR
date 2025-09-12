@@ -89,7 +89,7 @@ const app = express();
 // CORS configuration for specific domain
 app.use(
   cors({
-    origin: ["https://app.tudominio.com"],
+    origin: ["https://patincarrera.net"],
     credentials: true,
   })
 );
