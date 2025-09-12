@@ -86,6 +86,14 @@ const allowedOrigins = [
 
 const app = express();
 
+// CORS configuration for specific domain
+app.use(
+  cors({
+    origin: ["https://app.tudominio.com"],
+    credentials: true,
+  })
+);
+
 // Fallback CORS handler to guarantee headers are always sent
 app.use((req, res, next) => {
   const origin = req.headers.origin?.replace(/\/+$/, '');
