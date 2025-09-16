@@ -30,6 +30,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Configurar zona horaria para Argentina
 process.env.TZ = 'America/Argentina/Buenos_Aires';
 
+// LOG global de errores no atrapados
+process.on('unhandledRejection', (err) => console.error('[unhandledRejection]', err));
+process.on('uncaughtException', (err) => console.error('[uncaughtException]', err));
+
 // Cargar variables de entorno desde .env si está presente
 const envPath = path.resolve('.env');
 if (fs.existsSync(envPath)) {
@@ -85,6 +89,12 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 const app = express();
+
+// Logger simple de requests (temporal para debug)
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} ${req.method} ${req.originalUrl}`);
+  next();
+});
 
 // CORS configuration for specific domain
 app.use(
@@ -1734,6 +1744,12 @@ app.get('/api/auth/google/callback', async (req, res) => {
     console.error('Error en autenticación de Google', err);
     res.redirect(`${FRONTEND_URL}/login?error=google`);
   }
+});
+
+// Middleware de errores (al final)
+app.use((err, req, res, next) => {
+  console.error('[ERROR]', err);
+  res.status(err.status || 500).json({ ok: false, message: 'Internal error' });
 });
 
 const PORT = process.env.PORT || 5000;
