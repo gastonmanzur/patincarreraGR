@@ -150,8 +150,13 @@ app.use('/api/uploads', express.static('uploads'));
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/+$/, '');
 const CLUB_LOCAL = process.env.CLUB_LOCAL || 'Gral. Rodríguez';
+const AUTH_ROUTE_PREFIXES = ['/api/auth', '/auth'];
+const CANONICAL_AUTH_PREFIX = AUTH_ROUTE_PREFIXES[0];
+const GOOGLE_REDIRECT_URI =
+  process.env.GOOGLE_REDIRECT_URI ||
+  `${BACKEND_URL}${CANONICAL_AUTH_PREFIX}/google/callback`;
 
 const ORDEN_CATEGORIAS = [
   'CHP',
@@ -253,125 +258,194 @@ async function crearNotificacionesParaTodos(mensaje, competencia = null) {
   }
 }
 
-app.post('/api/auth/registro', async (req, res) => {
-  const { nombre, apellido, email, password, confirmarPassword, rol, codigo } = req.body;
-  const emailNormalizado = normalizarEmail(email);
+  const buildConfirmationUrl = (token) =>
+    `${BACKEND_URL}${CANONICAL_AUTH_PREFIX}/confirmar/${token}`;
 
-  if (!nombre || !apellido || !email || !password || !confirmarPassword || !rol) {
-    return res.status(400).json({ mensaje: 'Faltan datos' });
-  }
-  if (password !== confirmarPassword) {
-    return res.status(400).json({ mensaje: 'Las contraseñas no coinciden' });
-  }
-  if (!passwordRegex.test(password)) {
-    return res.status(400).json({
-      mensaje:
-        'La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas, números y un carácter especial.'
-    });
-  }
-  if (rol === 'delegado' && codigo !== CODIGO_DELEGADO) {
-    return res.status(400).json({ mensaje: 'Código de delegado incorrecto' });
-  }
-  if (rol === 'tecnico' && codigo !== CODIGO_TECNICO) {
-    return res.status(400).json({ mensaje: 'Código de técnico incorrecto' });
-  }
-
-  if (!emailNormalizado) {
-    return res.status(400).json({ mensaje: 'Email inválido' });
-  }
-
-  const existente = await User.findOne({ email: emailNormalizado });
-  if (existente) {
-    return res.status(400).json({ mensaje: 'El email ya está registrado' });
-  }
-
-  const hashed = bcrypt.hashSync(password, 10);
-  const rolGuardado = rol.charAt(0).toUpperCase() + rol.slice(1);
-  const token = crypto.randomBytes(20).toString('hex');
-
-  await User.create({
-    nombre,
-    apellido,
-    email: emailNormalizado,
-    password: hashed,
-    rol: rolGuardado,
-    tokenConfirmacion: token
-  });
-
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
-
-  const url = `${BACKEND_URL}/api/auth/confirmar/${token}`;
-  await transporter.sendMail({
-    from: '"Mi Proyecto" <no-reply@miweb.com>',
-    to: emailNormalizado,
-    subject: 'Confirmá tu cuenta',
-    html: `<p>Hacé clic en el siguiente enlace para confirmar tu cuenta:</p><a href="${url}">${url}</a>`
-  });
-
-  return res
-    .status(201)
-    .json({ mensaje: 'Usuario registrado con éxito. Revisa tu email para confirmar la cuenta.' });
-});
-
-app.get('/api/auth/confirmar/:token', async (req, res) => {
-  const { token } = req.params;
-  const usuario = await User.findOne({ tokenConfirmacion: token });
-  if (!usuario) {
-    return res.status(400).send('Token no válido o ya usado');
-  }
-  usuario.confirmado = true;
-  usuario.tokenConfirmacion = null;
-  await usuario.save();
-  return res.redirect(`${FRONTEND_URL}/`);
-});
-
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
+  const handleRegistro = async (req, res) => {
+    const { nombre, apellido, email, password, confirmarPassword, rol, codigo } = req.body;
     const emailNormalizado = normalizarEmail(email);
+
+    if (!nombre || !apellido || !email || !password || !confirmarPassword || !rol) {
+      return res.status(400).json({ mensaje: 'Faltan datos' });
+    }
+    if (password !== confirmarPassword) {
+      return res.status(400).json({ mensaje: 'Las contraseñas no coinciden' });
+    }
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        mensaje:
+          'La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas, números y un carácter especial.'
+      });
+    }
+    if (rol === 'delegado' && codigo !== CODIGO_DELEGADO) {
+      return res.status(400).json({ mensaje: 'Código de delegado incorrecto' });
+    }
+    if (rol === 'tecnico' && codigo !== CODIGO_TECNICO) {
+      return res.status(400).json({ mensaje: 'Código de técnico incorrecto' });
+    }
+
     if (!emailNormalizado) {
       return res.status(400).json({ mensaje: 'Email inválido' });
     }
 
-    const usuario = await User.findOne({ email: emailNormalizado });
+    const existente = await User.findOne({ email: emailNormalizado });
+    if (existente) {
+      return res.status(400).json({ mensaje: 'El email ya está registrado' });
+    }
+
+    const hashed = bcrypt.hashSync(password, 10);
+    const rolGuardado = rol.charAt(0).toUpperCase() + rol.slice(1);
+    const token = crypto.randomBytes(20).toString('hex');
+
+    await User.create({
+      nombre,
+      apellido,
+      email: emailNormalizado,
+      password: hashed,
+      rol: rolGuardado,
+      tokenConfirmacion: token
+    });
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+
+    const url = buildConfirmationUrl(token);
+    await transporter.sendMail({
+      from: '"Mi Proyecto" <no-reply@miweb.com>',
+      to: emailNormalizado,
+      subject: 'Confirmá tu cuenta',
+      html: `<p>Hacé clic en el siguiente enlace para confirmar tu cuenta:</p><a href="${url}">${url}</a>`
+    });
+
+    return res
+      .status(201)
+      .json({ mensaje: 'Usuario registrado con éxito. Revisa tu email para confirmar la cuenta.' });
+  };
+
+  const handleConfirmacion = async (req, res) => {
+    const { token } = req.params;
+    const usuario = await User.findOne({ tokenConfirmacion: token });
     if (!usuario) {
-      return res.status(400).json({ mensaje: 'Credenciales inválidas' });
+      return res.status(400).send('Token no válido o ya usado');
     }
-    if (!usuario.confirmado) {
-      return res.status(403).json({ mensaje: 'Tenés que confirmar tu cuenta primero' });
-    }
-    if (!usuario.password) {
-      return res.status(400).json({
-        mensaje:
-          'Este usuario se registró con Google y no tiene una contraseña local. Iniciá sesión con Google.'
+    usuario.confirmado = true;
+    usuario.tokenConfirmacion = null;
+    await usuario.save();
+    return res.redirect(`${FRONTEND_URL}/`);
+  };
+
+  const handleLogin = async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      const emailNormalizado = normalizarEmail(email);
+      if (!emailNormalizado) {
+        return res.status(400).json({ mensaje: 'Email inválido' });
+      }
+
+      const usuario = await User.findOne({ email: emailNormalizado });
+      if (!usuario) {
+        return res.status(400).json({ mensaje: 'Credenciales inválidas' });
+      }
+      if (!usuario.confirmado) {
+        return res.status(403).json({ mensaje: 'Tenés que confirmar tu cuenta primero' });
+      }
+      if (!usuario.password) {
+        return res.status(400).json({
+          mensaje:
+            'Este usuario se registró con Google y no tiene una contraseña local. Iniciá sesión con Google.'
+        });
+      }
+      const valido = bcrypt.compareSync(password, usuario.password);
+      if (!valido) {
+        return res.status(400).json({ mensaje: 'Credenciales inválidas' });
+      }
+      const token = jwt.sign({ id: usuario._id, rol: usuario.rol }, JWT_SECRET, {
+        expiresIn: '24h'
       });
+      return res.json({
+        token,
+        usuario: { nombre: usuario.nombre, rol: usuario.rol, foto: usuario.foto || '' }
+      });
+    } catch (err) {
+      console.error(`Error en ${req.originalUrl}`, err);
+      res.status(500).json({ mensaje: 'Error al iniciar sesión' });
     }
-    const valido = bcrypt.compareSync(password, usuario.password);
-    if (!valido) {
-      return res.status(400).json({ mensaje: 'Credenciales inválidas' });
+  };
+
+  const handleGoogleStart = (req, res) => {
+    const params = new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID || '',
+      redirect_uri: GOOGLE_REDIRECT_URI,
+      response_type: 'code',
+      scope: 'profile email',
+      access_type: 'offline',
+      prompt: 'consent'
+    });
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    res.redirect(authUrl);
+  };
+
+  const handleGoogleCallback = async (req, res) => {
+    const code = req.query.code;
+    if (!code) {
+      return res.status(400).json({ mensaje: 'Código no proporcionado por Google' });
     }
-    // Extendemos la duración del token para evitar que la sesión
-    // se cierre de manera prematura. Antes el token expiraba en 1 hora,
-    // lo cual provocaba que el usuario perdiera la sesión rápidamente.
-    // Ahora el token tiene una vigencia de 24 horas.
-    const token = jwt.sign({ id: usuario._id, rol: usuario.rol }, JWT_SECRET, {
-      expiresIn: '24h'
-    });
-    return res.json({
-      token,
-      usuario: { nombre: usuario.nombre, rol: usuario.rol, foto: usuario.foto || '' }
-    });
-  } catch (err) {
-    console.error('Error en /api/auth/login', err);
-    res.status(500).json({ mensaje: 'Error al iniciar sesión' });
-  }
-});
+    try {
+      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code,
+          client_id: process.env.GOOGLE_CLIENT_ID || '',
+          client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+          redirect_uri: GOOGLE_REDIRECT_URI,
+          grant_type: 'authorization_code'
+        })
+      });
+      const tokenData = await tokenRes.json();
+      const idToken = tokenData.id_token;
+      if (!idToken) {
+        return res.status(400).json({ mensaje: 'Token de Google no recibido' });
+      }
+      const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64').toString());
+
+      let usuario = await User.findOne({ googleId: payload.sub });
+      if (!usuario) {
+        usuario = await User.create({
+          nombre: payload.given_name || payload.name || 'Usuario',
+          apellido: payload.family_name || '',
+          email: payload.email,
+          confirmado: true,
+          googleId: payload.sub,
+          foto: payload.picture || ''
+        });
+      }
+
+      const token = jwt.sign(
+        { id: usuario._id, rol: usuario.rol, foto: usuario.foto || '' },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      res.redirect(`${FRONTEND_URL}/google-success?token=${token}`);
+    } catch (err) {
+      console.error('Error en autenticación de Google', err);
+      res.redirect(`${FRONTEND_URL}/login?error=google`);
+    }
+  };
+
+  AUTH_ROUTE_PREFIXES.forEach((prefix) => {
+    app.post(`${prefix}/registro`, handleRegistro);
+    app.get(`${prefix}/confirmar/:token`, handleConfirmacion);
+    app.post(`${prefix}/login`, handleLogin);
+    app.get(`${prefix}/google`, handleGoogleStart);
+    app.get(`${prefix}/google/callback`, handleGoogleCallback);
+  });
 
 app.post('/api/contacto', protegerRuta, async (req, res) => {
   const { mensaje } = req.body;
@@ -1682,80 +1756,6 @@ app.get('/api/progreso/:id', protegerRuta, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al obtener progreso' });
-  }
-});
-
-// Inicio de sesión con Google (OAuth 2.0 sin dependencias externas)
-app.get('/api/auth/google', (req, res) => {
-  const redirectUri =
-    process.env.GOOGLE_REDIRECT_URI ||
-    'https://patincarrera.net/api/auth/google/callback';
-  const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID || '',
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: 'profile email',
-    access_type: 'offline',
-    prompt: 'consent'
-  });
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-  res.redirect(authUrl);
-});
-
-// Callback de Google
-app.get('/api/auth/google/callback', async (req, res) => {
-  const code = req.query.code;
-  if (!code) {
-    return res.status(400).json({ mensaje: 'Código no proporcionado por Google' });
-  }
-  try {
-    const redirectUri =
-      process.env.GOOGLE_REDIRECT_URI ||
-      'https://patincarrera.net/api/auth/google/callback';
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: process.env.GOOGLE_CLIENT_ID || '',
-        client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
-        redirect_uri: redirectUri,
-        grant_type: 'authorization_code'
-      })
-    });
-    const tokenData = await tokenRes.json();
-    const idToken = tokenData.id_token;
-    if (!idToken) {
-      return res.status(400).json({ mensaje: 'Token de Google no recibido' });
-    }
-    const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64').toString());
-
-    let usuario = await User.findOne({ googleId: payload.sub });
-    if (!usuario) {
-      usuario = await User.create({
-        nombre: payload.given_name || payload.name || 'Usuario',
-        apellido: payload.family_name || '',
-        email: payload.email,
-        confirmado: true,
-        googleId: payload.sub,
-        foto: payload.picture || ''
-      });
-    }
-
-    // Generamos un token con vigencia de 24 horas para evitar que la
-    // sesión de los usuarios que inician con Google se cierre de manera
-    // prematura. De esta forma se mantiene el mismo tiempo de expiración
-    // que en el inicio de sesión tradicional.
-    const token = jwt.sign(
-      { id: usuario._id, rol: usuario.rol, foto: usuario.foto || '' },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    res.redirect(`${FRONTEND_URL}/google-success?token=${token}`);
-  } catch (err) {
-    console.error('Error en autenticación de Google', err);
-    res.redirect(`${FRONTEND_URL}/login?error=google`);
   }
 });
 
