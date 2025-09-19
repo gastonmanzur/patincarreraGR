@@ -51,7 +51,7 @@ if (fs.existsSync(envPath)) {
 // Define la URI de MongoDB con un valor predeterminado para evitar errores
 // cuando no se proporciona la variable de entorno correspondiente.
 const MONGODB_URI =
-  process.env.MONGODB_URI || 'mongodb://localhost:27017/backend-auth';
+  process.env.MONGODB_URI || 'mongodb+srv://gastonmanzur:<db_password>@cluster0.0sd1y.mongodb.net/';
 
 mongoose
   .connect(MONGODB_URI)
@@ -66,7 +66,6 @@ mongoose
 // y añadimos orígenes permitidos por defecto. Esto evita que un valor
 // incorrecto de las variables de entorno deje a producción sin cabeceras CORS.
 const DEFAULT_ALLOWED_ORIGINS = [
-  'http://localhost:5173',
   'https://patincarrera.net',
   'https://www.patincarrera.net'
 ].map((url) => url.replace(/\/+$/, ''));
