@@ -8,14 +8,22 @@ import jwt from 'jsonwebtoken';
 // Clave JWT unificada
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
 
+const normalizarEmail = (email) =>
+  typeof email === 'string' ? email.trim().toLowerCase() : '';
+
 export const registrarUsuario = async (req, res) => {
   const { nombre, apellido, email, password, confirmarPassword } = req.body;
+  const emailNormalizado = normalizarEmail(email);
 
   if (password !== confirmarPassword) {
     return res.status(400).json({ mensaje: 'Las contraseñas no coinciden' });
   }
 
-  const usuarioExistente = await User.findOne({ email });
+  if (!emailNormalizado) {
+    return res.status(400).json({ mensaje: 'Email inválido' });
+  }
+
+  const usuarioExistente = await User.findOne({ email: emailNormalizado });
   if (usuarioExistente) {
     return res.status(400).json({ mensaje: 'Ese email ya está registrado' });
   }
@@ -26,7 +34,7 @@ export const registrarUsuario = async (req, res) => {
   const nuevoUsuario = new User({
     nombre,
     apellido,
-    email,
+    email: emailNormalizado,
     password: hashedPassword,
     tokenConfirmacion: token,
   });
@@ -34,7 +42,7 @@ export const registrarUsuario = async (req, res) => {
   await nuevoUsuario.save();
 
   // Enviar email de confirmación
-  await enviarEmailConfirmacion(email, token);
+  await enviarEmailConfirmacion(emailNormalizado, token);
 
   res.status(201).json({ mensaje: 'Registro exitoso. Revisa tu email para confirmar la cuenta.' });
 };
@@ -61,8 +69,13 @@ export const confirmarCuenta = async (req, res) => {
 export const loginUsuario = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const emailNormalizado = normalizarEmail(email);
 
-    const usuario = await User.findOne({ email });
+    if (!emailNormalizado) {
+      return res.status(400).json({ mensaje: 'Email inválido' });
+    }
+
+    const usuario = await User.findOne({ email: emailNormalizado });
 
     if (!usuario) {
       return res.status(404).json({ mensaje: 'Usuario no encontrado' });

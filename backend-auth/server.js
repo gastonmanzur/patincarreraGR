@@ -197,6 +197,9 @@ const ORDEN_CATEGORIAS = [
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
+const normalizarEmail = (email) =>
+  typeof email === 'string' ? email.trim().toLowerCase() : '';
+
 const posCategoria = (cat) => {
   const idx = ORDEN_CATEGORIAS.indexOf(cat);
   return idx === -1 ? ORDEN_CATEGORIAS.length : idx;
@@ -252,6 +255,7 @@ async function crearNotificacionesParaTodos(mensaje, competencia = null) {
 
 app.post('/api/auth/registro', async (req, res) => {
   const { nombre, apellido, email, password, confirmarPassword, rol, codigo } = req.body;
+  const emailNormalizado = normalizarEmail(email);
 
   if (!nombre || !apellido || !email || !password || !confirmarPassword || !rol) {
     return res.status(400).json({ mensaje: 'Faltan datos' });
@@ -272,7 +276,11 @@ app.post('/api/auth/registro', async (req, res) => {
     return res.status(400).json({ mensaje: 'Código de técnico incorrecto' });
   }
 
-  const existente = await User.findOne({ email });
+  if (!emailNormalizado) {
+    return res.status(400).json({ mensaje: 'Email inválido' });
+  }
+
+  const existente = await User.findOne({ email: emailNormalizado });
   if (existente) {
     return res.status(400).json({ mensaje: 'El email ya está registrado' });
   }
@@ -284,7 +292,7 @@ app.post('/api/auth/registro', async (req, res) => {
   await User.create({
     nombre,
     apellido,
-    email,
+    email: emailNormalizado,
     password: hashed,
     rol: rolGuardado,
     tokenConfirmacion: token
@@ -301,7 +309,7 @@ app.post('/api/auth/registro', async (req, res) => {
   const url = `${BACKEND_URL}/api/auth/confirmar/${token}`;
   await transporter.sendMail({
     from: '"Mi Proyecto" <no-reply@miweb.com>',
-    to: email,
+    to: emailNormalizado,
     subject: 'Confirmá tu cuenta',
     html: `<p>Hacé clic en el siguiente enlace para confirmar tu cuenta:</p><a href="${url}">${url}</a>`
   });
@@ -326,7 +334,12 @@ app.get('/api/auth/confirmar/:token', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const usuario = await User.findOne({ email });
+    const emailNormalizado = normalizarEmail(email);
+    if (!emailNormalizado) {
+      return res.status(400).json({ mensaje: 'Email inválido' });
+    }
+
+    const usuario = await User.findOne({ email: emailNormalizado });
     if (!usuario) {
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
     }
