@@ -27,7 +27,7 @@ router.get('/usuarios', protegerRuta, permitirRol('admin'), async (req, res) => 
 router.post('/foto-perfil', protegerRuta, upload.single('foto'), async (req, res) => {
   try {
     const user = await User.findById(req.usuario.id);
-    user.foto = `${BACKEND_URL}/uploads/${req.file.filename}`;
+    user.foto = `${BACKEND_URL}/api/uploads/${req.file.filename}`;
     await user.save();
     res.json({ mensaje: 'Foto actualizada', foto: user.foto });
   } catch (err) {

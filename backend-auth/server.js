@@ -144,7 +144,7 @@ app.use((err, req, res, next) => {
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
 }
-app.use('/uploads', express.static('uploads'));
+app.use('/api/uploads', express.static('uploads'));
 
 
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
@@ -408,7 +408,7 @@ app.post(
       const user = await User.findById(req.usuario.id);
       // Use the configured backend URL when returning the uploaded image so the
       // path is valid even when requests are proxied through another host.
-      user.foto = `${BACKEND_URL}/uploads/${req.file.filename}`;
+      user.foto = `${BACKEND_URL}/api/uploads/${req.file.filename}`;
       await user.save();
       res.json({ mensaje: 'Foto actualizada', foto: user.foto });
     } catch (err) {
@@ -467,10 +467,10 @@ app.post(
         numeroCorredor,
         categoria,
         fotoRostro: fotoRostroFile
-          ? `${BACKEND_URL}/uploads/${fotoRostroFile.filename}`
+          ? `${BACKEND_URL}/api/uploads/${fotoRostroFile.filename}`
           : undefined,
         foto: fotoFile
-          ? `${BACKEND_URL}/uploads/${fotoFile.filename}`
+          ? `${BACKEND_URL}/api/uploads/${fotoFile.filename}`
           : undefined
       });
 
@@ -595,10 +595,10 @@ app.put(
       const fotoFile = req.files?.foto?.[0];
 
       if (fotoRostroFile) {
-        actualizacion.fotoRostro = `${BACKEND_URL}/uploads/${fotoRostroFile.filename}`;
+        actualizacion.fotoRostro = `${BACKEND_URL}/api/uploads/${fotoRostroFile.filename}`;
       }
       if (fotoFile) {
-        actualizacion.foto = `${BACKEND_URL}/uploads/${fotoFile.filename}`;
+        actualizacion.foto = `${BACKEND_URL}/api/uploads/${fotoFile.filename}`;
       }
 
       const patinadorActualizado = await Patinador.findByIdAndUpdate(
@@ -716,7 +716,7 @@ app.post(
     try {
       const { titulo, contenido } = req.body;
       const imagen = req.file
-        ? `${BACKEND_URL}/uploads/${req.file.filename}`
+        ? `${BACKEND_URL}/api/uploads/${req.file.filename}`
         : undefined;
       const noticia = await News.create({
         titulo,
@@ -859,7 +859,7 @@ app.post(
       const torneo = await Torneo.findById(req.params.id);
       if (!torneo) return res.status(404).json({ mensaje: 'Torneo no encontrado' });
       const imagen = req.file
-        ? `${BACKEND_URL}/uploads/${req.file.filename}`
+        ? `${BACKEND_URL}/api/uploads/${req.file.filename}`
         : undefined;
       const competencia = await Competencia.create({
         nombre,
@@ -905,7 +905,7 @@ app.put(
     const { nombre, fecha } = req.body;
     const update = { nombre, fecha };
     if (req.file) {
-      update.imagen = `${BACKEND_URL}/uploads/${req.file.filename}`;
+      update.imagen = `${BACKEND_URL}/api/uploads/${req.file.filename}`;
     }
     try {
       const comp = await Competencia.findByIdAndUpdate(req.params.id, update, {

@@ -14,7 +14,7 @@ export default defineConfig({
   // proxy connection issues.
   server: {
     proxy: {
-      '/uploads': {
+      '/api/uploads': {
         target: 'http://localhost:5000',
         changeOrigin: true
       }
