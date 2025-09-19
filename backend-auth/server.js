@@ -36,17 +36,38 @@ process.on('unhandledRejection', (err) => console.error('[unhandledRejection]', 
 process.on('uncaughtException', (err) => console.error('[uncaughtException]', err));
 
 // Cargar variables de entorno desde .env si está presente
-const envPath = path.resolve('.env');
-if (fs.existsSync(envPath)) {
-  const envContent = fs.readFileSync(envPath, 'utf8');
-  envContent.split('\n').forEach((line) => {
-    const match = line.match(/^([^#=]+)=([^]*)$/);
-    if (match) {
-      const key = match[1].trim();
-      const value = match[2].trim();
-      if (!process.env[key]) process.env[key] = value;
+const envCandidates = [
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(__dirname, '.env'),
+  path.resolve(__dirname, '..', '.env')
+];
+
+const loadedEnvPaths = new Set();
+
+envCandidates.forEach((candidate) => {
+  if (!candidate || loadedEnvPaths.has(candidate) || !fs.existsSync(candidate)) {
+    return;
+  }
+
+  const envContent = fs.readFileSync(candidate, 'utf8');
+  envContent.split(/\r?\n/).forEach((line) => {
+    const match = line.match(/^([^#=\s]+)=([^]*)$/);
+    if (!match) return;
+
+    const key = match[1].trim();
+    const value = match[2].trim();
+    if (key && !Object.prototype.hasOwnProperty.call(process.env, key)) {
+      process.env[key] = value;
     }
   });
+
+  loadedEnvPaths.add(candidate);
+});
+
+if (loadedEnvPaths.size > 0) {
+  console.log(
+    `[config] Variables de entorno cargadas desde: ${[...loadedEnvPaths].join(', ')}`
+  );
 }
 
 // Define la URI de MongoDB con un valor predeterminado para evitar errores
