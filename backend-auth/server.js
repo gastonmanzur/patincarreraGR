@@ -502,7 +502,7 @@ app.post('/api/contacto', protegerRuta, async (req, res) => {
   }
 });
 
-app.get('/api/protegido/usuario', protegerRuta, async (req, res) => {
+app.get(['/api/protegido/usuario', '/protegido/usuario'], protegerRuta, async (req, res) => {
   try {
     const usuario = await User.findById(req.usuario.id)
       .select('-password')
@@ -514,7 +514,7 @@ app.get('/api/protegido/usuario', protegerRuta, async (req, res) => {
 });
 
 app.post(
-  '/api/protegido/foto-perfil',
+  ['/api/protegido/foto-perfil', '/protegido/foto-perfil'],
   protegerRuta,
   upload.single('foto'),
   async (req, res) => {
@@ -783,7 +783,7 @@ app.post('/api/patinadores/asociar', protegerRuta, async (req, res) => {
   }
 });
 
-app.get('/api/news', async (req, res) => {
+app.get(['/api/news', '/news'], async (req, res) => {
   try {
     const noticias = await News.find()
       .sort({ fecha: -1 })
@@ -803,7 +803,7 @@ app.get('/api/news', async (req, res) => {
   }
 });
 
-app.get('/api/news/:id', async (req, res) => {
+app.get(['/api/news/:id', '/news/:id'], async (req, res) => {
   try {
     const noticia = await News.findById(req.params.id).populate(
       'autor',
@@ -830,7 +830,7 @@ app.get('/api/news/:id', async (req, res) => {
 });
 
 app.post(
-  '/api/news',
+  ['/api/news', '/news'],
   protegerRuta,
   permitirRol('Delegado', 'Tecnico'),
   upload.single('imagen'),
@@ -858,7 +858,7 @@ app.post(
 
 
 app.post(
-  '/api/notifications',
+  ['/api/notifications', '/notifications'],
   protegerRuta,
   permitirRol('Delegado', 'Tecnico'),
   async (req, res) => {
@@ -869,7 +869,7 @@ app.post(
   },
 );
 
-app.get('/api/notifications', protegerRuta, async (req, res) => {
+app.get(['/api/notifications', '/notifications'], protegerRuta, async (req, res) => {
   try {
     const notificaciones = await Notification.find({ destinatario: req.usuario.id })
       .sort({ createdAt: -1 });
@@ -880,7 +880,7 @@ app.get('/api/notifications', protegerRuta, async (req, res) => {
   }
 });
 
-app.put('/api/notifications/:id/read', protegerRuta, async (req, res) => {
+app.put(['/api/notifications/:id/read', '/notifications/:id/read'], protegerRuta, async (req, res) => {
   try {
     const notif = await Notification.findOneAndUpdate(
       { _id: req.params.id, destinatario: req.usuario.id },
@@ -895,7 +895,10 @@ app.put('/api/notifications/:id/read', protegerRuta, async (req, res) => {
   }
 });
 
-app.delete('/api/notifications/:id', protegerRuta, permitirRol('Delegado', 'Tecnico'), async (req, res) => {
+app.delete([
+  '/api/notifications/:id',
+  '/notifications/:id'
+], protegerRuta, permitirRol('Delegado', 'Tecnico'), async (req, res) => {
   try {
     const notif = await Notification.findById(req.params.id);
     if (!notif) return res.status(404).json({ mensaje: 'Notificación no encontrada' });
@@ -1801,6 +1804,11 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Servidor escuchando en puerto ${PORT}`);
-});
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`Servidor escuchando en puerto ${PORT}`);
+  });
+}
+
+export default app;
