@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import mongoose from 'mongoose';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -24,6 +23,7 @@ import Progreso from './models/Progreso.js';
 import ExcelJS from 'exceljs';
 import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
+import connectDB, { sanitizeMongoUri } from './config/db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -71,17 +71,20 @@ if (loadedEnvPaths.size > 0) {
 
 // Define la URI de MongoDB con un valor predeterminado para evitar errores
 // cuando no se proporciona la variable de entorno correspondiente.
-const MONGODB_URI =
-  process.env.MONGODB_URI || 'mongodb+srv://gastonmanzur:<db_password>@cluster0.0sd1y.mongodb.net/';
-
-mongoose
-  .connect(MONGODB_URI)
-  .then(async () => {
-    console.log('MongoDB conectado');
+connectDB()
+  .then(async ({ uri }) => {
+    const sanitizedUri = sanitizeMongoUri(uri);
+    console.log(`MongoDB conectado${sanitizedUri ? ` (${sanitizedUri})` : ''}`);
     // Mantener los índices sincronizados con el esquema actual
     await PatinadorExterno.syncIndexes();
   })
-  .catch((err) => console.error('Error conectando a MongoDB:', err.message));
+  .catch((err) => {
+    console.error('Error conectando a MongoDB:', err.message);
+    const sanitizedUri = sanitizeMongoUri(err.mongoUri);
+    if (sanitizedUri) {
+      console.error(`URI utilizada: ${sanitizedUri}`);
+    }
+  });
 
 // Normalizamos las URLs del frontend para evitar problemas con barras finales
 // y añadimos orígenes permitidos por defecto. Esto evita que un valor
