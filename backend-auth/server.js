@@ -519,7 +519,15 @@ app.post(
   upload.single('foto'),
   async (req, res) => {
     try {
+      if (!req.file) {
+        return res.status(400).json({ mensaje: 'No se recibió ningún archivo' });
+      }
+
       const user = await User.findById(req.usuario.id);
+      if (!user) {
+        return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+      }
+
       // Use the configured backend URL when returning the uploaded image so the
       // path is valid even when requests are proxied through another host.
       user.foto = `${BACKEND_URL}/api/uploads/${req.file.filename}`;
