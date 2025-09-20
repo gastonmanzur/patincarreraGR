@@ -361,10 +361,14 @@ async function crearNotificacionesParaTodos(mensaje, competencia = null) {
 
   const handleLogin = async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { email, password } = req.body ?? {};
       const emailNormalizado = normalizarEmail(email);
       if (!emailNormalizado) {
         return res.status(400).json({ mensaje: 'Email inválido' });
+      }
+
+      if (typeof password !== 'string' || password.trim() === '') {
+        return res.status(400).json({ mensaje: 'Contraseña inválida' });
       }
 
       const usuario = await User.findOne({ email: emailNormalizado });
