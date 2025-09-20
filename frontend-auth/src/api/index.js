@@ -22,7 +22,27 @@ const baseURL = envUrl
 // hitting the wrong path (e.g. `https://api.example.com/auth/registro`
 // instead of `https://api.example.com/api/auth/registro`).
 const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
-const defaultBaseUrl = `${window.location.origin}/api`;
+
+// When running the Vite dev server the frontend lives on port 5173 while the
+// API continues listening on 5000. Without an explicit API URL the previous
+// logic attempted to hit `http://localhost:5173/api`, which obviously does not
+// exist and resulted in 404 responses such as the one reported for
+// `/api/competencias`. Detect the common local development hostnames and
+// fallback to the backend port instead so developers get a working experience
+// without having to define environment variables.
+const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)/.test(
+  window.location.origin
+);
+const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim();
+
+const localFallbackBaseUrl = backendPort
+  ? `${window.location.protocol}//${window.location.hostname}:${backendPort}/api`
+  : 'http://localhost:5000/api';
+
+const defaultBaseUrl = isLocalhost
+  ? localFallbackBaseUrl
+  : `${window.location.origin.replace(/\/+$/, '')}/api`;
+
 const api = axios.create({
   baseURL: envUrl
     ? envUrl.endsWith('/api')

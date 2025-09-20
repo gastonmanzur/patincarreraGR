@@ -987,7 +987,7 @@ app.post(
   }
 );
 
-app.get('/api/competencias', async (req, res) => {
+app.get(['/api/competencias', '/competencias'], async (req, res) => {
   try {
     const comps = await Competencia.find().sort({ fecha: 1 });
     res.json(comps);
