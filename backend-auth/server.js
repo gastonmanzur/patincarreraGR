@@ -541,7 +541,7 @@ app.post(
 );
 
 app.post(
-  '/api/patinadores',
+  ['/api/patinadores', '/patinadores'],
   protegerRuta,
   upload.fields([
     { name: 'fotoRostro', maxCount: 1 },
@@ -611,12 +611,12 @@ app.post(
         return res.status(400).json({ mensaje: `${campo} ya existe` });
       }
 
-  res.status(500).json({ mensaje: 'Error al crear el patinador' });
+      return res.status(500).json({ mensaje: 'Error al crear el patinador' });
     }
   }
 );
 
-app.get('/api/patinadores', async (req, res) => {
+app.get(['/api/patinadores', '/patinadores'], async (req, res) => {
   try {
     const patinadores = await Patinador.find().sort({ edad: 1 });
     res.json(patinadores);
@@ -653,7 +653,7 @@ app.get('/api/clubs', protegerRuta, async (req, res) => {
   }
 });
 
-app.get('/api/patinadores/:id', async (req, res) => {
+app.get(['/api/patinadores/:id', '/patinadores/:id'], async (req, res) => {
   try {
     const patinador = await Patinador.findById(req.params.id);
     if (!patinador) {
@@ -666,7 +666,10 @@ app.get('/api/patinadores/:id', async (req, res) => {
   }
 });
 
-app.post('/api/patinadores/:id/seguro', protegerRuta, async (req, res) => {
+app.post([
+  '/api/patinadores/:id/seguro',
+  '/patinadores/:id/seguro'
+], protegerRuta, async (req, res) => {
   try {
     const { tipo } = req.body;
     if (!['SD', 'SA'].includes(tipo)) {
@@ -704,7 +707,7 @@ app.post('/api/patinadores/:id/seguro', protegerRuta, async (req, res) => {
 });
 
 app.put(
-  '/api/patinadores/:id',
+  ['/api/patinadores/:id', '/patinadores/:id'],
   protegerRuta,
   upload.fields([
     { name: 'fotoRostro', maxCount: 1 },
@@ -741,47 +744,51 @@ app.put(
   }
 );
 
-  app.delete('/api/patinadores/:id', protegerRuta, async (req, res) => {
-    try {
-      const patinador = await Patinador.findByIdAndDelete(req.params.id);
-      if (!patinador) {
-        return res.status(404).json({ mensaje: 'Patinador no encontrado' });
-      }
-      res.json({ mensaje: 'Patinador eliminado' });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ mensaje: 'Error al eliminar el patinador' });
-    }
-  });
-
-app.post('/api/patinadores/asociar', protegerRuta, async (req, res) => {
-  const { dniPadre, dniMadre } = req.body;
-  if (!dniPadre && !dniMadre) {
-    return res.status(400).json({ mensaje: 'Debe proporcionar dniPadre o dniMadre' });
-  }
+app.delete(['/api/patinadores/:id', '/patinadores/:id'], protegerRuta, async (req, res) => {
   try {
-    const condiciones = [];
-    if (dniPadre) condiciones.push({ dniPadre });
-    if (dniMadre) condiciones.push({ dniMadre });
-    const patinadores = await Patinador.find({ $or: condiciones });
-    if (patinadores.length === 0) {
-      return res.status(404).json({ mensaje: 'No se encontraron patinadores' });
+    const patinador = await Patinador.findByIdAndDelete(req.params.id);
+    if (!patinador) {
+      return res.status(404).json({ mensaje: 'Patinador no encontrado' });
     }
-    const usuario = await User.findById(req.usuario.id);
-    const ids = patinadores.map((p) => p._id);
-    const existentes = (usuario.patinadores || []).map((id) => id.toString());
-    ids.forEach((id) => {
-      if (!existentes.includes(id.toString())) {
-        usuario.patinadores.push(id);
-      }
-    });
-    await usuario.save();
-    res.json(patinadores);
+    res.json({ mensaje: 'Patinador eliminado' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ mensaje: 'Error al asociar patinadores' });
+    res.status(500).json({ mensaje: 'Error al eliminar el patinador' });
   }
 });
+
+app.post(
+  ['/api/patinadores/asociar', '/patinadores/asociar'],
+  protegerRuta,
+  async (req, res) => {
+    const { dniPadre, dniMadre } = req.body;
+    if (!dniPadre && !dniMadre) {
+      return res.status(400).json({ mensaje: 'Debe proporcionar dniPadre o dniMadre' });
+    }
+    try {
+      const condiciones = [];
+      if (dniPadre) condiciones.push({ dniPadre });
+      if (dniMadre) condiciones.push({ dniMadre });
+      const patinadores = await Patinador.find({ $or: condiciones });
+      if (patinadores.length === 0) {
+        return res.status(404).json({ mensaje: 'No se encontraron patinadores' });
+      }
+      const usuario = await User.findById(req.usuario.id);
+      const ids = patinadores.map((p) => p._id);
+      const existentes = (usuario.patinadores || []).map((id) => id.toString());
+      ids.forEach((id) => {
+        if (!existentes.includes(id.toString())) {
+          usuario.patinadores.push(id);
+        }
+      });
+      await usuario.save();
+      res.json(patinadores);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al asociar patinadores' });
+    }
+  }
+);
 
 app.get(['/api/news', '/news'], async (req, res) => {
   try {

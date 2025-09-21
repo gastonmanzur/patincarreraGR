@@ -15,7 +15,7 @@ export default function Dashboard() {
     const cargarDatos = async () => {
       try {
         const res = await api.get('/protegido/usuario');
-        setUsuario(res.data.usuario);
+        setUsuario(res.data?.usuario || {});
       } catch (err) {
         console.log(err);
       }

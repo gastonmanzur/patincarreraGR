@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function Home() {
   const [news, setNews] = useState([]);
@@ -13,7 +14,7 @@ export default function Home() {
     const cargarNoticias = async () => {
       try {
         const newsRes = await api.get('/news');
-        setNews(newsRes.data);
+        setNews(Array.isArray(newsRes.data) ? newsRes.data : []);
       } catch (err) {
         console.error(err);
       }
@@ -22,7 +23,8 @@ export default function Home() {
     const cargarPatinadores = async () => {
       try {
         const userRes = await api.get('/protegido/usuario');
-        setPatinadores(userRes.data.usuario.patinadores || []);
+        const asociados = userRes.data?.usuario?.patinadores;
+        setPatinadores(Array.isArray(asociados) ? asociados : []);
       } catch (err) {
         console.error(err);
       }
@@ -31,7 +33,7 @@ export default function Home() {
     const cargarCompetencia = async () => {
       try {
         const compRes = await api.get('/competencias');
-        const comps = compRes.data;
+        const comps = Array.isArray(compRes.data) ? compRes.data : [];
         if (comps.length > 0) {
           const sorted = comps.sort(
             (a, b) => new Date(a.fecha) - new Date(b.fecha)
@@ -76,6 +78,9 @@ export default function Home() {
   }
 
   const currentPatinador = patinadores[currentPatIndex];
+  const currentPatinadorFoto = currentPatinador
+    ? getImageUrl(currentPatinador.foto)
+    : '';
   const latestNews = news.slice(0, 4);
   const wideNews = news.slice(4, 7);
   const additionalNews = news.slice(7, 11);
@@ -111,7 +116,10 @@ export default function Home() {
               </div>
               {displayedNews[0].imagen && (
                 <div className="top-news-image">
-                  <img src={displayedNews[0].imagen} alt="imagen noticia" />
+                  <img
+                    src={getImageUrl(displayedNews[0].imagen)}
+                    alt="imagen noticia"
+                  />
                 </div>
               )}
             </Link>
@@ -119,8 +127,8 @@ export default function Home() {
           <div className="patinadores-card top-right">
             {currentPatinador ? (
               <>
-                {currentPatinador.foto && (
-                  <img src={currentPatinador.foto} alt="foto patinador" />
+                {currentPatinadorFoto && (
+                  <img src={currentPatinadorFoto} alt="foto patinador" />
                 )}
                 <div className="overlay">
                   <h6>
@@ -142,7 +150,10 @@ export default function Home() {
             >
               {displayedNews[1].imagen && (
                 <div className="image-container">
-                  <img src={displayedNews[1].imagen} alt="imagen noticia" />
+                  <img
+                    src={getImageUrl(displayedNews[1].imagen)}
+                    alt="imagen noticia"
+                  />
                   <div className="news-label">NOTICIA</div>
                   <div className="news-label-line" />
                 </div>
@@ -170,7 +181,10 @@ export default function Home() {
             >
               {displayedNews[2].imagen && (
                 <div className="image-container">
-                  <img src={displayedNews[2].imagen} alt="imagen noticia" />
+                  <img
+                    src={getImageUrl(displayedNews[2].imagen)}
+                    alt="imagen noticia"
+                  />
                   <div className="news-label">NOTICIA</div>
                   <div className="news-label-line" />
                 </div>
@@ -198,7 +212,10 @@ export default function Home() {
             >
               {displayedNews[3].imagen && (
                 <div className="image-container">
-                  <img src={displayedNews[3].imagen} alt="imagen noticia" />
+                  <img
+                    src={getImageUrl(displayedNews[3].imagen)}
+                    alt="imagen noticia"
+                  />
                   <div className="news-label">NOTICIA</div>
                   <div className="news-label-line" />
                 </div>
@@ -222,7 +239,10 @@ export default function Home() {
             <div className="news-item bottom-right">
               <div className="image-container">
                 {nextCompetition.imagen && (
-                  <img src={nextCompetition.imagen} alt="imagen competencia" />
+                  <img
+                    src={getImageUrl(nextCompetition.imagen)}
+                    alt="imagen competencia"
+                  />
                 )}
                 <div className="news-label competition-label">COMPETENCIA</div>
                 <div className="news-label-line" />
@@ -253,7 +273,10 @@ export default function Home() {
               className="mini-news-card"
             >
               {item.imagen && (
-                <img src={item.imagen} alt="imagen noticia" />
+                <img
+                  src={getImageUrl(item.imagen)}
+                  alt="imagen noticia"
+                />
               )}
               <div className="mini-news-info">
                 <div className="mini-news-header">
@@ -285,7 +308,10 @@ export default function Home() {
               >
                 {item.imagen && (
                   <div className="image-container">
-                    <img src={item.imagen} alt="imagen noticia" />
+                    <img
+                      src={getImageUrl(item.imagen)}
+                      alt="imagen noticia"
+                    />
                     <div className="news-label">NOTICIA</div>
                     <div className="news-label-line" />
                   </div>
@@ -319,7 +345,10 @@ export default function Home() {
               >
                 {item.imagen && (
                   <div className="image-container">
-                    <img src={item.imagen} alt="imagen noticia" />
+                    <img
+                      src={getImageUrl(item.imagen)}
+                      alt="imagen noticia"
+                    />
                     <div className="news-label">NOTICIA</div>
                     <div className="news-label-line" />
                   </div>

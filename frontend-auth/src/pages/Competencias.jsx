@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function Competencias() {
   const { id } = useParams();
@@ -16,7 +17,7 @@ export default function Competencias() {
     const cargar = async () => {
       try {
         const res = await api.get(`/tournaments/${id}/competitions`);
-        setCompetencias(res.data);
+        setCompetencias(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error(err);
         setError('Error al cargar competencias');
@@ -45,7 +46,7 @@ export default function Competencias() {
       setFecha('');
       e.target.imagen.value = '';
       const res = await api.get(`/tournaments/${id}/competitions`);
-      setCompetencias(res.data);
+      setCompetencias(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
       alert('Error al crear competencia');
@@ -63,7 +64,7 @@ export default function Competencias() {
         fecha: nuevaFecha
       });
       const res = await api.get(`/tournaments/${id}/competitions`);
-      setCompetencias(res.data);
+      setCompetencias(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
       alert('Error al actualizar competencia');
@@ -122,16 +123,18 @@ export default function Competencias() {
         <p>No hay competencias registradas.</p>
       ) : (
         <ul className="list-group">
-          {competencias.map((c) => (
-            <li key={c._id} className="list-group-item d-flex justify-content-between align-items-center">
-              <div className="d-flex align-items-center gap-3">
-                {c.imagen && (
-                  <img src={c.imagen} alt="imagen competencia" className="competencia-img" />
-                )}
-                <div>
-                  <strong>{c.nombre}</strong> - {new Date(c.fecha).toLocaleDateString()}
+          {competencias.map((c) => {
+            const imagen = getImageUrl(c.imagen);
+            return (
+              <li key={c._id} className="list-group-item d-flex justify-content-between align-items-center">
+                <div className="d-flex align-items-center gap-3">
+                  {imagen && (
+                    <img src={imagen} alt="imagen competencia" className="competencia-img" />
+                  )}
+                  <div>
+                    <strong>{c.nombre}</strong> - {new Date(c.fecha).toLocaleDateString()}
+                  </div>
                 </div>
-              </div>
               <div className="d-flex gap-2">
                 {rol === 'Delegado' && (
                   <>
@@ -162,8 +165,9 @@ export default function Competencias() {
                   VER
                 </button>
               </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
