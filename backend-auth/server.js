@@ -1242,15 +1242,17 @@ app.post(
 );
 
 app.post('/api/competitions/:id/responder', protegerRuta, async (req, res) => {
-  const { participa } = req.body;
+  const { participa, notificationId } = req.body;
   try {
     const competencia = await Competencia.findById(req.params.id);
     if (!competencia) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
     const usuario = await User.findById(req.usuario.id).populate('patinadores');
-    const notif = await Notification.findOne({
-      destinatario: req.usuario.id,
-      competencia: competencia._id
-    });
+    const notif = notificationId
+      ? await Notification.findOne({ _id: notificationId, destinatario: req.usuario.id })
+      : await Notification.findOne({
+          destinatario: req.usuario.id,
+          competencia: competencia._id
+        });
     if (!notif) return res.status(404).json({ mensaje: 'Notificación no encontrada' });
     notif.estadoRespuesta = participa ? 'Participo' : 'No Participo';
     notif.leido = true;

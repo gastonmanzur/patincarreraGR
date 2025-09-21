@@ -33,7 +33,10 @@ export default function Notificaciones() {
 
   const responder = async (competenciaId, notifId, participa) => {
     try {
-      await api.post(`/competitions/${competenciaId}/responder`, { participa });
+      await api.post(`/competitions/${competenciaId}/responder`, {
+        participa,
+        notificationId: notifId
+      });
       setNotificaciones((prev) =>
         prev.map((n) =>
           n._id === notifId
