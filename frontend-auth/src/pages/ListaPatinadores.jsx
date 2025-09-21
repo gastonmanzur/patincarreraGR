@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import getImageUrl from '../utils/getImageUrl';
+import ImageWithFallback from '../components/ImageWithFallback';
 
 export default function ListaPatinadores() {
   const [patinadores, setPatinadores] = useState([]);
@@ -62,9 +63,10 @@ export default function ListaPatinadores() {
             const foto = getImageUrl(p.foto);
             return (
               <div className="deportista-card mb-4" key={p._id}>
-                {foto && (
-                  <img src={foto} alt={`${p.primerNombre} ${p.apellido}`} />
-                )}
+                <ImageWithFallback
+                  src={foto}
+                  alt={`${p.primerNombre} ${p.apellido}`}
+                />
                 <div className="category-label">{p.categoria}</div>
                 <div className="category-label-line" />
                 <div className="name-label">
@@ -98,13 +100,11 @@ export default function ListaPatinadores() {
           return (
             <div className="col-md-4 mb-4" key={p._id}>
               <div className="card h-100">
-                {fotoRostro && (
-                  <img
-                    src={fotoRostro}
-                    className="card-img-top"
-                    alt={`${p.primerNombre} ${p.apellido}`}
-                  />
-                )}
+                <ImageWithFallback
+                  src={fotoRostro}
+                  className="card-img-top"
+                  alt={`${p.primerNombre} ${p.apellido}`}
+                />
                 <div className="card-body d-flex flex-column">
                   <h5 className="card-title">
                     {p.primerNombre} {p.apellido}
