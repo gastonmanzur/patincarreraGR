@@ -11,7 +11,7 @@ import mongoose from 'mongoose';
 import User from './models/User.js';
 import Patinador from './models/Patinador.js';
 import { protegerRuta, permitirRol } from './middlewares/authMiddleware.js';
-import upload from './utils/multer.js';
+import upload, { UPLOADS_DIR } from './utils/multer.js';
 import News from './models/News.js';
 import Notification from './models/Notification.js';
 import Torneo from './models/Torneo.js';
@@ -165,10 +165,10 @@ app.use((err, req, res, next) => {
   }
   next(err);
 });
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
-app.use('/api/uploads', express.static('uploads'));
+app.use('/api/uploads', express.static(UPLOADS_DIR));
 
 
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
