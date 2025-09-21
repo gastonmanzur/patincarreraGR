@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import mongoose from 'mongoose';
 import User from './models/User.js';
 import Patinador from './models/Patinador.js';
 import { protegerRuta, permitirRol } from './middlewares/authMiddleware.js';
@@ -241,6 +242,99 @@ const ordenarResultados = (lista) =>
     const diff = posCategoria(a.categoria) - posCategoria(b.categoria);
     return diff !== 0 ? diff : (b.puntos || 0) - (a.puntos || 0);
   });
+
+const toObjectId = (value) => {
+  if (!value) return null;
+  if (value instanceof mongoose.Types.ObjectId) return value;
+  if (typeof value === 'string' && mongoose.Types.ObjectId.isValid(value.trim())) {
+    return new mongoose.Types.ObjectId(value.trim());
+  }
+  return null;
+};
+
+const normalizeRawCompetencia = (raw) => {
+  if (!raw) return null;
+  const normalized = { ...raw };
+
+  const maybeId = toObjectId(normalized._id);
+  if (maybeId) {
+    normalized._id = maybeId;
+  }
+
+  if (normalized.torneo) {
+    const torneoId = toObjectId(normalized.torneo);
+    if (torneoId) {
+      normalized.torneo = torneoId;
+    }
+  }
+
+  if (Array.isArray(normalized.listaBuenaFe)) {
+    normalized.listaBuenaFe = normalized.listaBuenaFe
+      .map((item) => {
+        if (item instanceof mongoose.Types.ObjectId) return item;
+        if (typeof item === 'string') {
+          return toObjectId(item);
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }
+
+  return normalized;
+};
+
+const obtenerCompetenciaConLista = async (rawId) => {
+  const id = typeof rawId === 'string' ? rawId.trim() : rawId;
+  if (!id) return null;
+
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    const comp = await Competencia.findById(id).populate('listaBuenaFe');
+    if (comp) return comp;
+  }
+
+  const raw = await Competencia.collection.findOne({ _id: id });
+  if (!raw) return null;
+
+  const normalized = normalizeRawCompetencia(raw);
+  if (!normalized) return null;
+
+  try {
+    const hydrated = Competencia.hydrate(normalized);
+    await hydrated.populate('listaBuenaFe');
+    return hydrated;
+  } catch (error) {
+    if (error?.name !== 'CastError') throw error;
+
+    const listaIds = Array.isArray(normalized.listaBuenaFe)
+      ? normalized.listaBuenaFe.filter((item) => item instanceof mongoose.Types.ObjectId)
+      : [];
+    const patinadores = listaIds.length
+      ? await Patinador.find({ _id: { $in: listaIds } })
+      : [];
+
+    return {
+      ...normalized,
+      listaBuenaFe: patinadores.map((p) =>
+        p.toObject({ getters: true, virtuals: true, versionKey: false })
+      )
+    };
+  }
+};
+
+const listaBuenaFeOrdenada = (lista) => {
+  const base = Array.isArray(lista)
+    ? lista
+        .map((item) => {
+          if (!item) return null;
+          if (typeof item.toObject === 'function') {
+            return item.toObject({ getters: true, virtuals: true, versionKey: false });
+          }
+          return item;
+        })
+        .filter(Boolean)
+    : [];
+  return ordenarPorCategoria(base);
+};
 
 const recalcularPosiciones = async (competenciaId, categoria = null) => {
   const filtro = { competenciaId };
@@ -1284,9 +1378,9 @@ app.get(
   permitirRol('Delegado'),
   async (req, res) => {
     try {
-      const comp = await Competencia.findById(req.params.id).populate('listaBuenaFe');
+      const comp = await obtenerCompetenciaConLista(req.params.id);
       if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
-      const listaOrdenada = ordenarPorCategoria([...comp.listaBuenaFe]);
+      const listaOrdenada = listaBuenaFeOrdenada(comp.listaBuenaFe);
       res.json(listaOrdenada);
     } catch (err) {
       console.error(err);
@@ -1301,7 +1395,7 @@ app.get(
   permitirRol('Delegado'),
   async (req, res) => {
     try {
-      const comp = await Competencia.findById(req.params.id).populate('listaBuenaFe');
+      const comp = await obtenerCompetenciaConLista(req.params.id);
       if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
 
       const workbook = new ExcelJS.Workbook();
@@ -1424,9 +1518,7 @@ app.get(
       d8.alignment = { horizontal: 'center', vertical: 'middle' };
       d8.border = allBorders;
 
-      const lista = Array.isArray(comp.listaBuenaFe)
-        ? ordenarPorCategoria([...comp.listaBuenaFe])
-        : [];
+      const lista = listaBuenaFeOrdenada(comp.listaBuenaFe);
       const getUltimaLetra = (cat) => {
         if (!cat || typeof cat !== 'string') return '';
         return cat.trim().slice(-1).toUpperCase();
