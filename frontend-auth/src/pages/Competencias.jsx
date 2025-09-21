@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import getImageUrl from '../utils/getImageUrl';
+import ImageWithFallback from '../components/ImageWithFallback';
 
 export default function Competencias() {
   const { id } = useParams();
@@ -129,7 +130,11 @@ export default function Competencias() {
               <li key={c._id} className="list-group-item d-flex justify-content-between align-items-center">
                 <div className="d-flex align-items-center gap-3">
                   {imagen && (
-                    <img src={imagen} alt="imagen competencia" className="competencia-img" />
+                    <ImageWithFallback
+                      src={imagen}
+                      alt={`Imagen de la competencia ${c.nombre}`}
+                      className="competencia-img"
+                    />
                   )}
                   <div>
                     <strong>{c.nombre}</strong> - {new Date(c.fecha).toLocaleDateString()}

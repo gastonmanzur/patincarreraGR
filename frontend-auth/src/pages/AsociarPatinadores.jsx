@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import api from '../api';
 import getImageUrl from '../utils/getImageUrl';
+import ImageWithFallback from '../components/ImageWithFallback';
 
 export default function AsociarPatinadores() {
   const [dniPadre, setDniPadre] = useState('');
@@ -50,9 +51,11 @@ export default function AsociarPatinadores() {
         const foto = getImageUrl(p.foto);
         return (
           <div className="card patinador-card" key={p._id}>
-            {foto && (
-              <img src={foto} className="card-img-top" alt="foto patinador" />
-            )}
+            <ImageWithFallback
+              src={foto}
+              className="card-img-top"
+              alt={`Foto de ${p.primerNombre} ${p.apellido}`}
+            />
             <div className="card-body">
               <h5 className="card-title">{p.primerNombre} {p.apellido}</h5>
               <p className="card-text"><strong>Categoría:</strong> {p.categoria}</p>

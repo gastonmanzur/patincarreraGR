@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import getImageUrl from '../utils/getImageUrl';
+import ImageWithFallback from '../components/ImageWithFallback';
 
 export default function Home() {
   const [news, setNews] = useState([]);
@@ -116,9 +117,9 @@ export default function Home() {
               </div>
               {displayedNews[0].imagen && (
                 <div className="top-news-image">
-                  <img
+                  <ImageWithFallback
                     src={getImageUrl(displayedNews[0].imagen)}
-                    alt="imagen noticia"
+                    alt={`Imagen de la noticia ${displayedNews[0].titulo}`}
                   />
                 </div>
               )}
@@ -127,9 +128,10 @@ export default function Home() {
           <div className="patinadores-card top-right">
             {currentPatinador ? (
               <>
-                {currentPatinadorFoto && (
-                  <img src={currentPatinadorFoto} alt="foto patinador" />
-                )}
+                <ImageWithFallback
+                  src={currentPatinadorFoto}
+                  alt={`Foto de ${currentPatinador.primerNombre} ${currentPatinador.apellido}`}
+                />
                 <div className="overlay">
                   <h6>
                     {currentPatinador.primerNombre} {currentPatinador.apellido}
@@ -150,9 +152,9 @@ export default function Home() {
             >
               {displayedNews[1].imagen && (
                 <div className="image-container">
-                  <img
+                  <ImageWithFallback
                     src={getImageUrl(displayedNews[1].imagen)}
-                    alt="imagen noticia"
+                    alt={`Imagen de la noticia ${displayedNews[1].titulo}`}
                   />
                   <div className="news-label">NOTICIA</div>
                   <div className="news-label-line" />
@@ -181,9 +183,9 @@ export default function Home() {
             >
               {displayedNews[2].imagen && (
                 <div className="image-container">
-                  <img
+                  <ImageWithFallback
                     src={getImageUrl(displayedNews[2].imagen)}
-                    alt="imagen noticia"
+                    alt={`Imagen de la noticia ${displayedNews[2].titulo}`}
                   />
                   <div className="news-label">NOTICIA</div>
                   <div className="news-label-line" />
@@ -212,9 +214,9 @@ export default function Home() {
             >
               {displayedNews[3].imagen && (
                 <div className="image-container">
-                  <img
+                  <ImageWithFallback
                     src={getImageUrl(displayedNews[3].imagen)}
-                    alt="imagen noticia"
+                    alt={`Imagen de la noticia ${displayedNews[3].titulo}`}
                   />
                   <div className="news-label">NOTICIA</div>
                   <div className="news-label-line" />
@@ -239,9 +241,9 @@ export default function Home() {
             <div className="news-item bottom-right">
               <div className="image-container">
                 {nextCompetition.imagen && (
-                  <img
+                  <ImageWithFallback
                     src={getImageUrl(nextCompetition.imagen)}
-                    alt="imagen competencia"
+                    alt={`Imagen de la competencia ${nextCompetition.nombre}`}
                   />
                 )}
                 <div className="news-label competition-label">COMPETENCIA</div>
@@ -273,9 +275,9 @@ export default function Home() {
               className="mini-news-card"
             >
               {item.imagen && (
-                <img
+                <ImageWithFallback
                   src={getImageUrl(item.imagen)}
-                  alt="imagen noticia"
+                  alt={`Imagen de la noticia ${item.titulo}`}
                 />
               )}
               <div className="mini-news-info">
@@ -308,9 +310,9 @@ export default function Home() {
               >
                 {item.imagen && (
                   <div className="image-container">
-                    <img
+                    <ImageWithFallback
                       src={getImageUrl(item.imagen)}
-                      alt="imagen noticia"
+                      alt={`Imagen de la noticia ${item.titulo}`}
                     />
                     <div className="news-label">NOTICIA</div>
                     <div className="news-label-line" />
@@ -345,9 +347,9 @@ export default function Home() {
               >
                 {item.imagen && (
                   <div className="image-container">
-                    <img
+                    <ImageWithFallback
                       src={getImageUrl(item.imagen)}
-                      alt="imagen noticia"
+                      alt={`Imagen de la noticia ${item.titulo}`}
                     />
                     <div className="news-label">NOTICIA</div>
                     <div className="news-label-line" />
