@@ -1241,7 +1241,15 @@ app.post(
   }
 );
 
-app.post('/api/competitions/:id/responder', protegerRuta, async (req, res) => {
+app.post(
+  [
+    '/api/competitions/:id/responder',
+    '/competitions/:id/responder',
+    '/api/competencias/:id/responder',
+    '/competencias/:id/responder'
+  ],
+  protegerRuta,
+  async (req, res) => {
   const { participa, notificationId } = req.body;
   try {
     const competencia = await Competencia.findById(req.params.id);
@@ -1267,7 +1275,8 @@ app.post('/api/competitions/:id/responder', protegerRuta, async (req, res) => {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al responder' });
   }
-});
+  }
+);
 
 app.get(
   '/api/competitions/:id/lista-buena-fe',
