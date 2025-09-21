@@ -7,8 +7,12 @@ import api from '../api';
  * que siempre devolvamos una URL absoluta válida hacia `/api/uploads`.
  *
  * @param {string | undefined | null} rawPath Ruta cruda recibida desde la API.
- * @returns {string} URL lista para usarse en etiquetas <img>. Devuelve
- *          una cadena vacía si no existe imagen.
+ * También reescribe URLs absolutas que apuntan a `localhost` u otros hosts
+ * sólo accesibles en entornos de desarrollo, tomando únicamente la ruta y
+ * reconstruyéndola con el dominio configurado para el backend actual.
+ *
+ * @returns {string} URL lista para usarse en etiquetas <img>. Devuelve una
+ *          cadena vacía si no existe imagen.
  */
 export default function getImageUrl(rawPath) {
   if (!rawPath || typeof rawPath !== 'string') {
@@ -20,23 +24,44 @@ export default function getImageUrl(rawPath) {
     return '';
   }
 
-  // Si ya es una URL absoluta o un data URI, la devolvemos tal cual.
-  if (/^(https?:\/\/|data:)/i.test(trimmed)) {
-    return trimmed;
+  const base = (api.defaults?.baseURL || `${window.location.origin}/api`).replace(/\/+$/, '');
+
+  // Las URLs absolutas son válidas siempre que no apunten a hosts locales
+  // (como `http://localhost:5000`) que quedan inaccesibles en producción.
+  // En esos casos reciclamos únicamente la ruta para reconstruirla con el
+  // host configurado en `api.defaults.baseURL`.
+  let candidate = trimmed;
+
+  if (/^https?:\/\//i.test(candidate)) {
+    try {
+      const parsed = new URL(candidate);
+      const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(parsed.hostname);
+      if (!isLocalHost) {
+        return candidate;
+      }
+      // Tomamos únicamente la ruta, preservando posibles prefijos como `/api`.
+      candidate = `${parsed.pathname}${parsed.search || ''}`;
+    } catch (error) {
+      console.warn('URL de imagen inválida recibida, se usará el valor original.', error);
+      return candidate;
+    }
   }
 
-  // Eliminamos barras iniciales y el prefijo "api/" si estuviera presente.
-  let normalized = trimmed.replace(/^\/+/, '').replace(/\\+/g, '/');
-
-  if (/^api\//i.test(normalized)) {
-    normalized = normalized.replace(/^api\/+/, '');
+  // Data URIs ya contienen toda la información necesaria.
+  if (/^data:/i.test(candidate)) {
+    return candidate;
   }
+
+  // Normalizamos la ruta relativa eliminando barras iniciales, el prefijo
+  // `api/` si estuviera presente y convirtiendo backslashes en forward
+  // slashes.
+  let normalized = candidate.replace(/^\/+/, '').replace(/\\+/g, '/');
+
+  normalized = normalized.replace(new RegExp('^api/+', 'i'), '');
 
   if (!normalized.startsWith('uploads/')) {
     normalized = `uploads/${normalized}`;
   }
-
-  const base = (api.defaults?.baseURL || `${window.location.origin}/api`).replace(/\/+$/, '');
 
   try {
     return new URL(normalized, `${base}/`).href;
