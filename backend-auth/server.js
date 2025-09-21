@@ -922,7 +922,10 @@ app.delete([
 
 // ---- TORNEOS Y COMPETENCIAS ----
 
-app.post('/api/tournaments', protegerRuta, permitirRol('Delegado'), async (req, res) => {
+app.post([
+  '/api/tournaments',
+  '/tournaments'
+], protegerRuta, permitirRol('Delegado'), async (req, res) => {
   const { nombre, fechaInicio, fechaFin } = req.body;
   if (!nombre || !fechaInicio || !fechaFin) {
     return res.status(400).json({ mensaje: 'Faltan datos' });
@@ -936,7 +939,10 @@ app.post('/api/tournaments', protegerRuta, permitirRol('Delegado'), async (req, 
   }
 });
 
-app.get('/api/tournaments', protegerRuta, async (req, res) => {
+app.get([
+  '/api/tournaments',
+  '/tournaments'
+], protegerRuta, async (req, res) => {
   try {
     const torneos = await Torneo.find().sort({ fechaInicio: -1 });
     res.json(torneos);
@@ -946,7 +952,10 @@ app.get('/api/tournaments', protegerRuta, async (req, res) => {
   }
 });
 
-app.put('/api/tournaments/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
+app.put([
+  '/api/tournaments/:id',
+  '/tournaments/:id'
+], protegerRuta, permitirRol('Delegado'), async (req, res) => {
   const { nombre, fechaInicio, fechaFin } = req.body;
   try {
     const torneo = await Torneo.findByIdAndUpdate(
@@ -962,7 +971,10 @@ app.put('/api/tournaments/:id', protegerRuta, permitirRol('Delegado'), async (re
   }
 });
 
-app.delete('/api/tournaments/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
+app.delete([
+  '/api/tournaments/:id',
+  '/tournaments/:id'
+], protegerRuta, permitirRol('Delegado'), async (req, res) => {
   try {
     const comps = await Competencia.find({ torneo: req.params.id }, '_id');
     const compIds = comps.map((c) => c._id);
@@ -978,7 +990,7 @@ app.delete('/api/tournaments/:id', protegerRuta, permitirRol('Delegado'), async 
 });
 
 app.post(
-  '/api/tournaments/:id/competitions',
+  ['/api/tournaments/:id/competitions', '/tournaments/:id/competitions'],
   protegerRuta,
   permitirRol('Delegado'),
   upload.single('imagen'),
@@ -1018,7 +1030,10 @@ app.get(['/api/competencias', '/competencias'], async (req, res) => {
   }
 });
 
-app.get('/api/tournaments/:id/competitions', protegerRuta, async (req, res) => {
+app.get([
+  '/api/tournaments/:id/competitions',
+  '/tournaments/:id/competitions'
+], protegerRuta, async (req, res) => {
   try {
     const comps = await Competencia.find({ torneo: req.params.id }).sort({ fecha: 1 });
     res.json(comps);
@@ -1548,7 +1563,10 @@ app.get(
 );
 // ---- RANKINGS ----
 
-app.get('/api/tournaments/:id/ranking/individual', protegerRuta, async (req, res) => {
+app.get([
+  '/api/tournaments/:id/ranking/individual',
+  '/tournaments/:id/ranking/individual'
+], protegerRuta, async (req, res) => {
   try {
     const comps = await Competencia.find({ torneo: req.params.id }, '_id');
     const compIds = comps.map((c) => c._id);
@@ -1597,7 +1615,10 @@ app.get('/api/tournaments/:id/ranking/individual', protegerRuta, async (req, res
   }
 });
 
-app.get('/api/tournaments/:id/ranking/club', protegerRuta, async (req, res) => {
+app.get([
+  '/api/tournaments/:id/ranking/club',
+  '/tournaments/:id/ranking/club'
+], protegerRuta, async (req, res) => {
   try {
     const comps = await Competencia.find({ torneo: req.params.id }, '_id');
     const compIds = comps.map((c) => c._id);
