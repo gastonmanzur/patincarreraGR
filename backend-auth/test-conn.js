@@ -1,15 +1,18 @@
-// test-conn.js
-const { MongoClient } = require('mongodb');
+// test-conn.js (ESM)
+import { MongoClient } from "mongodb";
 
-const uri = "mongodb+srv://gastonmanzur:gastonmanzur@cluster0.0sd1y.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const uri = "mongodb+srv://appUser:TU_PASSWORD@cluster0.xxxxx.mongodb.net/myappdb?retryWrites=true&w=majority";
 
 async function run() {
-  const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 10000 });
+  const client = new MongoClient(uri, {
+    serverSelectionTimeoutMS: 10000,
+  });
+
   try {
     await client.connect();
     console.log("✅ Conectado a Atlas correctamente");
-    const db = client.db('myappdb');
-    const col = db.collection('test_collection');
+    const db = client.db("myappdb");
+    const col = db.collection("test_collection");
     const r = await col.insertOne({ ahora: new Date(), prueba: true });
     console.log("Insertado id:", r.insertedId);
     const docs = await col.find().limit(5).toArray();
