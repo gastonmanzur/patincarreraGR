@@ -70,8 +70,8 @@ app.use('/uploads', express.static('uploads'));
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://patincarrera.net';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://patincarrera.net';
 const CLUB_LOCAL = process.env.CLUB_LOCAL || 'Gral. Rodríguez';
 
 const ORDEN_CATEGORIAS = [
