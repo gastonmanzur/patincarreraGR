@@ -8,22 +8,14 @@ import jwt from 'jsonwebtoken';
 // Clave JWT unificada
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
 
-const normalizarEmail = (email) =>
-  typeof email === 'string' ? email.trim().toLowerCase() : '';
-
 export const registrarUsuario = async (req, res) => {
   const { nombre, apellido, email, password, confirmarPassword } = req.body;
-  const emailNormalizado = normalizarEmail(email);
 
   if (password !== confirmarPassword) {
     return res.status(400).json({ mensaje: 'Las contraseñas no coinciden' });
   }
 
-  if (!emailNormalizado) {
-    return res.status(400).json({ mensaje: 'Email inválido' });
-  }
-
-  const usuarioExistente = await User.findOne({ email: emailNormalizado });
+  const usuarioExistente = await User.findOne({ email });
   if (usuarioExistente) {
     return res.status(400).json({ mensaje: 'Ese email ya está registrado' });
   }
@@ -34,7 +26,7 @@ export const registrarUsuario = async (req, res) => {
   const nuevoUsuario = new User({
     nombre,
     apellido,
-    email: emailNormalizado,
+    email,
     password: hashedPassword,
     tokenConfirmacion: token,
   });
@@ -42,7 +34,7 @@ export const registrarUsuario = async (req, res) => {
   await nuevoUsuario.save();
 
   // Enviar email de confirmación
-  await enviarEmailConfirmacion(emailNormalizado, token);
+  await enviarEmailConfirmacion(email, token);
 
   res.status(201).json({ mensaje: 'Registro exitoso. Revisa tu email para confirmar la cuenta.' });
 };
@@ -68,57 +60,52 @@ export const confirmarCuenta = async (req, res) => {
 // Login de usuario
 export const loginUsuario = async (req, res) => {
   try {
-    const { email, password } = req.body ?? {};
-    const emailNormalizado = normalizarEmail(email);
+    const { email, password } = req.body;
 
-    if (!emailNormalizado) {
-      return res.status(400).json({ mensaje: 'Email inválido' });
-    }
-
-    if (typeof password !== 'string' || password.trim() === '') {
-      return res.status(400).json({ mensaje: 'Contraseña inválida' });
-    }
-
-    const usuario = await User.findOne({ email: emailNormalizado });
+    const usuario = await User.findOne({ email });
 
     if (!usuario) {
-      return res.status(400).json({ mensaje: 'Credenciales inválidas' });
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
     }
 
     if (!usuario.confirmado) {
       return res.status(403).json({ mensaje: 'Tenés que confirmar tu cuenta primero' });
     }
 
-
     if (!usuario.password) {
-      return res.status(400).json({
-        mensaje:
-          'Este usuario se registró con Google y no tiene una contraseña local. Iniciá sesión con Google.'
-      });
+      return res
+        .status(400)
+        .json({
+          mensaje:
+            'Este usuario se registró con Google y no tiene una contraseña local. Iniciá sesión con Google.'
+        });
     }
 
     const passwordValido = await bcrypt.compare(password, usuario.password);
     if (!passwordValido) {
-      return res.status(400).json({ mensaje: 'Credenciales inválidas' });
+      return res.status(401).json({ mensaje: 'Contraseña incorrecta' });
     }
 
     const token = jwt.sign(
       { id: usuario._id, rol: usuario.rol },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '7d' }
     );
 
-    return res.json({
+    res.status(200).json({
+      mensaje: 'Login exitoso',
       token,
       usuario: {
         nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        email: usuario.email,
         rol: usuario.rol,
-        foto: usuario.foto || ''
+        foto: usuario.foto
       }
     });
   } catch (error) {
     console.error('Error en loginUsuario', error);
-    return res.status(500).json({ mensaje: 'Error al iniciar sesión' });
+    res.status(500).json({ mensaje: 'Error al iniciar sesión' });
   }
 };
   

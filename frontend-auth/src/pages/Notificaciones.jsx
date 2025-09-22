@@ -32,39 +32,19 @@ export default function Notificaciones() {
   };
 
   const responder = async (competenciaId, notifId, participa) => {
-    const payload = { participa, notificationId: notifId };
-    const endpoints = [
-      `/competencias/${competenciaId}/responder`,
-      `/competitions/${competenciaId}/responder`
-    ];
-
-    let lastError = null;
-    for (const endpoint of endpoints) {
-      try {
-        await api.post(endpoint, payload);
-        lastError = null;
-        break;
-      } catch (err) {
-        lastError = err;
-        if (err.response?.status !== 404) {
-          break;
-        }
-      }
+    try {
+      await api.post(`/competitions/${competenciaId}/responder`, { participa });
+      setNotificaciones((prev) =>
+        prev.map((n) =>
+          n._id === notifId
+            ? { ...n, estadoRespuesta: participa ? 'Participo' : 'No Participo', leido: true }
+            : n
+        )
+      );
+      window.dispatchEvent(new Event('notificationsUpdated'));
+    } catch (err) {
+      console.error(err);
     }
-
-    if (lastError) {
-      console.error(lastError);
-      return;
-    }
-
-    setNotificaciones((prev) =>
-      prev.map((n) =>
-        n._id === notifId
-          ? { ...n, estadoRespuesta: participa ? 'Participo' : 'No Participo', leido: true }
-          : n
-      )
-    );
-    window.dispatchEvent(new Event('notificationsUpdated'));
   };
 
   const verReporte = async (notif) => {

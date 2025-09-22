@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api';
-import getImageUrl from '../utils/getImageUrl';
-import ImageWithFallback from '../components/ImageWithFallback';
 
 export default function VerPatinador() {
   const { id } = useParams();
@@ -12,7 +10,7 @@ export default function VerPatinador() {
     const fetchPatinador = async () => {
       try {
         const res = await api.get(`/patinadores/${id}`);
-        setPatinador(res.data || null);
+        setPatinador(res.data);
       } catch (err) {
         console.error(err);
       }
@@ -36,8 +34,8 @@ export default function VerPatinador() {
         {patinador.apellido}
       </h1>
       {patinador.fotoRostro && (
-        <ImageWithFallback
-          src={getImageUrl(patinador.fotoRostro)}
+        <img
+          src={patinador.fotoRostro}
           alt={`${patinador.primerNombre} ${patinador.apellido}`}
           style={{ maxWidth: '200px' }}
           className="img-fluid mb-3"
@@ -64,8 +62,8 @@ export default function VerPatinador() {
       </ul>
       {patinador.foto && (
         <div className="mb-3">
-          <ImageWithFallback
-            src={getImageUrl(patinador.foto)}
+          <img
+            src={patinador.foto}
             alt={`${patinador.primerNombre} ${patinador.apellido}`}
             className="img-fluid"
             style={{ maxWidth: '300px' }}

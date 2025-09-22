@@ -85,7 +85,7 @@ export default function ResultadosCompetencia() {
     const cargar = async () => {
       try {
         const [resRes, resPat, resExt, resClubs] = await Promise.all([
-          api.get(`/competencias/${id}/resultados`),
+          api.get(`/competitions/${id}/resultados`),
           api.get('/patinadores'),
           api.get('/patinadores-externos'),
           api.get('/clubs')
@@ -138,9 +138,9 @@ export default function ResultadosCompetencia() {
         }
         payload.invitado = invitado;
       }
-      await api.post(`/competencias/${id}/resultados/manual`, payload);
+      await api.post(`/competitions/${id}/resultados/manual`, payload);
       const [resRes, resExt, resClubs] = await Promise.all([
-        api.get(`/competencias/${id}/resultados`),
+        api.get(`/competitions/${id}/resultados`),
         api.get('/patinadores-externos'),
         api.get('/clubs')
       ]);
@@ -163,10 +163,10 @@ export default function ResultadosCompetencia() {
     try {
       const formData = new FormData();
       formData.append('archivo', archivo);
-      await api.post(`/competencias/${id}/resultados/import-pdf`, formData, {
+      await api.post(`/competitions/${id}/resultados/import-pdf`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      const res = await api.get(`/competencias/${id}/resultados`);
+      const res = await api.get(`/competitions/${id}/resultados`);
       setResultados(res.data);
       setArchivo(null);
     } catch (err) {

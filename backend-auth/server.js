@@ -2,16 +2,16 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-import mongoose from 'mongoose';
 import User from './models/User.js';
 import Patinador from './models/Patinador.js';
 import { protegerRuta, permitirRol } from './middlewares/authMiddleware.js';
-import upload, { UPLOADS_DIR } from './utils/multer.js';
+import upload from './utils/multer.js';
 import News from './models/News.js';
 import Notification from './models/Notification.js';
 import Torneo from './models/Torneo.js';
@@ -24,61 +24,41 @@ import Progreso from './models/Progreso.js';
 import ExcelJS from 'exceljs';
 import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
-import connectDB, { sanitizeMongoUri } from './config/db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Configurar zona horaria para Argentina
 process.env.TZ = 'America/Argentina/Buenos_Aires';
 
-// LOG global de errores no atrapados
-process.on('unhandledRejection', (err) => console.error('[unhandledRejection]', err));
-process.on('uncaughtException', (err) => console.error('[uncaughtException]', err));
-
 // Cargar variables de entorno desde .env si está presente
-const envCandidates = [
-  path.resolve(process.cwd(), '.env'),
-  path.resolve(__dirname, '.env'),
-  path.resolve(__dirname, '..', '.env')
-];
-
-const loadedEnvPaths = new Set();
-
-envCandidates.forEach((candidate) => {
-  if (!candidate || loadedEnvPaths.has(candidate) || !fs.existsSync(candidate)) {
-    return;
-  }
-
-  const envContent = fs.readFileSync(candidate, 'utf8');
-  envContent.split(/\r?\n/).forEach((line) => {
-    const match = line.match(/^([^#=\s]+)=([^]*)$/);
-    if (!match) return;
-
-    const key = match[1].trim();
-    const value = match[2].trim();
-    if (key && !Object.prototype.hasOwnProperty.call(process.env, key)) {
-      process.env[key] = value;
+const envPath = path.resolve('.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split('\n').forEach((line) => {
+    const match = line.match(/^([^#=]+)=([^]*)$/);
+    if (match) {
+      const key = match[1].trim();
+      const value = match[2].trim();
+      if (!process.env[key]) process.env[key] = value;
     }
   });
-
-  loadedEnvPaths.add(candidate);
-});
-
-if (loadedEnvPaths.size > 0) {
-  console.log(
-    `[config] Variables de entorno cargadas desde: ${[...loadedEnvPaths].join(', ')}`
-  );
 }
 
 // Define la URI de MongoDB con un valor predeterminado para evitar errores
 // cuando no se proporciona la variable de entorno correspondiente.
-connectDB()
-  .then(async ({ uri }) => {
-    const sanitizedUri = sanitizeMongoUri(uri);
-    console.log(`MongoDB conectado${sanitizedUri ? ` (${sanitizedUri})` : ''}`);
+const MONGODB_URI =
+  process.env.MONGODB_URI || 'mongodb://localhost:27017/backend-auth';
+
+mongoose
+  .connect(MONGODB_URI)
+  .then(async () => {
+    console.log('MongoDB conectado');
     // Mantener los índices sincronizados con el esquema actual
     await PatinadorExterno.syncIndexes();
   })
+
+  .catch((err) => console.error('Error conectando a MongoDB:', err.message));
+
   .catch((err) => {
     console.error('Error conectando a MongoDB:', err.message);
     const sanitizedUri = sanitizeMongoUri(err.mongoUri);
@@ -90,7 +70,9 @@ connectDB()
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+
 const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:5173',
   'https://patincarrera.net',
   'https://www.patincarrera.net'
 ];
@@ -118,6 +100,9 @@ const allowedOrigins = Array.from(
 ).filter(Boolean);
 
 const app = express();
+
+
+// Fallback CORS handler to guarantee headers are always sent
 
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
@@ -150,6 +135,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+
 
 app.use((req, res, next) => {
   const origin = req.headers.origin?.replace(/\/+$/, '');
@@ -186,18 +172,24 @@ app.use((err, req, res, next) => {
   return next(err);
 });
 
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
+app.use('/uploads', express.static('uploads'));
+
+
 app.use('/api/uploads', express.static(UPLOADS_DIR));
+
 
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
 
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+
+
+
 const CLUB_LOCAL = process.env.CLUB_LOCAL || 'Gral. Rodríguez';
-const AUTH_ROUTE_PREFIXES = ['/api/auth', '/auth'];
-const CANONICAL_AUTH_PREFIX = AUTH_ROUTE_PREFIXES[0];
-const GOOGLE_REDIRECT_URI =
-  process.env.GOOGLE_REDIRECT_URI ||
-  `${BACKEND_URL}${CANONICAL_AUTH_PREFIX}/google/callback`;
 
 const ORDEN_CATEGORIAS = [
   'CHP',
@@ -243,9 +235,6 @@ const ORDEN_CATEGORIAS = [
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
-const normalizarEmail = (email) =>
-  typeof email === 'string' ? email.trim().toLowerCase() : '';
-
 const posCategoria = (cat) => {
   const idx = ORDEN_CATEGORIAS.indexOf(cat);
   return idx === -1 ? ORDEN_CATEGORIAS.length : idx;
@@ -259,99 +248,6 @@ const ordenarResultados = (lista) =>
     const diff = posCategoria(a.categoria) - posCategoria(b.categoria);
     return diff !== 0 ? diff : (b.puntos || 0) - (a.puntos || 0);
   });
-
-const toObjectId = (value) => {
-  if (!value) return null;
-  if (value instanceof mongoose.Types.ObjectId) return value;
-  if (typeof value === 'string' && mongoose.Types.ObjectId.isValid(value.trim())) {
-    return new mongoose.Types.ObjectId(value.trim());
-  }
-  return null;
-};
-
-const normalizeRawCompetencia = (raw) => {
-  if (!raw) return null;
-  const normalized = { ...raw };
-
-  const maybeId = toObjectId(normalized._id);
-  if (maybeId) {
-    normalized._id = maybeId;
-  }
-
-  if (normalized.torneo) {
-    const torneoId = toObjectId(normalized.torneo);
-    if (torneoId) {
-      normalized.torneo = torneoId;
-    }
-  }
-
-  if (Array.isArray(normalized.listaBuenaFe)) {
-    normalized.listaBuenaFe = normalized.listaBuenaFe
-      .map((item) => {
-        if (item instanceof mongoose.Types.ObjectId) return item;
-        if (typeof item === 'string') {
-          return toObjectId(item);
-        }
-        return null;
-      })
-      .filter(Boolean);
-  }
-
-  return normalized;
-};
-
-const obtenerCompetenciaConLista = async (rawId) => {
-  const id = typeof rawId === 'string' ? rawId.trim() : rawId;
-  if (!id) return null;
-
-  if (mongoose.Types.ObjectId.isValid(id)) {
-    const comp = await Competencia.findById(id).populate('listaBuenaFe');
-    if (comp) return comp;
-  }
-
-  const raw = await Competencia.collection.findOne({ _id: id });
-  if (!raw) return null;
-
-  const normalized = normalizeRawCompetencia(raw);
-  if (!normalized) return null;
-
-  try {
-    const hydrated = Competencia.hydrate(normalized);
-    await hydrated.populate('listaBuenaFe');
-    return hydrated;
-  } catch (error) {
-    if (error?.name !== 'CastError') throw error;
-
-    const listaIds = Array.isArray(normalized.listaBuenaFe)
-      ? normalized.listaBuenaFe.filter((item) => item instanceof mongoose.Types.ObjectId)
-      : [];
-    const patinadores = listaIds.length
-      ? await Patinador.find({ _id: { $in: listaIds } })
-      : [];
-
-    return {
-      ...normalized,
-      listaBuenaFe: patinadores.map((p) =>
-        p.toObject({ getters: true, virtuals: true, versionKey: false })
-      )
-    };
-  }
-};
-
-const listaBuenaFeOrdenada = (lista) => {
-  const base = Array.isArray(lista)
-    ? lista
-        .map((item) => {
-          if (!item) return null;
-          if (typeof item.toObject === 'function') {
-            return item.toObject({ getters: true, virtuals: true, versionKey: false });
-          }
-          return item;
-        })
-        .filter(Boolean)
-    : [];
-  return ordenarPorCategoria(base);
-};
 
 const recalcularPosiciones = async (competenciaId, categoria = null) => {
   const filtro = { competenciaId };
@@ -392,82 +288,95 @@ async function crearNotificacionesParaTodos(mensaje, competencia = null) {
   }
 }
 
-  const buildConfirmationUrl = (token) =>
-    `${BACKEND_URL}${CANONICAL_AUTH_PREFIX}/confirmar/${token}`;
+app.post('/api/auth/registro', async (req, res) => {
+  const { nombre, apellido, email, password, confirmarPassword, rol, codigo } = req.body;
 
-  const handleRegistro = async (req, res) => {
-    const { nombre, apellido, email, password, confirmarPassword, rol, codigo } = req.body;
-    const emailNormalizado = normalizarEmail(email);
+  if (!nombre || !apellido || !email || !password || !confirmarPassword || !rol) {
+    return res.status(400).json({ mensaje: 'Faltan datos' });
+  }
+  if (password !== confirmarPassword) {
+    return res.status(400).json({ mensaje: 'Las contraseñas no coinciden' });
+  }
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({
+      mensaje:
+        'La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas, números y un carácter especial.'
+    });
+  }
+  if (rol === 'delegado' && codigo !== CODIGO_DELEGADO) {
+    return res.status(400).json({ mensaje: 'Código de delegado incorrecto' });
+  }
+  if (rol === 'tecnico' && codigo !== CODIGO_TECNICO) {
+    return res.status(400).json({ mensaje: 'Código de técnico incorrecto' });
+  }
 
-    if (!nombre || !apellido || !email || !password || !confirmarPassword || !rol) {
-      return res.status(400).json({ mensaje: 'Faltan datos' });
+  const existente = await User.findOne({ email });
+  if (existente) {
+    return res.status(400).json({ mensaje: 'El email ya está registrado' });
+  }
+
+  const hashed = bcrypt.hashSync(password, 10);
+  const rolGuardado = rol.charAt(0).toUpperCase() + rol.slice(1);
+  const token = crypto.randomBytes(20).toString('hex');
+
+  await User.create({
+    nombre,
+    apellido,
+    email,
+    password: hashed,
+    rol: rolGuardado,
+    tokenConfirmacion: token
+  });
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
     }
-    if (password !== confirmarPassword) {
-      return res.status(400).json({ mensaje: 'Las contraseñas no coinciden' });
+  });
+
+  const url = `${BACKEND_URL}/api/auth/confirmar/${token}`;
+  await transporter.sendMail({
+    from: '"Mi Proyecto" <no-reply@miweb.com>',
+    to: email,
+    subject: 'Confirmá tu cuenta',
+    html: `<p>Hacé clic en el siguiente enlace para confirmar tu cuenta:</p><a href="${url}">${url}</a>`
+  });
+
+  return res
+    .status(201)
+    .json({ mensaje: 'Usuario registrado con éxito. Revisa tu email para confirmar la cuenta.' });
+});
+
+app.get('/api/auth/confirmar/:token', async (req, res) => {
+  const { token } = req.params;
+  const usuario = await User.findOne({ tokenConfirmacion: token });
+  if (!usuario) {
+    return res.status(400).send('Token no válido o ya usado');
+  }
+  usuario.confirmado = true;
+  usuario.tokenConfirmacion = null;
+  await usuario.save();
+  return res.redirect(`${FRONTEND_URL}/`);
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const usuario = await User.findOne({ email });
+    if (!usuario) {
+      return res.status(400).json({ mensaje: 'Credenciales inválidas' });
     }
-    if (!passwordRegex.test(password)) {
+    if (!usuario.confirmado) {
+      return res.status(403).json({ mensaje: 'Tenés que confirmar tu cuenta primero' });
+    }
+    if (!usuario.password) {
       return res.status(400).json({
         mensaje:
-          'La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas, números y un carácter especial.'
+          'Este usuario se registró con Google y no tiene una contraseña local. Iniciá sesión con Google.'
       });
     }
-    if (rol === 'delegado' && codigo !== CODIGO_DELEGADO) {
-      return res.status(400).json({ mensaje: 'Código de delegado incorrecto' });
-    }
-    if (rol === 'tecnico' && codigo !== CODIGO_TECNICO) {
-      return res.status(400).json({ mensaje: 'Código de técnico incorrecto' });
-    }
-
-    if (!emailNormalizado) {
-      return res.status(400).json({ mensaje: 'Email inválido' });
-    }
-
-    const existente = await User.findOne({ email: emailNormalizado });
-    if (existente) {
-      return res.status(400).json({ mensaje: 'El email ya está registrado' });
-    }
-
-    const hashed = bcrypt.hashSync(password, 10);
-    const rolGuardado = rol.charAt(0).toUpperCase() + rol.slice(1);
-    const token = crypto.randomBytes(20).toString('hex');
-
-    await User.create({
-      nombre,
-      apellido,
-      email: emailNormalizado,
-      password: hashed,
-      rol: rolGuardado,
-      tokenConfirmacion: token
-    });
-
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
-
-    const url = buildConfirmationUrl(token);
-    await transporter.sendMail({
-      from: '"Mi Proyecto" <no-reply@miweb.com>',
-      to: emailNormalizado,
-      subject: 'Confirmá tu cuenta',
-      html: `<p>Hacé clic en el siguiente enlace para confirmar tu cuenta:</p><a href="${url}">${url}</a>`
-    });
-
-    return res
-      .status(201)
-      .json({ mensaje: 'Usuario registrado con éxito. Revisa tu email para confirmar la cuenta.' });
-  };
-
-  const handleConfirmacion = async (req, res) => {
-    const { token } = req.params;
-    const usuario = await User.findOne({ tokenConfirmacion: token });
-    if (!usuario) {
-      return res.status(400).send('Token no válido o ya usado');
-    }
-
     const valido = bcrypt.compareSync(password, usuario.password);
     if (!valido) {
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
@@ -482,125 +391,12 @@ async function crearNotificacionesParaTodos(mensaje, competencia = null) {
     return res.json({
       token,
       usuario: { nombre: usuario.nombre, rol: usuario.rol, foto: usuario.foto || '' }
-
-    usuario.confirmado = true;
-    usuario.tokenConfirmacion = null;
-    await usuario.save();
-    return res.redirect(`${FRONTEND_URL}/`);
-  };
-
-  const handleLogin = async (req, res) => {
-    try {
-      const { email, password } = req.body ?? {};
-      const emailNormalizado = normalizarEmail(email);
-      if (!emailNormalizado) {
-        return res.status(400).json({ mensaje: 'Email inválido' });
-      }
-
-      if (typeof password !== 'string' || password.trim() === '') {
-        return res.status(400).json({ mensaje: 'Contraseña inválida' });
-      }
-
-      const usuario = await User.findOne({ email: emailNormalizado });
-      if (!usuario) {
-        return res.status(400).json({ mensaje: 'Credenciales inválidas' });
-      }
-      if (!usuario.confirmado) {
-        return res.status(403).json({ mensaje: 'Tenés que confirmar tu cuenta primero' });
-      }
-      if (!usuario.password) {
-        return res.status(400).json({
-          mensaje:
-            'Este usuario se registró con Google y no tiene una contraseña local. Iniciá sesión con Google.'
-        });
-      }
-      const valido = bcrypt.compareSync(password, usuario.password);
-      if (!valido) {
-        return res.status(400).json({ mensaje: 'Credenciales inválidas' });
-      }
-      const token = jwt.sign({ id: usuario._id, rol: usuario.rol }, JWT_SECRET, {
-        expiresIn: '24h'
-      });
-      return res.json({
-        token,
-        usuario: { nombre: usuario.nombre, rol: usuario.rol, foto: usuario.foto || '' }
-      });
-    } catch (err) {
-      console.error(`Error en ${req.originalUrl}`, err);
-      res.status(500).json({ mensaje: 'Error al iniciar sesión' });
-    }
-  };
-
-  const handleGoogleStart = (req, res) => {
-    const params = new URLSearchParams({
-      client_id: process.env.GOOGLE_CLIENT_ID || '',
-      redirect_uri: GOOGLE_REDIRECT_URI,
-      response_type: 'code',
-      scope: 'profile email',
-      access_type: 'offline',
-      prompt: 'consent'
-
     });
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-    res.redirect(authUrl);
-  };
-
-  const handleGoogleCallback = async (req, res) => {
-    const code = req.query.code;
-    if (!code) {
-      return res.status(400).json({ mensaje: 'Código no proporcionado por Google' });
-    }
-    try {
-      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          code,
-          client_id: process.env.GOOGLE_CLIENT_ID || '',
-          client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
-          redirect_uri: GOOGLE_REDIRECT_URI,
-          grant_type: 'authorization_code'
-        })
-      });
-      const tokenData = await tokenRes.json();
-      const idToken = tokenData.id_token;
-      if (!idToken) {
-        return res.status(400).json({ mensaje: 'Token de Google no recibido' });
-      }
-      const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64').toString());
-
-      let usuario = await User.findOne({ googleId: payload.sub });
-      if (!usuario) {
-        usuario = await User.create({
-          nombre: payload.given_name || payload.name || 'Usuario',
-          apellido: payload.family_name || '',
-          email: payload.email,
-          confirmado: true,
-          googleId: payload.sub,
-          foto: payload.picture || ''
-        });
-      }
-
-      const token = jwt.sign(
-        { id: usuario._id, rol: usuario.rol, foto: usuario.foto || '' },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      res.redirect(`${FRONTEND_URL}/google-success?token=${token}`);
-    } catch (err) {
-      console.error('Error en autenticación de Google', err);
-      res.redirect(`${FRONTEND_URL}/login?error=google`);
-    }
-  };
-
-  AUTH_ROUTE_PREFIXES.forEach((prefix) => {
-    app.post(`${prefix}/registro`, handleRegistro);
-    app.get(`${prefix}/confirmar/:token`, handleConfirmacion);
-    app.post(`${prefix}/login`, handleLogin);
-    app.get(`${prefix}/google`, handleGoogleStart);
-    app.get(`${prefix}/google/callback`, handleGoogleCallback);
-  });
+  } catch (err) {
+    console.error('Error en /api/auth/login', err);
+    res.status(500).json({ mensaje: 'Error al iniciar sesión' });
+  }
+});
 
 app.post('/api/contacto', protegerRuta, async (req, res) => {
   const { mensaje } = req.body;
@@ -630,7 +426,7 @@ app.post('/api/contacto', protegerRuta, async (req, res) => {
   }
 });
 
-app.get(['/api/protegido/usuario', '/protegido/usuario'], protegerRuta, async (req, res) => {
+app.get('/api/protegido/usuario', protegerRuta, async (req, res) => {
   try {
     const usuario = await User.findById(req.usuario.id)
       .select('-password')
@@ -642,23 +438,15 @@ app.get(['/api/protegido/usuario', '/protegido/usuario'], protegerRuta, async (r
 });
 
 app.post(
-  ['/api/protegido/foto-perfil', '/protegido/foto-perfil'],
+  '/api/protegido/foto-perfil',
   protegerRuta,
   upload.single('foto'),
   async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ mensaje: 'No se recibió ningún archivo' });
-      }
-
       const user = await User.findById(req.usuario.id);
-      if (!user) {
-        return res.status(404).json({ mensaje: 'Usuario no encontrado' });
-      }
-
       // Use the configured backend URL when returning the uploaded image so the
       // path is valid even when requests are proxied through another host.
-      user.foto = `${BACKEND_URL}/api/uploads/${req.file.filename}`;
+      user.foto = `${BACKEND_URL}/uploads/${req.file.filename}`;
       await user.save();
       res.json({ mensaje: 'Foto actualizada', foto: user.foto });
     } catch (err) {
@@ -669,7 +457,7 @@ app.post(
 );
 
 app.post(
-  ['/api/patinadores', '/patinadores'],
+  '/api/patinadores',
   protegerRuta,
   upload.fields([
     { name: 'fotoRostro', maxCount: 1 },
@@ -717,10 +505,10 @@ app.post(
         numeroCorredor,
         categoria,
         fotoRostro: fotoRostroFile
-          ? `${BACKEND_URL}/api/uploads/${fotoRostroFile.filename}`
+          ? `${BACKEND_URL}/uploads/${fotoRostroFile.filename}`
           : undefined,
         foto: fotoFile
-          ? `${BACKEND_URL}/api/uploads/${fotoFile.filename}`
+          ? `${BACKEND_URL}/uploads/${fotoFile.filename}`
           : undefined
       });
 
@@ -739,12 +527,12 @@ app.post(
         return res.status(400).json({ mensaje: `${campo} ya existe` });
       }
 
-      return res.status(500).json({ mensaje: 'Error al crear el patinador' });
+  res.status(500).json({ mensaje: 'Error al crear el patinador' });
     }
   }
 );
 
-app.get(['/api/patinadores', '/patinadores'], async (req, res) => {
+app.get('/api/patinadores', async (req, res) => {
   try {
     const patinadores = await Patinador.find().sort({ edad: 1 });
     res.json(patinadores);
@@ -781,7 +569,7 @@ app.get('/api/clubs', protegerRuta, async (req, res) => {
   }
 });
 
-app.get(['/api/patinadores/:id', '/patinadores/:id'], async (req, res) => {
+app.get('/api/patinadores/:id', async (req, res) => {
   try {
     const patinador = await Patinador.findById(req.params.id);
     if (!patinador) {
@@ -794,10 +582,7 @@ app.get(['/api/patinadores/:id', '/patinadores/:id'], async (req, res) => {
   }
 });
 
-app.post([
-  '/api/patinadores/:id/seguro',
-  '/patinadores/:id/seguro'
-], protegerRuta, async (req, res) => {
+app.post('/api/patinadores/:id/seguro', protegerRuta, async (req, res) => {
   try {
     const { tipo } = req.body;
     if (!['SD', 'SA'].includes(tipo)) {
@@ -835,7 +620,7 @@ app.post([
 });
 
 app.put(
-  ['/api/patinadores/:id', '/patinadores/:id'],
+  '/api/patinadores/:id',
   protegerRuta,
   upload.fields([
     { name: 'fotoRostro', maxCount: 1 },
@@ -848,10 +633,10 @@ app.put(
       const fotoFile = req.files?.foto?.[0];
 
       if (fotoRostroFile) {
-        actualizacion.fotoRostro = `${BACKEND_URL}/api/uploads/${fotoRostroFile.filename}`;
+        actualizacion.fotoRostro = `${BACKEND_URL}/uploads/${fotoRostroFile.filename}`;
       }
       if (fotoFile) {
-        actualizacion.foto = `${BACKEND_URL}/api/uploads/${fotoFile.filename}`;
+        actualizacion.foto = `${BACKEND_URL}/uploads/${fotoFile.filename}`;
       }
 
       const patinadorActualizado = await Patinador.findByIdAndUpdate(
@@ -872,53 +657,49 @@ app.put(
   }
 );
 
-app.delete(['/api/patinadores/:id', '/patinadores/:id'], protegerRuta, async (req, res) => {
-  try {
-    const patinador = await Patinador.findByIdAndDelete(req.params.id);
-    if (!patinador) {
-      return res.status(404).json({ mensaje: 'Patinador no encontrado' });
+  app.delete('/api/patinadores/:id', protegerRuta, async (req, res) => {
+    try {
+      const patinador = await Patinador.findByIdAndDelete(req.params.id);
+      if (!patinador) {
+        return res.status(404).json({ mensaje: 'Patinador no encontrado' });
+      }
+      res.json({ mensaje: 'Patinador eliminado' });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al eliminar el patinador' });
     }
-    res.json({ mensaje: 'Patinador eliminado' });
+  });
+
+app.post('/api/patinadores/asociar', protegerRuta, async (req, res) => {
+  const { dniPadre, dniMadre } = req.body;
+  if (!dniPadre && !dniMadre) {
+    return res.status(400).json({ mensaje: 'Debe proporcionar dniPadre o dniMadre' });
+  }
+  try {
+    const condiciones = [];
+    if (dniPadre) condiciones.push({ dniPadre });
+    if (dniMadre) condiciones.push({ dniMadre });
+    const patinadores = await Patinador.find({ $or: condiciones });
+    if (patinadores.length === 0) {
+      return res.status(404).json({ mensaje: 'No se encontraron patinadores' });
+    }
+    const usuario = await User.findById(req.usuario.id);
+    const ids = patinadores.map((p) => p._id);
+    const existentes = (usuario.patinadores || []).map((id) => id.toString());
+    ids.forEach((id) => {
+      if (!existentes.includes(id.toString())) {
+        usuario.patinadores.push(id);
+      }
+    });
+    await usuario.save();
+    res.json(patinadores);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ mensaje: 'Error al eliminar el patinador' });
+    res.status(500).json({ mensaje: 'Error al asociar patinadores' });
   }
 });
 
-app.post(
-  ['/api/patinadores/asociar', '/patinadores/asociar'],
-  protegerRuta,
-  async (req, res) => {
-    const { dniPadre, dniMadre } = req.body;
-    if (!dniPadre && !dniMadre) {
-      return res.status(400).json({ mensaje: 'Debe proporcionar dniPadre o dniMadre' });
-    }
-    try {
-      const condiciones = [];
-      if (dniPadre) condiciones.push({ dniPadre });
-      if (dniMadre) condiciones.push({ dniMadre });
-      const patinadores = await Patinador.find({ $or: condiciones });
-      if (patinadores.length === 0) {
-        return res.status(404).json({ mensaje: 'No se encontraron patinadores' });
-      }
-      const usuario = await User.findById(req.usuario.id);
-      const ids = patinadores.map((p) => p._id);
-      const existentes = (usuario.patinadores || []).map((id) => id.toString());
-      ids.forEach((id) => {
-        if (!existentes.includes(id.toString())) {
-          usuario.patinadores.push(id);
-        }
-      });
-      await usuario.save();
-      res.json(patinadores);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ mensaje: 'Error al asociar patinadores' });
-    }
-  }
-);
-
-app.get(['/api/news', '/news'], async (req, res) => {
+app.get('/api/news', async (req, res) => {
   try {
     const noticias = await News.find()
       .sort({ fecha: -1 })
@@ -938,7 +719,7 @@ app.get(['/api/news', '/news'], async (req, res) => {
   }
 });
 
-app.get(['/api/news/:id', '/news/:id'], async (req, res) => {
+app.get('/api/news/:id', async (req, res) => {
   try {
     const noticia = await News.findById(req.params.id).populate(
       'autor',
@@ -965,7 +746,7 @@ app.get(['/api/news/:id', '/news/:id'], async (req, res) => {
 });
 
 app.post(
-  ['/api/news', '/news'],
+  '/api/news',
   protegerRuta,
   permitirRol('Delegado', 'Tecnico'),
   upload.single('imagen'),
@@ -973,7 +754,7 @@ app.post(
     try {
       const { titulo, contenido } = req.body;
       const imagen = req.file
-        ? `${BACKEND_URL}/api/uploads/${req.file.filename}`
+        ? `${BACKEND_URL}/uploads/${req.file.filename}`
         : undefined;
       const noticia = await News.create({
         titulo,
@@ -993,7 +774,7 @@ app.post(
 
 
 app.post(
-  ['/api/notifications', '/notifications'],
+  '/api/notifications',
   protegerRuta,
   permitirRol('Delegado', 'Tecnico'),
   async (req, res) => {
@@ -1004,7 +785,7 @@ app.post(
   },
 );
 
-app.get(['/api/notifications', '/notifications'], protegerRuta, async (req, res) => {
+app.get('/api/notifications', protegerRuta, async (req, res) => {
   try {
     const notificaciones = await Notification.find({ destinatario: req.usuario.id })
       .sort({ createdAt: -1 });
@@ -1015,7 +796,7 @@ app.get(['/api/notifications', '/notifications'], protegerRuta, async (req, res)
   }
 });
 
-app.put(['/api/notifications/:id/read', '/notifications/:id/read'], protegerRuta, async (req, res) => {
+app.put('/api/notifications/:id/read', protegerRuta, async (req, res) => {
   try {
     const notif = await Notification.findOneAndUpdate(
       { _id: req.params.id, destinatario: req.usuario.id },
@@ -1030,10 +811,7 @@ app.put(['/api/notifications/:id/read', '/notifications/:id/read'], protegerRuta
   }
 });
 
-app.delete([
-  '/api/notifications/:id',
-  '/notifications/:id'
-], protegerRuta, permitirRol('Delegado', 'Tecnico'), async (req, res) => {
+app.delete('/api/notifications/:id', protegerRuta, permitirRol('Delegado', 'Tecnico'), async (req, res) => {
   try {
     const notif = await Notification.findById(req.params.id);
     if (!notif) return res.status(404).json({ mensaje: 'Notificación no encontrada' });
@@ -1050,10 +828,7 @@ app.delete([
 
 // ---- TORNEOS Y COMPETENCIAS ----
 
-app.post([
-  '/api/tournaments',
-  '/tournaments'
-], protegerRuta, permitirRol('Delegado'), async (req, res) => {
+app.post('/api/tournaments', protegerRuta, permitirRol('Delegado'), async (req, res) => {
   const { nombre, fechaInicio, fechaFin } = req.body;
   if (!nombre || !fechaInicio || !fechaFin) {
     return res.status(400).json({ mensaje: 'Faltan datos' });
@@ -1067,10 +842,7 @@ app.post([
   }
 });
 
-app.get([
-  '/api/tournaments',
-  '/tournaments'
-], protegerRuta, async (req, res) => {
+app.get('/api/tournaments', protegerRuta, async (req, res) => {
   try {
     const torneos = await Torneo.find().sort({ fechaInicio: -1 });
     res.json(torneos);
@@ -1080,10 +852,7 @@ app.get([
   }
 });
 
-app.put([
-  '/api/tournaments/:id',
-  '/tournaments/:id'
-], protegerRuta, permitirRol('Delegado'), async (req, res) => {
+app.put('/api/tournaments/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
   const { nombre, fechaInicio, fechaFin } = req.body;
   try {
     const torneo = await Torneo.findByIdAndUpdate(
@@ -1099,10 +868,7 @@ app.put([
   }
 });
 
-app.delete([
-  '/api/tournaments/:id',
-  '/tournaments/:id'
-], protegerRuta, permitirRol('Delegado'), async (req, res) => {
+app.delete('/api/tournaments/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
   try {
     const comps = await Competencia.find({ torneo: req.params.id }, '_id');
     const compIds = comps.map((c) => c._id);
@@ -1118,12 +884,7 @@ app.delete([
 });
 
 app.post(
-  [
-    '/api/tournaments/:id/competitions',
-    '/tournaments/:id/competitions',
-    '/api/torneos/:id/competencias',
-    '/torneos/:id/competencias'
-  ],
+  '/api/tournaments/:id/competitions',
   protegerRuta,
   permitirRol('Delegado'),
   upload.single('imagen'),
@@ -1136,7 +897,7 @@ app.post(
       const torneo = await Torneo.findById(req.params.id);
       if (!torneo) return res.status(404).json({ mensaje: 'Torneo no encontrado' });
       const imagen = req.file
-        ? `${BACKEND_URL}/api/uploads/${req.file.filename}`
+        ? `${BACKEND_URL}/uploads/${req.file.filename}`
         : undefined;
       const competencia = await Competencia.create({
         nombre,
@@ -1153,7 +914,7 @@ app.post(
   }
 );
 
-app.get(['/api/competencias', '/competencias'], async (req, res) => {
+app.get('/api/competencias', async (req, res) => {
   try {
     const comps = await Competencia.find().sort({ fecha: 1 });
     res.json(comps);
@@ -1163,12 +924,7 @@ app.get(['/api/competencias', '/competencias'], async (req, res) => {
   }
 });
 
-app.get([
-  '/api/tournaments/:id/competitions',
-  '/tournaments/:id/competitions',
-  '/api/torneos/:id/competencias',
-  '/torneos/:id/competencias'
-], protegerRuta, async (req, res) => {
+app.get('/api/tournaments/:id/competitions', protegerRuta, async (req, res) => {
   try {
     const comps = await Competencia.find({ torneo: req.params.id }).sort({ fecha: 1 });
     res.json(comps);
@@ -1179,12 +935,7 @@ app.get([
 });
 
 app.put(
-  [
-    '/api/competitions/:id',
-    '/competitions/:id',
-    '/api/competencias/:id',
-    '/competencias/:id'
-  ],
+  '/api/competitions/:id',
   protegerRuta,
   permitirRol('Delegado'),
   upload.single('imagen'),
@@ -1192,7 +943,7 @@ app.put(
     const { nombre, fecha } = req.body;
     const update = { nombre, fecha };
     if (req.file) {
-      update.imagen = `${BACKEND_URL}/api/uploads/${req.file.filename}`;
+      update.imagen = `${BACKEND_URL}/uploads/${req.file.filename}`;
     }
     try {
       const comp = await Competencia.findByIdAndUpdate(req.params.id, update, {
@@ -1208,12 +959,7 @@ app.put(
   }
 );
 
-app.delete([
-  '/api/competitions/:id',
-  '/competitions/:id',
-  '/api/competencias/:id',
-  '/competencias/:id'
-], protegerRuta, permitirRol('Delegado'), async (req, res) => {
+app.delete('/api/competitions/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
   try {
     await Resultado.deleteMany({ competenciaId: req.params.id });
     // Elimina notificaciones no leídas asociadas a la competencia
@@ -1227,12 +973,7 @@ app.delete([
   }
 });
 
-app.get([
-  '/api/competitions/:id/resultados',
-  '/competitions/:id/resultados',
-  '/api/competencias/:id/resultados',
-  '/competencias/:id/resultados'
-], protegerRuta, async (req, res) => {
+app.get('/api/competitions/:id/resultados', protegerRuta, async (req, res) => {
   try {
     await recalcularPosiciones(req.params.id);
     const resultados = await Resultado.find({ competenciaId: req.params.id })
@@ -1246,12 +987,7 @@ app.get([
 });
 
 app.post(
-  [
-    '/api/competitions/:id/resultados/import-pdf',
-    '/competitions/:id/resultados/import-pdf',
-    '/api/competencias/:id/resultados/import-pdf',
-    '/competencias/:id/resultados/import-pdf'
-  ],
+  '/api/competitions/:id/resultados/import-pdf',
   protegerRuta,
   permitirRol('Delegado'),
   upload.single('archivo'),
@@ -1309,12 +1045,7 @@ app.post(
 );
 
 app.post(
-  [
-    '/api/competitions/:id/resultados/manual',
-    '/competitions/:id/resultados/manual',
-    '/api/competencias/:id/resultados/manual',
-    '/competencias/:id/resultados/manual'
-  ],
+  '/api/competitions/:id/resultados/manual',
   protegerRuta,
   permitirRol('Delegado'),
   async (req, res) => {
@@ -1401,26 +1132,16 @@ app.post(
   }
 );
 
-app.post(
-  [
-    '/api/competitions/:id/responder',
-    '/competitions/:id/responder',
-    '/api/competencias/:id/responder',
-    '/competencias/:id/responder'
-  ],
-  protegerRuta,
-  async (req, res) => {
-  const { participa, notificationId } = req.body;
+app.post('/api/competitions/:id/responder', protegerRuta, async (req, res) => {
+  const { participa } = req.body;
   try {
     const competencia = await Competencia.findById(req.params.id);
     if (!competencia) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
     const usuario = await User.findById(req.usuario.id).populate('patinadores');
-    const notif = notificationId
-      ? await Notification.findOne({ _id: notificationId, destinatario: req.usuario.id })
-      : await Notification.findOne({
-          destinatario: req.usuario.id,
-          competencia: competencia._id
-        });
+    const notif = await Notification.findOne({
+      destinatario: req.usuario.id,
+      competencia: competencia._id
+    });
     if (!notif) return res.status(404).json({ mensaje: 'Notificación no encontrada' });
     notif.estadoRespuesta = participa ? 'Participo' : 'No Participo';
     notif.leido = true;
@@ -1435,38 +1156,32 @@ app.post(
     console.error(err);
     res.status(500).json({ mensaje: 'Error al responder' });
   }
+});
+
+app.get(
+  '/api/competitions/:id/lista-buena-fe',
+  protegerRuta,
+  permitirRol('Delegado'),
+  async (req, res) => {
+    try {
+      const comp = await Competencia.findById(req.params.id).populate('listaBuenaFe');
+      if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
+      const listaOrdenada = ordenarPorCategoria([...comp.listaBuenaFe]);
+      res.json(listaOrdenada);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ mensaje: 'Error al obtener lista' });
+    }
   }
 );
 
-const listaBuenaFePaths = [
-  '/api/competitions/:id/lista-buena-fe',
-  '/api/competencias/:id/lista-buena-fe'
-];
-
-const listaBuenaFeHandler = async (req, res) => {
-  try {
-    const comp = await obtenerCompetenciaConLista(req.params.id);
-    if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
-    const listaOrdenada = listaBuenaFeOrdenada(comp.listaBuenaFe);
-    res.json(listaOrdenada);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ mensaje: 'Error al obtener lista' });
-  }
-};
-
-for (const path of listaBuenaFePaths) {
-  app.get(path, protegerRuta, permitirRol('Delegado'), listaBuenaFeHandler);
-}
-
-const listaBuenaFeExcelPaths = [
+app.get(
   '/api/competitions/:id/lista-buena-fe/excel',
-  '/api/competencias/:id/lista-buena-fe/excel'
-];
-
-const listaBuenaFeExcelHandler = async (req, res) => {
-  try {
-      const comp = await obtenerCompetenciaConLista(req.params.id);
+  protegerRuta,
+  permitirRol('Delegado'),
+  async (req, res) => {
+    try {
+      const comp = await Competencia.findById(req.params.id).populate('listaBuenaFe');
       if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
 
       const workbook = new ExcelJS.Workbook();
@@ -1589,7 +1304,9 @@ const listaBuenaFeExcelHandler = async (req, res) => {
       d8.alignment = { horizontal: 'center', vertical: 'middle' };
       d8.border = allBorders;
 
-      const lista = listaBuenaFeOrdenada(comp.listaBuenaFe);
+      const lista = Array.isArray(comp.listaBuenaFe)
+        ? ordenarPorCategoria([...comp.listaBuenaFe])
+        : [];
       const getUltimaLetra = (cat) => {
         if (!cat || typeof cat !== 'string') return '';
         return cat.trim().slice(-1).toUpperCase();
@@ -1733,17 +1450,11 @@ const listaBuenaFeExcelHandler = async (req, res) => {
       console.error(err);
       res.status(500).json({ mensaje: 'Error al generar excel' });
     }
-  };
-
-for (const path of listaBuenaFeExcelPaths) {
-  app.get(path, protegerRuta, permitirRol('Delegado'), listaBuenaFeExcelHandler);
-}
+  }
+);
 // ---- RANKINGS ----
 
-app.get([
-  '/api/tournaments/:id/ranking/individual',
-  '/tournaments/:id/ranking/individual'
-], protegerRuta, async (req, res) => {
+app.get('/api/tournaments/:id/ranking/individual', protegerRuta, async (req, res) => {
   try {
     const comps = await Competencia.find({ torneo: req.params.id }, '_id');
     const compIds = comps.map((c) => c._id);
@@ -1792,10 +1503,7 @@ app.get([
   }
 });
 
-app.get([
-  '/api/tournaments/:id/ranking/club',
-  '/tournaments/:id/ranking/club'
-], protegerRuta, async (req, res) => {
+app.get('/api/tournaments/:id/ranking/club', protegerRuta, async (req, res) => {
   try {
     const comps = await Competencia.find({ torneo: req.params.id }, '_id');
     const compIds = comps.map((c) => c._id);
@@ -2002,11 +1710,11 @@ app.get('/api/progreso/:id', protegerRuta, async (req, res) => {
   }
 });
 
-
 // Inicio de sesión con Google (OAuth 2.0 sin dependencias externas)
 app.get('/api/auth/google', (req, res) => {
   const redirectUri =
-    process.env.GOOGLE_REDIRECT_URI || 'http://patincarrera.net/api/auth/google/callback';
+    process.env.GOOGLE_REDIRECT_URI ||
+    'https://patincarrera.net/api/auth/google/callback';
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID || '',
     redirect_uri: redirectUri,
@@ -2027,7 +1735,8 @@ app.get('/api/auth/google/callback', async (req, res) => {
   }
   try {
     const redirectUri =
-      process.env.GOOGLE_REDIRECT_URI || 'http://patincarrera.net/api/auth/google/callback';
+      process.env.GOOGLE_REDIRECT_URI ||
+      'https://patincarrera.net/api/auth/google/callback';
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -2068,19 +1777,14 @@ app.get('/api/auth/google/callback', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-// Middleware de errores (al final)
-app.use((err, req, res, next) => {
-  console.error('[ERROR]', err);
-  res.status(err.status || 500).json({ ok: false, message: 'Internal error' });
+    res.redirect(`${FRONTEND_URL}/google-success?token=${token}`);
+  } catch (err) {
+    console.error('Error en autenticación de Google', err);
+    res.redirect(`${FRONTEND_URL}/login?error=google`);
+  }
 });
 
 const PORT = process.env.PORT || 5000;
-
-
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`Servidor escuchando en puerto ${PORT}`);
-  });
-}
-
-export default app;
+app.listen(PORT, () => {
+  console.log(`Servidor escuchando en puerto ${PORT}`);
+});

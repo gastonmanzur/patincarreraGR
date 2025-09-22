@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api';
-import getImageUrl from '../utils/getImageUrl';
-import ImageWithFallback from '../components/ImageWithFallback';
 
 export default function VerNoticia() {
   const { id } = useParams();
@@ -12,7 +10,7 @@ export default function VerNoticia() {
     const fetchNoticia = async () => {
       try {
         const res = await api.get(`/news/${id}`);
-        setNoticia(res.data || null);
+        setNoticia(res.data);
       } catch (err) {
         console.error(err);
       }
@@ -29,9 +27,9 @@ export default function VerNoticia() {
     <div className="container mt-4">
       <h1 className="mb-3">{noticia.titulo}</h1>
       {noticia.imagen && (
-        <ImageWithFallback
-          src={getImageUrl(noticia.imagen)}
-          alt={`Imagen de la noticia ${noticia.titulo}`}
+        <img
+          src={noticia.imagen}
+          alt="imagen noticia"
           className="img-fluid mb-3"
         />
       )}
