@@ -21,6 +21,8 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    cd backend-auth
    cp .env.example .env
    # edit .env with real values (Mongo URI, JWT secret, email creds, etc.)
+   # NODE_ENV=production (present in the example file) ensures the backend
+   # uses https://patincarrera.net as the default domain for redirects & CORS.
    npm install
    pm2 start server.js --name patincarrera-backend
    pm2 save
@@ -34,8 +36,12 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    cp .env.example .env
    npm install
    npm run build
-   sudo mkdir -p /var/www/patincarrera/frontend
-   sudo cp -r dist /var/www/patincarrera/frontend
+   sudo mkdir -p /var/www/patincarrera/frontend/dist
+   # Copy the *contents* of the Vite build so the document root has an index.html
+   # directly inside it. Leaving the files nested inside an extra `dist/`
+   # directory causes Nginx/Hostinger to respond with "403 Forbidden" because
+   # there is no index at the root level.
+   sudo rsync -a dist/ /var/www/patincarrera/frontend/dist/
    cd ..
    ```
 

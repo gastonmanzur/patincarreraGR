@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+
 // Determine the base URL for API requests. If an explicit URL is provided via
 // `VITE_API_URL`, ensure it includes the `/api` prefix expected by the backend.
 // Otherwise, default to the current origin with the `/api` path.
@@ -36,6 +37,39 @@ const api = axios.create({
   baseURL,
   withCredentials: true,
 });*/
+
+// Normalise a raw URL so it always points to the backend `/api` prefix.
+const buildApiBaseUrl = () => {
+  const rawEnvUrl = import.meta.env.VITE_API_URL?.trim();
+
+  if (rawEnvUrl) {
+    const normalised = rawEnvUrl.replace(/\/+$/, '');
+    return normalised.endsWith('/api') ? normalised : `${normalised}/api`;
+  }
+
+  const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim();
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(hostname);
+
+  if (isLocalHost) {
+    const port = backendPort || '5000';
+    return `${protocol}//${hostname}:${port}/api`;
+  }
+
+  const origin = window.location.origin.replace(/\/+$/, '');
+  if (backendPort) {
+    return `${protocol}//${hostname}:${backendPort}/api`;
+  }
+
+
+  return `${origin}/api`;
+};
+
+
+const api = axios.create({
+  baseURL: buildApiBaseUrl()
+});
 
 
 api.interceptors.request.use((config) => {

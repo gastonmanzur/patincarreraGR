@@ -8,7 +8,14 @@ passport.use(new GoogleStrategy({
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL:
     process.env.GOOGLE_REDIRECT_URI ||
+
     'https://patincarrera.net/api/auth/google/callback'
+
+
+    (process.env.NODE_ENV === 'production'
+      ? 'https://patincarrera.net/api/auth/google/callback'
+      : 'http://localhost:5000/api/auth/google/callback')
+  
 
 }, async (accessToken, refreshToken, profile, done) => {
   try {
