@@ -67,9 +67,9 @@ const buildApiBaseUrl = () => {
 };
 
 
-const api = axios.create({
-  baseURL: buildApiBaseUrl()
-});
+// const api = axios.create({
+//   baseURL: buildApiBaseUrl()
+// });
 
 
 api.interceptors.request.use((config) => {
