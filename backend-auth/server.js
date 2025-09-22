@@ -885,12 +885,29 @@ app.post(
 );
 
 app.get('/api/notifications', protegerRuta, async (req, res) => {
+  const userId = req.usuario?.id;
+
+  if (!userId) {
+    return res.status(401).json({ mensaje: 'Usuario no autenticado' });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    console.warn('ID de usuario inválido recibido en /api/notifications', userId);
+    return res.status(400).json({ mensaje: 'Identificador de usuario inválido' });
+  }
+
+  const limitParam = Number.parseInt(req.query?.limit ?? '', 10);
+  const limit = Number.isNaN(limitParam) ? 100 : Math.max(1, Math.min(limitParam, 200));
+
   try {
-    const notificaciones = await Notification.find({ destinatario: req.usuario.id })
-      .sort({ createdAt: -1 });
+    const destinatarioId = new mongoose.Types.ObjectId(userId);
+    const notificaciones = await Notification.find({ destinatario: destinatarioId })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
     res.json(notificaciones);
   } catch (err) {
-    console.error(err);
+    console.error('Error al obtener notificaciones', err);
     res.status(500).json({ mensaje: 'Error al obtener notificaciones' });
   }
 });
