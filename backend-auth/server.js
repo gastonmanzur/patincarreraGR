@@ -26,6 +26,7 @@ import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOADS_DIR = path.resolve('uploads');
 
 // Configurar zona horaria para Argentina
 process.env.TZ = 'America/Argentina/Buenos_Aires';
@@ -44,6 +45,22 @@ if (fs.existsSync(envPath)) {
   });
 }
 
+const sanitizeMongoUri = (uri) => {
+  if (!uri) return '';
+  try {
+    const parsed = new URL(uri);
+    if (parsed.password) {
+      parsed.password = '***';
+    }
+    if (parsed.username) {
+      parsed.username = '***';
+    }
+    return parsed.toString();
+  } catch (err) {
+    return '';
+  }
+};
+
 // Define la URI de MongoDB con un valor predeterminado para evitar errores
 // cuando no se proporciona la variable de entorno correspondiente.
 const MONGODB_URI =
@@ -56,12 +73,9 @@ mongoose
     // Mantener los índices sincronizados con el esquema actual
     await PatinadorExterno.syncIndexes();
   })
-
-  .catch((err) => console.error('Error conectando a MongoDB:', err.message));
-
   .catch((err) => {
     console.error('Error conectando a MongoDB:', err.message);
-    const sanitizedUri = sanitizeMongoUri(err.mongoUri);
+    const sanitizedUri = sanitizeMongoUri(MONGODB_URI);
     if (sanitizedUri) {
       console.error(`URI utilizada: ${sanitizedUri}`);
     }
@@ -103,10 +117,6 @@ const app = express();
 
 
 // Fallback CORS handler to guarantee headers are always sent
-
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
 
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -172,22 +182,13 @@ app.use((err, req, res, next) => {
   return next(err);
 });
 
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
-app.use('/uploads', express.static('uploads'));
-
-
+app.use('/uploads', express.static(UPLOADS_DIR));
 app.use('/api/uploads', express.static(UPLOADS_DIR));
 
 
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
-
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-
-
 
 const CLUB_LOCAL = process.env.CLUB_LOCAL || 'Gral. Rodríguez';
 
