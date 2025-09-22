@@ -133,6 +133,46 @@ const allowedOrigins = Array.from(
 
 const app = express();
 
+const registerWithAliases = (originalMethod) => (path, ...handlers) => {
+  const looksLikePath =
+    typeof path === 'string' || Array.isArray(path) || path instanceof RegExp;
+
+  if (!looksLikePath) {
+    return originalMethod(path, ...handlers);
+  }
+
+  const uniquePaths = [...new Set(withApiAliases(path))];
+  uniquePaths.forEach((alias) => {
+    originalMethod(alias, ...handlers);
+  });
+
+  return app;
+};
+
+['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all'].forEach(
+  (method) => {
+    const original = app[method].bind(app);
+    app[method] = registerWithAliases(original);
+  }
+);
+
+const originalUse = app.use.bind(app);
+app.use = (path, ...handlers) => {
+  const looksLikePath =
+    typeof path === 'string' || Array.isArray(path) || path instanceof RegExp;
+
+  if (!looksLikePath) {
+    return originalUse(path, ...handlers);
+  }
+
+  const uniquePaths = [...new Set(withApiAliases(path))];
+  uniquePaths.forEach((alias) => {
+    originalUse(alias, ...handlers);
+  });
+
+  return app;
+};
+
 
 // Fallback CORS handler to guarantee headers are always sent
 
