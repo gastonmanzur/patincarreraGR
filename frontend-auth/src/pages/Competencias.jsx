@@ -17,7 +17,7 @@ export default function Competencias() {
   useEffect(() => {
     const cargar = async () => {
       try {
-        const res = await api.get(`/tournaments/${id}/competitions`);
+        const res = await api.get(`/torneos/${id}/competencias`);
         setCompetencias(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error(err);
@@ -38,7 +38,7 @@ export default function Competencias() {
       if (e.target.imagen.files[0]) {
         formData.append('imagen', e.target.imagen.files[0]);
       }
-      await api.post(`/tournaments/${id}/competitions`, formData, {
+      await api.post(`/torneos/${id}/competencias`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -46,7 +46,7 @@ export default function Competencias() {
       setNombre('');
       setFecha('');
       e.target.imagen.value = '';
-      const res = await api.get(`/tournaments/${id}/competitions`);
+      const res = await api.get(`/torneos/${id}/competencias`);
       setCompetencias(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
@@ -60,11 +60,11 @@ export default function Competencias() {
     const nuevaFecha = prompt('Nueva fecha', comp.fecha.slice(0, 10));
     if (!nuevaFecha) return;
     try {
-      await api.put(`/competitions/${comp._id}`, {
+      await api.put(`/competencias/${comp._id}`, {
         nombre: nuevoNombre,
         fecha: nuevaFecha
       });
-      const res = await api.get(`/tournaments/${id}/competitions`);
+      const res = await api.get(`/torneos/${id}/competencias`);
       setCompetencias(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
@@ -75,7 +75,7 @@ export default function Competencias() {
   const eliminarCompetencia = async (compId) => {
     if (!confirm('¿Eliminar competencia?')) return;
     try {
-      await api.delete(`/competitions/${compId}`);
+      await api.delete(`/competencias/${compId}`);
       setCompetencias(competencias.filter((c) => c._id !== compId));
     } catch (err) {
       console.error(err);

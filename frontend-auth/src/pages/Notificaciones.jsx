@@ -34,8 +34,8 @@ export default function Notificaciones() {
   const responder = async (competenciaId, notifId, participa) => {
     const payload = { participa, notificationId: notifId };
     const endpoints = [
-      `/competitions/${competenciaId}/responder`,
-      `/competencias/${competenciaId}/responder`
+      `/competencias/${competenciaId}/responder`,
+      `/competitions/${competenciaId}/responder`
     ];
 
     let lastError = null;

@@ -1084,7 +1084,12 @@ app.delete([
 });
 
 app.post(
-  ['/api/tournaments/:id/competitions', '/tournaments/:id/competitions'],
+  [
+    '/api/tournaments/:id/competitions',
+    '/tournaments/:id/competitions',
+    '/api/torneos/:id/competencias',
+    '/torneos/:id/competencias'
+  ],
   protegerRuta,
   permitirRol('Delegado'),
   upload.single('imagen'),
@@ -1126,7 +1131,9 @@ app.get(['/api/competencias', '/competencias'], async (req, res) => {
 
 app.get([
   '/api/tournaments/:id/competitions',
-  '/tournaments/:id/competitions'
+  '/tournaments/:id/competitions',
+  '/api/torneos/:id/competencias',
+  '/torneos/:id/competencias'
 ], protegerRuta, async (req, res) => {
   try {
     const comps = await Competencia.find({ torneo: req.params.id }).sort({ fecha: 1 });
@@ -1138,7 +1145,12 @@ app.get([
 });
 
 app.put(
-  '/api/competitions/:id',
+  [
+    '/api/competitions/:id',
+    '/competitions/:id',
+    '/api/competencias/:id',
+    '/competencias/:id'
+  ],
   protegerRuta,
   permitirRol('Delegado'),
   upload.single('imagen'),
@@ -1162,7 +1174,12 @@ app.put(
   }
 );
 
-app.delete('/api/competitions/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
+app.delete([
+  '/api/competitions/:id',
+  '/competitions/:id',
+  '/api/competencias/:id',
+  '/competencias/:id'
+], protegerRuta, permitirRol('Delegado'), async (req, res) => {
   try {
     await Resultado.deleteMany({ competenciaId: req.params.id });
     // Elimina notificaciones no leídas asociadas a la competencia
@@ -1176,7 +1193,12 @@ app.delete('/api/competitions/:id', protegerRuta, permitirRol('Delegado'), async
   }
 });
 
-app.get('/api/competitions/:id/resultados', protegerRuta, async (req, res) => {
+app.get([
+  '/api/competitions/:id/resultados',
+  '/competitions/:id/resultados',
+  '/api/competencias/:id/resultados',
+  '/competencias/:id/resultados'
+], protegerRuta, async (req, res) => {
   try {
     await recalcularPosiciones(req.params.id);
     const resultados = await Resultado.find({ competenciaId: req.params.id })
@@ -1190,7 +1212,12 @@ app.get('/api/competitions/:id/resultados', protegerRuta, async (req, res) => {
 });
 
 app.post(
-  '/api/competitions/:id/resultados/import-pdf',
+  [
+    '/api/competitions/:id/resultados/import-pdf',
+    '/competitions/:id/resultados/import-pdf',
+    '/api/competencias/:id/resultados/import-pdf',
+    '/competencias/:id/resultados/import-pdf'
+  ],
   protegerRuta,
   permitirRol('Delegado'),
   upload.single('archivo'),
@@ -1248,7 +1275,12 @@ app.post(
 );
 
 app.post(
-  '/api/competitions/:id/resultados/manual',
+  [
+    '/api/competitions/:id/resultados/manual',
+    '/competitions/:id/resultados/manual',
+    '/api/competencias/:id/resultados/manual',
+    '/competencias/:id/resultados/manual'
+  ],
   protegerRuta,
   permitirRol('Delegado'),
   async (req, res) => {
