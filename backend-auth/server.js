@@ -1372,29 +1372,34 @@ app.post(
   }
 );
 
-app.get(
+const listaBuenaFePaths = [
   '/api/competitions/:id/lista-buena-fe',
-  protegerRuta,
-  permitirRol('Delegado'),
-  async (req, res) => {
-    try {
-      const comp = await obtenerCompetenciaConLista(req.params.id);
-      if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
-      const listaOrdenada = listaBuenaFeOrdenada(comp.listaBuenaFe);
-      res.json(listaOrdenada);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ mensaje: 'Error al obtener lista' });
-    }
-  }
-);
+  '/api/competencias/:id/lista-buena-fe'
+];
 
-app.get(
+const listaBuenaFeHandler = async (req, res) => {
+  try {
+    const comp = await obtenerCompetenciaConLista(req.params.id);
+    if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
+    const listaOrdenada = listaBuenaFeOrdenada(comp.listaBuenaFe);
+    res.json(listaOrdenada);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener lista' });
+  }
+};
+
+for (const path of listaBuenaFePaths) {
+  app.get(path, protegerRuta, permitirRol('Delegado'), listaBuenaFeHandler);
+}
+
+const listaBuenaFeExcelPaths = [
   '/api/competitions/:id/lista-buena-fe/excel',
-  protegerRuta,
-  permitirRol('Delegado'),
-  async (req, res) => {
-    try {
+  '/api/competencias/:id/lista-buena-fe/excel'
+];
+
+const listaBuenaFeExcelHandler = async (req, res) => {
+  try {
       const comp = await obtenerCompetenciaConLista(req.params.id);
       if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
 
@@ -1662,8 +1667,11 @@ app.get(
       console.error(err);
       res.status(500).json({ mensaje: 'Error al generar excel' });
     }
-  }
-);
+  };
+
+for (const path of listaBuenaFeExcelPaths) {
+  app.get(path, protegerRuta, permitirRol('Delegado'), listaBuenaFeExcelHandler);
+}
 // ---- RANKINGS ----
 
 app.get([
