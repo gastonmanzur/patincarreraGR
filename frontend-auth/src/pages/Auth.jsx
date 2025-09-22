@@ -10,7 +10,7 @@ export default function Auth() {
       <div className="row justify-content-center">
         <div className="col-12 col-md-6">
           <h1 className="text-center mb-4">
-            {mostrarRegistro ? 'Registrarse' : 'Iniciar sesión'}
+            {mostrarRegistro ? 'Registrarse' : 'Iniciar Sesión'}
           </h1>
           <div className="card p-4">
             {mostrarRegistro ? <RegisterForm /> : <LoginForm />}

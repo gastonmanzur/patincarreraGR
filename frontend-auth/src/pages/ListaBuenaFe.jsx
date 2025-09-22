@@ -11,7 +11,7 @@ export default function ListaBuenaFe() {
   useEffect(() => {
     const cargar = async () => {
       try {
-        const res = await api.get(`/competitions/${id}/lista-buena-fe`);
+        const res = await api.get(`/competencias/${id}/lista-buena-fe`);
         setLista(res.data);
       } catch (err) {
         console.error(err);
@@ -25,7 +25,7 @@ export default function ListaBuenaFe() {
 
   const exportar = async () => {
     try {
-      const res = await api.get(`/competitions/${id}/lista-buena-fe/excel`, {
+      const res = await api.get(`/competencias/${id}/lista-buena-fe/excel`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([res.data]));

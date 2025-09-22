@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
+import ImageWithFallback from '../components/ImageWithFallback';
 
 export default function Home() {
   const [news, setNews] = useState([]);
@@ -13,7 +15,7 @@ export default function Home() {
     const cargarNoticias = async () => {
       try {
         const newsRes = await api.get('/news');
-        setNews(newsRes.data);
+        setNews(Array.isArray(newsRes.data) ? newsRes.data : []);
       } catch (err) {
         console.error(err);
       }
@@ -22,7 +24,8 @@ export default function Home() {
     const cargarPatinadores = async () => {
       try {
         const userRes = await api.get('/protegido/usuario');
-        setPatinadores(userRes.data.usuario.patinadores || []);
+        const asociados = userRes.data?.usuario?.patinadores;
+        setPatinadores(Array.isArray(asociados) ? asociados : []);
       } catch (err) {
         console.error(err);
       }
@@ -31,7 +34,7 @@ export default function Home() {
     const cargarCompetencia = async () => {
       try {
         const compRes = await api.get('/competencias');
-        const comps = compRes.data;
+        const comps = Array.isArray(compRes.data) ? compRes.data : [];
         if (comps.length > 0) {
           const sorted = comps.sort(
             (a, b) => new Date(a.fecha) - new Date(b.fecha)
@@ -76,6 +79,9 @@ export default function Home() {
   }
 
   const currentPatinador = patinadores[currentPatIndex];
+  const currentPatinadorFoto = currentPatinador
+    ? getImageUrl(currentPatinador.foto)
+    : '';
   const latestNews = news.slice(0, 4);
   const wideNews = news.slice(4, 7);
   const additionalNews = news.slice(7, 11);
@@ -92,7 +98,13 @@ export default function Home() {
         </div>
       )}
       <div className="container mt-4">
+
         <h1 className="mb-4">Noticias</h1>
+
+
+        <h1 className="mb-4 text-center">Noticias</h1>
+
+
         <div className="news-grid">
           {displayedNews[0] && (
             <Link
@@ -108,7 +120,10 @@ export default function Home() {
               </div>
               {displayedNews[0].imagen && (
                 <div className="top-news-image">
-                  <img src={displayedNews[0].imagen} alt="imagen noticia" />
+                  <ImageWithFallback
+                    src={getImageUrl(displayedNews[0].imagen)}
+                    alt={`Imagen de la noticia ${displayedNews[0].titulo}`}
+                  />
                 </div>
               )}
             </Link>
@@ -116,9 +131,10 @@ export default function Home() {
           <div className="patinadores-card top-right">
             {currentPatinador ? (
               <>
-                {currentPatinador.foto && (
-                  <img src={currentPatinador.foto} alt="foto patinador" />
-                )}
+                <ImageWithFallback
+                  src={currentPatinadorFoto}
+                  alt={`Foto de ${currentPatinador.primerNombre} ${currentPatinador.apellido}`}
+                />
                 <div className="overlay">
                   <h6>
                     {currentPatinador.primerNombre} {currentPatinador.apellido}
@@ -139,7 +155,10 @@ export default function Home() {
             >
               {displayedNews[1].imagen && (
                 <div className="image-container">
-                  <img src={displayedNews[1].imagen} alt="imagen noticia" />
+                  <ImageWithFallback
+                    src={getImageUrl(displayedNews[1].imagen)}
+                    alt={`Imagen de la noticia ${displayedNews[1].titulo}`}
+                  />
                   <div className="news-label">NOTICIA</div>
                   <div className="news-label-line" />
                 </div>
@@ -167,7 +186,10 @@ export default function Home() {
             >
               {displayedNews[2].imagen && (
                 <div className="image-container">
-                  <img src={displayedNews[2].imagen} alt="imagen noticia" />
+                  <ImageWithFallback
+                    src={getImageUrl(displayedNews[2].imagen)}
+                    alt={`Imagen de la noticia ${displayedNews[2].titulo}`}
+                  />
                   <div className="news-label">NOTICIA</div>
                   <div className="news-label-line" />
                 </div>
@@ -195,7 +217,10 @@ export default function Home() {
             >
               {displayedNews[3].imagen && (
                 <div className="image-container">
-                  <img src={displayedNews[3].imagen} alt="imagen noticia" />
+                  <ImageWithFallback
+                    src={getImageUrl(displayedNews[3].imagen)}
+                    alt={`Imagen de la noticia ${displayedNews[3].titulo}`}
+                  />
                   <div className="news-label">NOTICIA</div>
                   <div className="news-label-line" />
                 </div>
@@ -219,7 +244,10 @@ export default function Home() {
             <div className="news-item bottom-right">
               <div className="image-container">
                 {nextCompetition.imagen && (
-                  <img src={nextCompetition.imagen} alt="imagen competencia" />
+                  <ImageWithFallback
+                    src={getImageUrl(nextCompetition.imagen)}
+                    alt={`Imagen de la competencia ${nextCompetition.nombre}`}
+                  />
                 )}
                 <div className="news-label competition-label">COMPETENCIA</div>
                 <div className="news-label-line" />
@@ -250,7 +278,10 @@ export default function Home() {
               className="mini-news-card"
             >
               {item.imagen && (
-                <img src={item.imagen} alt="imagen noticia" />
+                <ImageWithFallback
+                  src={getImageUrl(item.imagen)}
+                  alt={`Imagen de la noticia ${item.titulo}`}
+                />
               )}
               <div className="mini-news-info">
                 <div className="mini-news-header">
@@ -282,7 +313,10 @@ export default function Home() {
               >
                 {item.imagen && (
                   <div className="image-container">
-                    <img src={item.imagen} alt="imagen noticia" />
+                    <ImageWithFallback
+                      src={getImageUrl(item.imagen)}
+                      alt={`Imagen de la noticia ${item.titulo}`}
+                    />
                     <div className="news-label">NOTICIA</div>
                     <div className="news-label-line" />
                   </div>
@@ -316,7 +350,10 @@ export default function Home() {
               >
                 {item.imagen && (
                   <div className="image-container">
-                    <img src={item.imagen} alt="imagen noticia" />
+                    <ImageWithFallback
+                      src={getImageUrl(item.imagen)}
+                      alt={`Imagen de la noticia ${item.titulo}`}
+                    />
                     <div className="news-label">NOTICIA</div>
                     <div className="news-label-line" />
                   </div>

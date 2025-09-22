@@ -10,7 +10,8 @@ export default function Reportes() {
     const cargar = async () => {
       try {
         const res = await api.get('/protegido/usuario');
-        setPatinadores(res.data.usuario.patinadores || []);
+        const asociados = res.data?.usuario?.patinadores;
+        setPatinadores(Array.isArray(asociados) ? asociados : []);
       } catch (err) {
         console.error(err);
       }

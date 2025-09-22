@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
+import ImageWithFallback from '../components/ImageWithFallback';
 
 export default function AsociarPatinadores() {
   const [dniPadre, setDniPadre] = useState('');
@@ -11,7 +13,8 @@ export default function AsociarPatinadores() {
     e.preventDefault();
     try {
       const res = await api.post('/patinadores/asociar', { dniPadre, dniMadre });
-      setPatinadores(res.data);
+      const asociados = Array.isArray(res.data) ? res.data : [];
+      setPatinadores(asociados);
       setError('');
     } catch (err) {
       setPatinadores([]);
@@ -44,18 +47,23 @@ export default function AsociarPatinadores() {
         <button type="submit" className="btn btn-primary">Asociar</button>
       </form>
       {error && <div className="alert alert-danger">{error}</div>}
-      {patinadores.map((p) => (
-        <div className="card patinador-card" key={p._id}>
-          {p.foto && (
-            <img src={p.foto} className="card-img-top" alt="foto patinador" />
-          )}
-          <div className="card-body">
-            <h5 className="card-title">{p.primerNombre} {p.apellido}</h5>
-            <p className="card-text"><strong>Categoría:</strong> {p.categoria}</p>
-            <p className="card-text"><strong>Edad:</strong> {p.edad}</p>
+      {patinadores.map((p) => {
+        const foto = getImageUrl(p.foto);
+        return (
+          <div className="card patinador-card" key={p._id}>
+            <ImageWithFallback
+              src={foto}
+              className="card-img-top"
+              alt={`Foto de ${p.primerNombre} ${p.apellido}`}
+            />
+            <div className="card-body">
+              <h5 className="card-title">{p.primerNombre} {p.apellido}</h5>
+              <p className="card-text"><strong>Categoría:</strong> {p.categoria}</p>
+              <p className="card-text"><strong>Edad:</strong> {p.edad}</p>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

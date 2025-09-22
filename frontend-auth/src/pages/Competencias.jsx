@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
+import ImageWithFallback from '../components/ImageWithFallback';
 
 export default function Competencias() {
   const { id } = useParams();
@@ -15,8 +17,8 @@ export default function Competencias() {
   useEffect(() => {
     const cargar = async () => {
       try {
-        const res = await api.get(`/tournaments/${id}/competitions`);
-        setCompetencias(res.data);
+        const res = await api.get(`/torneos/${id}/competencias`);
+        setCompetencias(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error(err);
         setError('Error al cargar competencias');
@@ -36,7 +38,7 @@ export default function Competencias() {
       if (e.target.imagen.files[0]) {
         formData.append('imagen', e.target.imagen.files[0]);
       }
-      await api.post(`/tournaments/${id}/competitions`, formData, {
+      await api.post(`/torneos/${id}/competencias`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -44,8 +46,8 @@ export default function Competencias() {
       setNombre('');
       setFecha('');
       e.target.imagen.value = '';
-      const res = await api.get(`/tournaments/${id}/competitions`);
-      setCompetencias(res.data);
+      const res = await api.get(`/torneos/${id}/competencias`);
+      setCompetencias(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
       alert('Error al crear competencia');
@@ -58,12 +60,12 @@ export default function Competencias() {
     const nuevaFecha = prompt('Nueva fecha', comp.fecha.slice(0, 10));
     if (!nuevaFecha) return;
     try {
-      await api.put(`/competitions/${comp._id}`, {
+      await api.put(`/competencias/${comp._id}`, {
         nombre: nuevoNombre,
         fecha: nuevaFecha
       });
-      const res = await api.get(`/tournaments/${id}/competitions`);
-      setCompetencias(res.data);
+      const res = await api.get(`/torneos/${id}/competencias`);
+      setCompetencias(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
       alert('Error al actualizar competencia');
@@ -73,7 +75,7 @@ export default function Competencias() {
   const eliminarCompetencia = async (compId) => {
     if (!confirm('¿Eliminar competencia?')) return;
     try {
-      await api.delete(`/competitions/${compId}`);
+      await api.delete(`/competencias/${compId}`);
       setCompetencias(competencias.filter((c) => c._id !== compId));
     } catch (err) {
       console.error(err);
@@ -122,16 +124,22 @@ export default function Competencias() {
         <p>No hay competencias registradas.</p>
       ) : (
         <ul className="list-group">
-          {competencias.map((c) => (
-            <li key={c._id} className="list-group-item d-flex justify-content-between align-items-center">
-              <div className="d-flex align-items-center gap-3">
-                {c.imagen && (
-                  <img src={c.imagen} alt="imagen competencia" className="competencia-img" />
-                )}
-                <div>
-                  <strong>{c.nombre}</strong> - {new Date(c.fecha).toLocaleDateString()}
+          {competencias.map((c) => {
+            const imagen = getImageUrl(c.imagen);
+            return (
+              <li key={c._id} className="list-group-item d-flex justify-content-between align-items-center">
+                <div className="d-flex align-items-center gap-3">
+                  {imagen && (
+                    <ImageWithFallback
+                      src={imagen}
+                      alt={`Imagen de la competencia ${c.nombre}`}
+                      className="competencia-img"
+                    />
+                  )}
+                  <div>
+                    <strong>{c.nombre}</strong> - {new Date(c.fecha).toLocaleDateString()}
+                  </div>
                 </div>
-              </div>
               <div className="d-flex gap-2">
                 {rol === 'Delegado' && (
                   <>
@@ -162,8 +170,9 @@ export default function Competencias() {
                   VER
                 </button>
               </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
