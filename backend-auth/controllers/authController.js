@@ -89,6 +89,7 @@ export const loginUsuario = async (req, res) => {
       return res.status(403).json({ mensaje: 'Tenés que confirmar tu cuenta primero' });
     }
 
+
     if (!usuario.password) {
       return res.status(400).json({
         mensaje:

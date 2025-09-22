@@ -87,6 +87,13 @@ connectDB()
     }
   });
 
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+
 // Normalizamos las URLs del frontend para evitar problemas con barras finales
 // y añadimos orígenes permitidos por defecto. Esto evita que un valor
 // incorrecto de las variables de entorno deje a producción sin cabeceras CORS.
@@ -167,6 +174,7 @@ app.use((err, req, res, next) => {
 });
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
 }
 app.use('/api/uploads', express.static(UPLOADS_DIR));
 
@@ -174,7 +182,12 @@ app.use('/api/uploads', express.static(UPLOADS_DIR));
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+
 const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/+$/, '');
+
 const CLUB_LOCAL = process.env.CLUB_LOCAL || 'Gral. Rodríguez';
 const AUTH_ROUTE_PREFIXES = ['/api/auth', '/auth'];
 const CANONICAL_AUTH_PREFIX = AUTH_ROUTE_PREFIXES[0];
@@ -450,6 +463,22 @@ async function crearNotificacionesParaTodos(mensaje, competencia = null) {
     if (!usuario) {
       return res.status(400).send('Token no válido o ya usado');
     }
+
+    const valido = bcrypt.compareSync(password, usuario.password);
+    if (!valido) {
+      return res.status(400).json({ mensaje: 'Credenciales inválidas' });
+    }
+    // Extendemos la duración del token para evitar que la sesión
+    // se cierre de manera prematura. Antes el token expiraba en 1 hora,
+    // lo cual provocaba que el usuario perdiera la sesión rápidamente.
+    // Ahora el token tiene una vigencia de 24 horas.
+    const token = jwt.sign({ id: usuario._id, rol: usuario.rol }, JWT_SECRET, {
+      expiresIn: '24h'
+    });
+    return res.json({
+      token,
+      usuario: { nombre: usuario.nombre, rol: usuario.rol, foto: usuario.foto || '' }
+
     usuario.confirmado = true;
     usuario.tokenConfirmacion = null;
     await usuario.save();
@@ -506,6 +535,7 @@ async function crearNotificacionesParaTodos(mensaje, competencia = null) {
       scope: 'profile email',
       access_type: 'offline',
       prompt: 'consent'
+
     });
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
     res.redirect(authUrl);
@@ -1968,6 +1998,72 @@ app.get('/api/progreso/:id', protegerRuta, async (req, res) => {
   }
 });
 
+
+// Inicio de sesión con Google (OAuth 2.0 sin dependencias externas)
+app.get('/api/auth/google', (req, res) => {
+  const redirectUri =
+    process.env.GOOGLE_REDIRECT_URI || 'http://patincarrera.net/api/auth/google/callback';
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID || '',
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'profile email',
+    access_type: 'offline',
+    prompt: 'consent'
+  });
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  res.redirect(authUrl);
+});
+
+// Callback de Google
+app.get('/api/auth/google/callback', async (req, res) => {
+  const code = req.query.code;
+  if (!code) {
+    return res.status(400).json({ mensaje: 'Código no proporcionado por Google' });
+  }
+  try {
+    const redirectUri =
+      process.env.GOOGLE_REDIRECT_URI || 'http://patincarrera.net/api/auth/google/callback';
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID || '',
+        client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code'
+      })
+    });
+    const tokenData = await tokenRes.json();
+    const idToken = tokenData.id_token;
+    if (!idToken) {
+      return res.status(400).json({ mensaje: 'Token de Google no recibido' });
+    }
+    const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64').toString());
+
+    let usuario = await User.findOne({ googleId: payload.sub });
+    if (!usuario) {
+      usuario = await User.create({
+        nombre: payload.given_name || payload.name || 'Usuario',
+        apellido: payload.family_name || '',
+        email: payload.email,
+        confirmado: true,
+        googleId: payload.sub,
+        foto: payload.picture || ''
+      });
+    }
+
+    // Generamos un token con vigencia de 24 horas para evitar que la
+    // sesión de los usuarios que inician con Google se cierre de manera
+    // prematura. De esta forma se mantiene el mismo tiempo de expiración
+    // que en el inicio de sesión tradicional.
+    const token = jwt.sign(
+      { id: usuario._id, rol: usuario.rol, foto: usuario.foto || '' },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
 // Middleware de errores (al final)
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err);
@@ -1975,6 +2071,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
+
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
