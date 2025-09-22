@@ -28,9 +28,16 @@ const buildApiBaseUrl = () => {
   return `${normalisedOrigin}/api`;
 };
 
+
+
+// const api = axios.create({
+//   baseURL: buildApiBaseUrl()
+// });
+
 const api = axios.create({
   baseURL: buildApiBaseUrl(),
 });
+
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
