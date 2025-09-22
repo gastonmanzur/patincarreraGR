@@ -113,6 +113,7 @@ mongoose
     // Mantener los índices sincronizados con el esquema actual
     await PatinadorExterno.syncIndexes();
   })
+
   .catch((err) => {
     console.error('Error conectando a MongoDB:', err.message);
     const sanitizedUri = sanitizeMongoUri(MONGODB_URI);
@@ -143,7 +144,7 @@ const FALLBACK_BACKEND_URL = isProduction
 
 const FRONTEND_URL = (process.env.FRONTEND_URL || FALLBACK_FRONTEND_URL).replace(/\/+$/, '');
 const FRONTEND_URL_WWW = (process.env.FRONTEND_URL_WWW || FALLBACK_FRONTEND_URL_WWW).replace(/\/+$/, '');
-const BACKEND_URL = (process.env.BACKEND_URL || FALLBACK_BACKEND_URL).replace(/\/+$/, '');
+// const BACKEND_URL = (process.env.BACKEND_URL || FALLBACK_BACKEND_URL).replace(/\/+$/, '');
 
 // Some deployments proxy the backend under the `/api` prefix while others
 // forward requests directly to the Express app without rewriting the path.
