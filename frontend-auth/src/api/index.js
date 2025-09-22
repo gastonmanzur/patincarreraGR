@@ -1,44 +1,8 @@
 import axios from 'axios';
 
-
-// Determine the base URL for API requests. If an explicit URL is provided via
-// `VITE_API_URL`, ensure it includes the `/api` prefix expected by the backend.
-// Otherwise, default to the current origin with the `/api` path.
-
-/*const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
-
-// Strip any trailing slashes from the provided API URL to avoid "//" in requests.
-const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
-
-const baseURL = envUrl
-  ? envUrl.endsWith('/api')
-    ? envUrl
-    : `${envUrl}/api`
-  : `${window.location.origin}/api`;*/
-
-
-// When an explicit API URL is provided, ensure it always targets the
-// `/api` prefix expected by the backend. This avoids subtle deployment
-// bugs where `VITE_API_URL` lacks the `/api` suffix and requests end up
-// hitting the wrong path (e.g. `https://api.example.com/auth/registro`
-// instead of `https://api.example.com/api/auth/registro`).
-const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
-const api = axios.create({
-  baseURL: envUrl
-    ? envUrl.endsWith('/api')
-      ? envUrl
-      : `${envUrl}/api`
-    : defaultBaseUrl
-});
-
-
-
-/*const api = axios.create({
-  baseURL,
-  withCredentials: true,
-});*/
-
-// Normalise a raw URL so it always points to the backend `/api` prefix.
+// Build the base URL used by the Axios instance. The helper normalises
+// values received from the environment so every deployment ends up
+// calling the backend under the expected `/api` prefix.
 const buildApiBaseUrl = () => {
   const rawEnvUrl = import.meta.env.VITE_API_URL?.trim();
 
@@ -48,8 +12,7 @@ const buildApiBaseUrl = () => {
   }
 
   const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim();
-  const hostname = window.location.hostname;
-  const protocol = window.location.protocol;
+  const { protocol, hostname, origin } = window.location;
   const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(hostname);
 
   if (isLocalHost) {
@@ -57,30 +20,37 @@ const buildApiBaseUrl = () => {
     return `${protocol}//${hostname}:${port}/api`;
   }
 
-  const origin = window.location.origin.replace(/\/+$/, '');
   if (backendPort) {
     return `${protocol}//${hostname}:${backendPort}/api`;
   }
 
-
-  return `${origin}/api`;
+  const normalisedOrigin = origin.replace(/\/+$/, '');
+  return `${normalisedOrigin}/api`;
 };
+
 
 
 // const api = axios.create({
 //   baseURL: buildApiBaseUrl()
 // });
 
+const api = axios.create({
+  baseURL: buildApiBaseUrl(),
+});
+
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  // Ensure request URLs are relative so the `/api` prefix in `baseURL` remains.
+
+  // Ensure request URLs remain relative so the Axios base URL is respected.
   if (config.url?.startsWith('/')) {
     config.url = config.url.slice(1);
   }
+
   return config;
 });
 
@@ -93,9 +63,9 @@ api.interceptors.response.use(
       localStorage.removeItem('foto');
       window.location.href = '/';
     }
+
     return Promise.reject(error);
   },
 );
 
 export default api;
-
