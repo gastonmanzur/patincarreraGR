@@ -13,24 +13,67 @@ export default function Navbar() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
 
   useEffect(() => {
-    let interval;
-    const cargar = async () => {
+    if (!isLoggedIn) {
+      setUnread(0);
+      return undefined;
+    }
+
+    const MIN_DELAY = 15000;
+    const MAX_DELAY = 120000;
+
+    let delay = MIN_DELAY;
+    let timeoutId;
+    let active = true;
+
+    const scheduleNext = () => {
+      if (!active) return;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = window.setTimeout(() => {
+        void tick();
+      }, delay);
+    };
+
+    const tick = async ({ resetDelay = false } = {}) => {
+      if (!active) return;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = undefined;
+      }
+      if (resetDelay) {
+        delay = MIN_DELAY;
+      }
+
       try {
         const res = await api.get('/notifications');
-        const count = res.data.filter((n) => !n.leido).length;
+        if (!active) return;
+        const data = Array.isArray(res.data) ? res.data : [];
+        const count = data.filter((n) => !n.leido).length;
         setUnread(count);
+        delay = MIN_DELAY;
       } catch (err) {
-        console.error(err);
+        if (!active) return;
+        console.error('Error al cargar notificaciones', err);
+        delay = Math.min(delay * 2, MAX_DELAY);
+      } finally {
+        scheduleNext();
       }
     };
-    if (isLoggedIn) {
-      cargar();
-      interval = setInterval(cargar, 5000);
-      window.addEventListener('notificationsUpdated', cargar);
-    }
+
+    const handleUpdate = () => {
+      void tick({ resetDelay: true });
+    };
+
+    void tick({ resetDelay: true });
+    window.addEventListener('notificationsUpdated', handleUpdate);
+
     return () => {
-      if (interval) clearInterval(interval);
-      window.removeEventListener('notificationsUpdated', cargar);
+      active = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      window.removeEventListener('notificationsUpdated', handleUpdate);
     };
   }, [isLoggedIn]);
 
