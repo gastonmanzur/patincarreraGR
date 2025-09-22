@@ -88,57 +88,72 @@ connectDB()
   });
 
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
+const isProduction = process.env.NODE_ENV === 'production';
 
-// Normalizamos las URLs del frontend para evitar problemas con barras finales
-// y añadimos orígenes permitidos por defecto. Esto evita que un valor
-// incorrecto de las variables de entorno deje a producción sin cabeceras CORS.
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://patincarrera.net',
   'https://www.patincarrera.net'
-].map((url) => url.replace(/\/+$/, ''));
+];
 
-// Provide sensible defaults for frontend URLs so redirects don't point to
-// `/undefined/...` when environment variables are missing. This keeps Google
-// OAuth working out of the box in production deployments where these variables
-// might not be explicitly defined.
-const FRONTEND_URL = (
-  process.env.FRONTEND_URL || 'https://patincarrera.net'
-).replace(/\/+$/, '');
-const FRONTEND_URL_WWW = (
-  process.env.FRONTEND_URL_WWW || 'https://www.patincarrera.net'
-).replace(/\/+$/, '');
+const FALLBACK_FRONTEND_URL = isProduction
+  ? 'https://patincarrera.net'
+  : 'http://localhost:5173';
+const FALLBACK_FRONTEND_URL_WWW = isProduction
+  ? 'https://www.patincarrera.net'
+  : 'http://localhost:5173';
+const FALLBACK_BACKEND_URL = isProduction
+  ? 'https://patincarrera.net'
+  : 'http://localhost:5000';
 
-const allowedOrigins = [
-  ...DEFAULT_ALLOWED_ORIGINS,
-  FRONTEND_URL,
-  FRONTEND_URL_WWW
-].filter(Boolean);
+const FRONTEND_URL = (process.env.FRONTEND_URL || FALLBACK_FRONTEND_URL).replace(/\/+$/, '');
+const FRONTEND_URL_WWW = (process.env.FRONTEND_URL_WWW || FALLBACK_FRONTEND_URL_WWW).replace(/\/+$/, '');
+const BACKEND_URL = (process.env.BACKEND_URL || FALLBACK_BACKEND_URL).replace(/\/+$/, '');
+
+const allowedOrigins = Array.from(
+  new Set([
+    ...DEFAULT_ALLOWED_ORIGINS.map((url) => url.replace(/\/+$/, '')),
+    FRONTEND_URL,
+    FRONTEND_URL_WWW
+  ])
+).filter(Boolean);
 
 const app = express();
 
-// Logger simple de requests (temporal para debug)
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
+
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.originalUrl}`);
   next();
 });
 
-// CORS configuration for specific domain
-app.use(
-  cors({
-    origin: ["https://patincarrera.net"],
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
 
-// Fallback CORS handler to guarantee headers are always sent
+    const normalizedOrigin = origin.replace(/\/+$/, '');
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+
+    return callback(null, false);
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 app.use((req, res, next) => {
   const origin = req.headers.origin?.replace(/\/+$/, '');
-  if (allowedOrigins.includes(origin)) {
+  if (origin && allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader(
@@ -149,44 +164,33 @@ app.use((req, res, next) => {
       'Access-Control-Allow-Methods',
       'GET, POST, PUT, PATCH, DELETE, OPTIONS'
     );
-    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
   }
   next();
 });
 
-const corsOptions = { origin: allowedOrigins, credentials: true };
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
-// Allow larger JSON and URL-encoded payloads so image data can be uploaded
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
-// Ensure CORS headers are present even when the body exceeds the limit
+
 app.use((err, req, res, next) => {
   if (err?.type === 'entity.too.large') {
     const origin = req.headers.origin?.replace(/\/+$/, '');
-    if (allowedOrigins.includes(origin)) {
+    if (origin && allowedOrigins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
     return res.status(413).json({ message: 'Payload too large' });
   }
-  next(err);
+  return next(err);
 });
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
-}
 app.use('/api/uploads', express.static(UPLOADS_DIR));
-
 
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
-
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-
-const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
 const CLUB_LOCAL = process.env.CLUB_LOCAL || 'Gral. Rodríguez';
 const AUTH_ROUTE_PREFIXES = ['/api/auth', '/auth'];

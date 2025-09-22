@@ -6,7 +6,11 @@ require('dotenv').config(); // ← ¡Esto es clave si estás probando passport p
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: "http://localhost:5000/api/auth/google/callback"
+  callbackURL:
+    process.env.GOOGLE_REDIRECT_URI ||
+    (process.env.NODE_ENV === 'production'
+      ? 'https://patincarrera.net/api/auth/google/callback'
+      : 'http://localhost:5000/api/auth/google/callback')
   
 }, async (accessToken, refreshToken, profile, done) => {
   try {
