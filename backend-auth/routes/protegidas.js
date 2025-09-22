@@ -5,7 +5,12 @@ const User = require('../models/User');
 const upload = require('../utils/multer');
 
 // Base URL of the backend, used when returning file paths.
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+const DEFAULT_BACKEND_URL =
+  process.env.NODE_ENV === 'production'
+    ? 'https://patincarrera.net'
+    : 'http://localhost:5000';
+
+const BACKEND_URL = (process.env.BACKEND_URL || DEFAULT_BACKEND_URL).replace(/\/+$/, '');
 
 
 router.get('/usuario', protegerRuta, async (req, res) => {

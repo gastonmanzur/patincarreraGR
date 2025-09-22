@@ -21,6 +21,8 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    cd backend-auth
    cp .env.example .env
    # edit .env with real values (Mongo URI, JWT secret, email creds, etc.)
+   # NODE_ENV=production (present in the example file) ensures the backend
+   # uses https://patincarrera.net as the default domain for redirects & CORS.
    npm install
    pm2 start server.js --name patincarrera-backend
    pm2 save
