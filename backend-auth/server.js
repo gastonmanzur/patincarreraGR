@@ -26,7 +26,17 @@ import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOADS_DIR = path.resolve('uploads');
+
+const resolveUploadsDir = () => {
+  const configured = process.env.UPLOADS_DIR?.trim();
+  if (configured) {
+    return path.resolve(configured);
+  }
+  return path.join(__dirname, 'uploads');
+};
+
+const UPLOADS_DIR = resolveUploadsDir();
+process.env.UPLOADS_DIR = UPLOADS_DIR;
 
 // Configurar zona horaria para Argentina
 process.env.TZ = 'America/Argentina/Buenos_Aires';
@@ -63,8 +73,38 @@ const sanitizeMongoUri = (uri) => {
 
 // Define la URI de MongoDB con un valor predeterminado para evitar errores
 // cuando no se proporciona la variable de entorno correspondiente.
-const MONGODB_URI =
-  process.env.MONGODB_URI || 'mongodb://localhost:27017/backend-auth';
+const DEFAULT_MONGODB_URI = 'mongodb://localhost:27017/backend-auth';
+const MONGODB_ENV_KEYS = [
+  'MONGODB_URI',
+  'MONGO_URI',
+  'MONGODB_URL',
+  'MONGO_URL',
+  'DATABASE_URL',
+  'DB_URI',
+  'DB_URL'
+];
+
+const resolveMongoUri = () => {
+  for (const key of MONGODB_ENV_KEYS) {
+    const value = process.env[key];
+    if (typeof value === 'string' && value.trim()) {
+      const trimmed = value.trim();
+      if (key !== 'MONGODB_URI') {
+        process.env.MONGODB_URI = trimmed;
+      }
+      return trimmed;
+    }
+  }
+  return DEFAULT_MONGODB_URI;
+};
+
+const MONGODB_URI = resolveMongoUri();
+process.env.MONGODB_URI = MONGODB_URI;
+
+const sanitizedMongoUri = sanitizeMongoUri(MONGODB_URI);
+if (sanitizedMongoUri) {
+  console.log(`Intentando conectar a MongoDB usando ${sanitizedMongoUri}`);
+}
 
 mongoose
   .connect(MONGODB_URI)

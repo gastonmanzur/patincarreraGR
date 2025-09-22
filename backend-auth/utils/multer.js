@@ -1,9 +1,18 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Ensure the uploads directory exists so Multer can save files without errors.
-const uploadDir = path.resolve('uploads');
+const uploadDir = (() => {
+  const configured = process.env.UPLOADS_DIR?.trim();
+  if (configured) {
+    return path.resolve(configured);
+  }
+  return path.resolve(__dirname, '..', 'uploads');
+})();
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
