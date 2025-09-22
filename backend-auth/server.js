@@ -27,6 +27,17 @@ import parseResultadosJson from './utils/parseResultadosJson.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const resolveUploadsDir = () => {
+  const configured = process.env.UPLOADS_DIR?.trim();
+  if (configured) {
+    return path.resolve(configured);
+  }
+  return path.join(__dirname, 'uploads');
+};
+
+const UPLOADS_DIR = resolveUploadsDir();
+process.env.UPLOADS_DIR = UPLOADS_DIR;
+
 // Configurar zona horaria para Argentina
 process.env.TZ = 'America/Argentina/Buenos_Aires';
 
@@ -44,10 +55,56 @@ if (fs.existsSync(envPath)) {
   });
 }
 
+const sanitizeMongoUri = (uri) => {
+  if (!uri) return '';
+  try {
+    const parsed = new URL(uri);
+    if (parsed.password) {
+      parsed.password = '***';
+    }
+    if (parsed.username) {
+      parsed.username = '***';
+    }
+    return parsed.toString();
+  } catch (err) {
+    return '';
+  }
+};
+
 // Define la URI de MongoDB con un valor predeterminado para evitar errores
 // cuando no se proporciona la variable de entorno correspondiente.
-const MONGODB_URI =
-  process.env.MONGODB_URI || 'mongodb://localhost:27017/backend-auth';
+const DEFAULT_MONGODB_URI = 'mongodb://localhost:27017/backend-auth';
+const MONGODB_ENV_KEYS = [
+  'MONGODB_URI',
+  'MONGO_URI',
+  'MONGODB_URL',
+  'MONGO_URL',
+  'DATABASE_URL',
+  'DB_URI',
+  'DB_URL'
+];
+
+const resolveMongoUri = () => {
+  for (const key of MONGODB_ENV_KEYS) {
+    const value = process.env[key];
+    if (typeof value === 'string' && value.trim()) {
+      const trimmed = value.trim();
+      if (key !== 'MONGODB_URI') {
+        process.env.MONGODB_URI = trimmed;
+      }
+      return trimmed;
+    }
+  }
+  return DEFAULT_MONGODB_URI;
+};
+
+const MONGODB_URI = resolveMongoUri();
+process.env.MONGODB_URI = MONGODB_URI;
+
+const sanitizedMongoUri = sanitizeMongoUri(MONGODB_URI);
+if (sanitizedMongoUri) {
+  console.log(`Intentando conectar a MongoDB usando ${sanitizedMongoUri}`);
+}
 
 mongoose
   .connect(MONGODB_URI)
@@ -57,11 +114,9 @@ mongoose
     await PatinadorExterno.syncIndexes();
   })
 
-
-
   .catch((err) => {
     console.error('Error conectando a MongoDB:', err.message);
-    const sanitizedUri = sanitizeMongoUri(err.mongoUri);
+    const sanitizedUri = sanitizeMongoUri(MONGODB_URI);
     if (sanitizedUri) {
       console.error(`URI utilizada: ${sanitizedUri}`);
     }
@@ -91,6 +146,24 @@ const FRONTEND_URL = (process.env.FRONTEND_URL || FALLBACK_FRONTEND_URL).replace
 const FRONTEND_URL_WWW = (process.env.FRONTEND_URL_WWW || FALLBACK_FRONTEND_URL_WWW).replace(/\/+$/, '');
 // const BACKEND_URL = (process.env.BACKEND_URL || FALLBACK_BACKEND_URL).replace(/\/+$/, '');
 
+// Some deployments proxy the backend under the `/api` prefix while others
+// forward requests directly to the Express app without rewriting the path.
+// Accepting both versions keeps the API resilient to minor proxy
+// misconfigurations and prevents confusing 404 errors such as the one
+// reported when hitting `/api/auth/login`.
+const withApiAliases = (path) => {
+  if (Array.isArray(path)) {
+    return path.flatMap(withApiAliases);
+  }
+
+  if (typeof path !== 'string' || !path.startsWith('/api/')) {
+    return [path];
+  }
+
+  const withoutApiPrefix = path.slice(4) || '/';
+  return [path, withoutApiPrefix];
+};
+
 const allowedOrigins = Array.from(
   new Set([
     ...DEFAULT_ALLOWED_ORIGINS.map((url) => url.replace(/\/+$/, '')),
@@ -101,12 +174,48 @@ const allowedOrigins = Array.from(
 
 const app = express();
 
+const registerWithAliases = (originalMethod) => (path, ...handlers) => {
+  const looksLikePath =
+    typeof path === 'string' || Array.isArray(path) || path instanceof RegExp;
+
+  if (!looksLikePath) {
+    return originalMethod(path, ...handlers);
+  }
+
+  const uniquePaths = [...new Set(withApiAliases(path))];
+  uniquePaths.forEach((alias) => {
+    originalMethod(alias, ...handlers);
+  });
+
+  return app;
+};
+
+['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all'].forEach(
+  (method) => {
+    const original = app[method].bind(app);
+    app[method] = registerWithAliases(original);
+  }
+);
+
+const originalUse = app.use.bind(app);
+app.use = (path, ...handlers) => {
+  const looksLikePath =
+    typeof path === 'string' || Array.isArray(path) || path instanceof RegExp;
+
+  if (!looksLikePath) {
+    return originalUse(path, ...handlers);
+  }
+
+  const uniquePaths = [...new Set(withApiAliases(path))];
+  uniquePaths.forEach((alias) => {
+    originalUse(alias, ...handlers);
+  });
+
+  return app;
+};
+
 
 // Fallback CORS handler to guarantee headers are always sent
-
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
 
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -172,22 +281,13 @@ app.use((err, req, res, next) => {
   return next(err);
 });
 
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
-app.use('/uploads', express.static('uploads'));
-
-
+app.use('/uploads', express.static(UPLOADS_DIR));
 app.use('/api/uploads', express.static(UPLOADS_DIR));
 
 
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
-
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-
-
 
 const CLUB_LOCAL = process.env.CLUB_LOCAL || 'Gral. Rodríguez';
 
@@ -288,7 +388,7 @@ async function crearNotificacionesParaTodos(mensaje, competencia = null) {
   }
 }
 
-app.post('/api/auth/registro', async (req, res) => {
+app.post(withApiAliases('/api/auth/registro'), async (req, res) => {
   const { nombre, apellido, email, password, confirmarPassword, rol, codigo } = req.body;
 
   if (!nombre || !apellido || !email || !password || !confirmarPassword || !rol) {
@@ -349,7 +449,7 @@ app.post('/api/auth/registro', async (req, res) => {
     .json({ mensaje: 'Usuario registrado con éxito. Revisa tu email para confirmar la cuenta.' });
 });
 
-app.get('/api/auth/confirmar/:token', async (req, res) => {
+app.get(withApiAliases('/api/auth/confirmar/:token'), async (req, res) => {
   const { token } = req.params;
   const usuario = await User.findOne({ tokenConfirmacion: token });
   if (!usuario) {
@@ -361,7 +461,7 @@ app.get('/api/auth/confirmar/:token', async (req, res) => {
   return res.redirect(`${FRONTEND_URL}/`);
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post(withApiAliases('/api/auth/login'), async (req, res) => {
   try {
     const { email, password } = req.body;
     const usuario = await User.findOne({ email });
@@ -786,12 +886,29 @@ app.post(
 );
 
 app.get('/api/notifications', protegerRuta, async (req, res) => {
+  const userId = req.usuario?.id;
+
+  if (!userId) {
+    return res.status(401).json({ mensaje: 'Usuario no autenticado' });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    console.warn('ID de usuario inválido recibido en /api/notifications', userId);
+    return res.status(400).json({ mensaje: 'Identificador de usuario inválido' });
+  }
+
+  const limitParam = Number.parseInt(req.query?.limit ?? '', 10);
+  const limit = Number.isNaN(limitParam) ? 100 : Math.max(1, Math.min(limitParam, 200));
+
   try {
-    const notificaciones = await Notification.find({ destinatario: req.usuario.id })
-      .sort({ createdAt: -1 });
+    const destinatarioId = new mongoose.Types.ObjectId(userId);
+    const notificaciones = await Notification.find({ destinatario: destinatarioId })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
     res.json(notificaciones);
   } catch (err) {
-    console.error(err);
+    console.error('Error al obtener notificaciones', err);
     res.status(500).json({ mensaje: 'Error al obtener notificaciones' });
   }
 });
@@ -1711,7 +1828,7 @@ app.get('/api/progreso/:id', protegerRuta, async (req, res) => {
 });
 
 // Inicio de sesión con Google (OAuth 2.0 sin dependencias externas)
-app.get('/api/auth/google', (req, res) => {
+app.get(withApiAliases('/api/auth/google'), (req, res) => {
   const redirectUri =
     process.env.GOOGLE_REDIRECT_URI ||
     'https://patincarrera.net/api/auth/google/callback';
@@ -1728,7 +1845,7 @@ app.get('/api/auth/google', (req, res) => {
 });
 
 // Callback de Google
-app.get('/api/auth/google/callback', async (req, res) => {
+app.get(withApiAliases('/api/auth/google/callback'), async (req, res) => {
   const code = req.query.code;
   if (!code) {
     return res.status(400).json({ mensaje: 'Código no proporcionado por Google' });
