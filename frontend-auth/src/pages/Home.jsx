@@ -84,6 +84,7 @@ export default function Home() {
     <>
       {localStorage.getItem('token') && patinadores.length === 0 && (
         <div className="container mt-4">
+    
           <div className="d-flex justify-content-end mb-3">
             <Link to="/asociar-patinadores" className="btn btn-primary">
               Asociar Patinadores
@@ -92,7 +93,9 @@ export default function Home() {
         </div>
       )}
       <div className="container mt-4">
-        <h1 className="mb-4">Noticias</h1>
+
+        <h1 className="mb-4">Noticias Falsas</h1>
+
         <div className="news-grid">
           {displayedNews[0] && (
             <Link
