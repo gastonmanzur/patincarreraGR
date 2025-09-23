@@ -14,7 +14,15 @@ const patinadorExternoSchema = new mongoose.Schema(
 
 patinadorExternoSchema.index(
   { primerNombre: 1, segundoNombre: 1, apellido: 1, club: 1 },
-  { unique: true }
+  {
+    unique: true,
+    partialFilterExpression: {
+      primerNombre: { $type: 'string' },
+      segundoNombre: { $type: 'string' },
+      apellido: { $type: 'string' },
+      club: { $type: 'string' }
+    }
+  }
 );
 
 patinadorExternoSchema.pre('save', function (next) {

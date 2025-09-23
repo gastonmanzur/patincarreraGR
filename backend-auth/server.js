@@ -144,7 +144,26 @@ const FALLBACK_BACKEND_URL = isProduction
 
 const FRONTEND_URL = (process.env.FRONTEND_URL || FALLBACK_FRONTEND_URL).replace(/\/+$/, '');
 const FRONTEND_URL_WWW = (process.env.FRONTEND_URL_WWW || FALLBACK_FRONTEND_URL_WWW).replace(/\/+$/, '');
-// const BACKEND_URL = (process.env.BACKEND_URL || FALLBACK_BACKEND_URL).replace(/\/+$/, '');
+const BACKEND_URL = (process.env.BACKEND_URL || FALLBACK_BACKEND_URL).replace(/\/+$/, '');
+process.env.BACKEND_URL = BACKEND_URL;
+
+// Some deployments proxy the backend under the `/api` prefix while others
+// forward requests directly to the Express app without rewriting the path.
+// Accepting both versions keeps the API resilient to minor proxy
+// misconfigurations and prevents confusing 404 errors such as the one
+// reported when hitting `/api/auth/login`.
+const withApiAliases = (path) => {
+  if (Array.isArray(path)) {
+    return path.flatMap(withApiAliases);
+  }
+
+  if (typeof path !== 'string' || !path.startsWith('/api/')) {
+    return [path];
+  }
+
+  const withoutApiPrefix = path.slice(4) || '/';
+  return [path, withoutApiPrefix];
+};
 
 // Some deployments proxy the backend under the `/api` prefix while others
 // forward requests directly to the Express app without rewriting the path.
