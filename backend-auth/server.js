@@ -473,7 +473,14 @@ app.get(withApiAliases('/api/auth/confirmar/:token'), async (req, res) => {
 
 app.post(withApiAliases('/api/auth/login'), async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const body = req.body ?? {};
+    const email = typeof body.email === 'string' ? body.email.trim() : '';
+    const password = typeof body.password === 'string' ? body.password : '';
+
+    if (!email || !password) {
+      return res.status(400).json({ mensaje: 'Email y contraseña son obligatorios' });
+    }
+
     const usuario = await User.findOne({ email });
     if (!usuario) {
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
