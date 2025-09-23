@@ -50,10 +50,16 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    ```bash
    sudo cp deployment/nginx.conf /etc/nginx/sites-available/patincarrera
    sudo ln -s /etc/nginx/sites-available/patincarrera /etc/nginx/sites-enabled/
+   # If you placed the frontend bundle in a different directory, edit the
+   # server block and update the `root` directive accordingly before
+   # restarting Nginx.
+   sudo nano /etc/nginx/sites-available/patincarrera
    sudo nginx -t
    sudo systemctl restart nginx
    ```
 2. Point the domain DNS records for `patincarrera.net` and `www.patincarrera.net` to the server IP `72.60.62.242`.
+3. Once HTTPS certificates are issued you can uncomment the redirect in the
+   provided config so every visitor is forced to use `https://`.
 
 ## 5. Optional HTTPS
 Use [Certbot](https://certbot.eff.org/) to obtain a Let's Encrypt certificate:
