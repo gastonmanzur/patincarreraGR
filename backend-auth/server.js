@@ -147,11 +147,13 @@ const FRONTEND_URL_WWW = (process.env.FRONTEND_URL_WWW || FALLBACK_FRONTEND_URL_
 const BACKEND_URL = (process.env.BACKEND_URL || FALLBACK_BACKEND_URL).replace(/\/+$/, '');
 process.env.BACKEND_URL = BACKEND_URL;
 
+
 // Some deployments proxy the backend under the `/api` prefix while others
 // forward requests directly to the Express app without rewriting the path.
 // Accepting both versions keeps the API resilient to minor proxy
 // misconfigurations and prevents confusing 404 errors such as the one
 // reported when hitting `/api/auth/login`.
+
 
 
 // Some deployments proxy the backend under the `/api` prefix while others
