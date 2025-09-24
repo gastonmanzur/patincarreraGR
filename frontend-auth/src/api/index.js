@@ -15,7 +15,11 @@ const buildApiBaseUrl = () => {
   const { protocol, hostname, origin } = window.location;
   const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(hostname);
 
-  if (isLocalHost) {
+  // During local development the Vite dev server might be accessed via the
+  // machine's LAN IP (e.g. from a phone on the same network). In those cases
+  // `hostname` isn't `localhost` so we also check `import.meta.env.DEV` to keep
+  // pointing requests to the Express server running on the backend port.
+  if (isLocalHost || import.meta.env.DEV) {
     const port = backendPort || '5000';
     return `${protocol}//${hostname}:${port}/api`;
   }
