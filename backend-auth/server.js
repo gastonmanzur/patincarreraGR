@@ -150,30 +150,9 @@ process.env.BACKEND_URL = BACKEND_URL;
 
 // Some deployments proxy the backend under the `/api` prefix while others
 // forward requests directly to the Express app without rewriting the path.
-// Accepting both versions keeps the API resilient to minor proxy
-// misconfigurations and prevents confusing 404 errors such as the one
-// reported when hitting `/api/auth/login`.
-
-
-
-// Some deployments proxy the backend under the `/api` prefix while others
-// forward requests directly to the Express app without rewriting the path.
-// Accepting both versions keeps the API resilient to minor proxy
-// misconfigurations and prevents confusing 404 errors such as the one
-// reported when hitting `/api/auth/login`.
-const withApiAliases = (path) => {
-  if (Array.isArray(path)) {
-    return path.flatMap(withApiAliases);
-  }
-
-  if (typeof path !== 'string' || !path.startsWith('/api/')) {
-    return [path];
-  }
-
-  const withoutApiPrefix = path.slice(4) || '/';
-  return [path, withoutApiPrefix];
-};
-
+// Routes are now registered with the explicit `/api` prefix so reverse
+// proxies must preserve it instead of relying on runtime aliasing that broke
+// Express when handling requests like `/api/auth/login`.
 const allowedOrigins = Array.from(
   new Set([
     ...DEFAULT_ALLOWED_ORIGINS.map((url) => url.replace(/\/+$/, '')),
@@ -184,45 +163,6 @@ const allowedOrigins = Array.from(
 
 const app = express();
 
-const registerWithAliases = (originalMethod) => (path, ...handlers) => {
-  const looksLikePath =
-    typeof path === 'string' || Array.isArray(path) || path instanceof RegExp;
-
-  if (!looksLikePath) {
-    return originalMethod(path, ...handlers);
-  }
-
-  const uniquePaths = [...new Set(withApiAliases(path))];
-  uniquePaths.forEach((alias) => {
-    originalMethod(alias, ...handlers);
-  });
-
-  return app;
-};
-
-['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all'].forEach(
-  (method) => {
-    const original = app[method].bind(app);
-    app[method] = registerWithAliases(original);
-  }
-);
-
-const originalUse = app.use.bind(app);
-app.use = (path, ...handlers) => {
-  const looksLikePath =
-    typeof path === 'string' || Array.isArray(path) || path instanceof RegExp;
-
-  if (!looksLikePath) {
-    return originalUse(path, ...handlers);
-  }
-
-  const uniquePaths = [...new Set(withApiAliases(path))];
-  uniquePaths.forEach((alias) => {
-    originalUse(alias, ...handlers);
-  });
-
-  return app;
-};
 
 
 // Fallback CORS handler to guarantee headers are always sent
@@ -398,7 +338,7 @@ async function crearNotificacionesParaTodos(mensaje, competencia = null) {
   }
 }
 
-app.post(withApiAliases('/api/auth/registro'), async (req, res) => {
+app.post('/api/auth/registro', async (req, res) => {
   const { nombre, apellido, email, password, confirmarPassword, rol, codigo } = req.body;
 
   if (!nombre || !apellido || !email || !password || !confirmarPassword || !rol) {
@@ -459,7 +399,7 @@ app.post(withApiAliases('/api/auth/registro'), async (req, res) => {
     .json({ mensaje: 'Usuario registrado con éxito. Revisa tu email para confirmar la cuenta.' });
 });
 
-app.get(withApiAliases('/api/auth/confirmar/:token'), async (req, res) => {
+app.get('/api/auth/confirmar/:token', async (req, res) => {
   const { token } = req.params;
   const usuario = await User.findOne({ tokenConfirmacion: token });
   if (!usuario) {
@@ -471,7 +411,7 @@ app.get(withApiAliases('/api/auth/confirmar/:token'), async (req, res) => {
   return res.redirect(`${FRONTEND_URL}/`);
 });
 
-app.post(withApiAliases('/api/auth/login'), async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
     const body = req.body ?? {};
     const email = typeof body.email === 'string' ? body.email.trim() : '';
@@ -1845,7 +1785,7 @@ app.get('/api/progreso/:id', protegerRuta, async (req, res) => {
 });
 
 // Inicio de sesión con Google (OAuth 2.0 sin dependencias externas)
-app.get(withApiAliases('/api/auth/google'), (req, res) => {
+app.get('/api/auth/google', (req, res) => {
   const redirectUri =
     process.env.GOOGLE_REDIRECT_URI ||
     'https://patincarrera.net/api/auth/google/callback';
@@ -1862,7 +1802,7 @@ app.get(withApiAliases('/api/auth/google'), (req, res) => {
 });
 
 // Callback de Google
-app.get(withApiAliases('/api/auth/google/callback'), async (req, res) => {
+app.get('/api/auth/google/callback', async (req, res) => {
   const code = req.query.code;
   if (!code) {
     return res.status(400).json({ mensaje: 'Código no proporcionado por Google' });
