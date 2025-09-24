@@ -494,6 +494,23 @@ app.get('/api/protegido/usuario', protegerRuta, async (req, res) => {
   }
 });
 
+app.get(
+  '/api/protegido/usuarios',
+  protegerRuta,
+  permitirRol('Delegado', 'Admin', 'admin'),
+  async (req, res) => {
+    try {
+      const usuarios = await User.find()
+        .select('-password')
+        .sort({ apellido: 1, nombre: 1 });
+      res.json(usuarios);
+    } catch (err) {
+      console.error('Error al obtener usuarios', err);
+      res.status(500).json({ mensaje: 'Error al obtener usuarios' });
+    }
+  }
+);
+
 app.post(
   '/api/protegido/foto-perfil',
   protegerRuta,
