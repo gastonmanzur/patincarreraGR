@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function VerPatinador() {
   const { id } = useParams();
@@ -10,7 +11,11 @@ export default function VerPatinador() {
     const fetchPatinador = async () => {
       try {
         const res = await api.get(`/patinadores/${id}`);
-        setPatinador(res.data);
+        setPatinador({
+          ...res.data,
+          foto: getImageUrl(res.data?.foto),
+          fotoRostro: getImageUrl(res.data?.fotoRostro)
+        });
       } catch (err) {
         console.error(err);
       }

@@ -48,15 +48,27 @@ export default function getImageUrl(rawPath) {
       const parsed = new URL(candidate);
       const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(parsed.hostname);
       const candidateHost = normalizeHost(parsed.hostname);
+      const isSameBackendHost =
+        candidateHost &&
+        (candidateHost === backendHost || candidateHost === currentHost);
       const shouldRewriteHttpSameDomain =
         parsed.protocol === 'http:' &&
-        (candidateHost === backendHost || candidateHost === currentHost);
+        isSameBackendHost;
+      const pathWithoutLeadingSlash = parsed.pathname.replace(/^\/+/, '');
+      const isUploadPath = /^((api\/)?uploads\/)/i.test(pathWithoutLeadingSlash);
 
-      if (!isLocalHost && !shouldRewriteHttpSameDomain) {
+      if (!isLocalHost && !shouldRewriteHttpSameDomain && (!isSameBackendHost || !isUploadPath)) {
         return candidate;
       }
       // Tomamos únicamente la ruta, preservando posibles prefijos como `/api`.
       candidate = `${parsed.pathname}${parsed.search || ''}`;
+
+      if (isSameBackendHost && isUploadPath) {
+        candidate = pathWithoutLeadingSlash.replace(/^api\/+/, '');
+        if (!candidate) {
+          return '';
+        }
+      }
     } catch (error) {
       console.warn('URL de imagen inválida recibida, se usará el valor original.', error);
       return candidate;

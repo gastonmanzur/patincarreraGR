@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
+import getImageUrl from '../utils/getImageUrl';
 
 
 export default function GoogleSuccess() {
@@ -14,8 +15,11 @@ export default function GoogleSuccess() {
       const datos = jwtDecode(token);
       localStorage.setItem('token', token);
       localStorage.setItem('rol', datos.rol);
-      if (datos.foto) {
-        localStorage.setItem('foto', datos.foto);
+      const foto = getImageUrl(datos.foto);
+      if (foto) {
+        localStorage.setItem('foto', foto);
+      } else {
+        localStorage.removeItem('foto');
       }
   
       navigate('/home');

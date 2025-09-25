@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function Competencias() {
   const { id } = useParams();
@@ -16,7 +17,13 @@ export default function Competencias() {
     const cargar = async () => {
       try {
         const res = await api.get(`/tournaments/${id}/competitions`);
-        setCompetencias(res.data);
+        const datos = Array.isArray(res.data)
+          ? res.data.map((comp) => ({
+              ...comp,
+              imagen: getImageUrl(comp.imagen)
+            }))
+          : [];
+        setCompetencias(datos);
       } catch (err) {
         console.error(err);
         setError('Error al cargar competencias');
@@ -45,7 +52,13 @@ export default function Competencias() {
       setFecha('');
       e.target.imagen.value = '';
       const res = await api.get(`/tournaments/${id}/competitions`);
-      setCompetencias(res.data);
+      const datos = Array.isArray(res.data)
+        ? res.data.map((comp) => ({
+            ...comp,
+            imagen: getImageUrl(comp.imagen)
+          }))
+        : [];
+      setCompetencias(datos);
     } catch (err) {
       console.error(err);
       alert('Error al crear competencia');
@@ -63,7 +76,13 @@ export default function Competencias() {
         fecha: nuevaFecha
       });
       const res = await api.get(`/tournaments/${id}/competitions`);
-      setCompetencias(res.data);
+      const datos = Array.isArray(res.data)
+        ? res.data.map((item) => ({
+            ...item,
+            imagen: getImageUrl(item.imagen)
+          }))
+        : [];
+      setCompetencias(datos);
     } catch (err) {
       console.error(err);
       alert('Error al actualizar competencia');

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function ListaPatinadores() {
   const [patinadores, setPatinadores] = useState([]);
@@ -11,7 +12,14 @@ export default function ListaPatinadores() {
     const obtenerPatinadores = async () => {
       try {
         const res = await api.get('/patinadores');
-        setPatinadores(res.data);
+        const patinadoresData = Array.isArray(res.data)
+          ? res.data.map((p) => ({
+              ...p,
+              foto: getImageUrl(p.foto),
+              fotoRostro: getImageUrl(p.fotoRostro)
+            }))
+          : [];
+        setPatinadores(patinadoresData);
       } catch (err) {
         console.error(err);
       }
@@ -23,7 +31,7 @@ export default function ListaPatinadores() {
     if (!window.confirm('¿Eliminar patinador?')) return;
     try {
       await api.delete(`/patinadores/${id}`);
-      setPatinadores(patinadores.filter((p) => p._id !== id));
+      setPatinadores((prev) => prev.filter((p) => p._id !== id));
     } catch (err) {
       console.error(err);
     }

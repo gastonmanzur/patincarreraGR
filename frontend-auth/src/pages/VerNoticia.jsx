@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function VerNoticia() {
   const { id } = useParams();
@@ -10,7 +11,10 @@ export default function VerNoticia() {
     const fetchNoticia = async () => {
       try {
         const res = await api.get(`/news/${id}`);
-        setNoticia(res.data);
+        setNoticia({
+          ...res.data,
+          imagen: getImageUrl(res.data?.imagen)
+        });
       } catch (err) {
         console.error(err);
       }
