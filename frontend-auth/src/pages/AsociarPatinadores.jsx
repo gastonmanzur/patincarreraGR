@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function AsociarPatinadores() {
   const [dniPadre, setDniPadre] = useState('');
@@ -11,7 +12,14 @@ export default function AsociarPatinadores() {
     e.preventDefault();
     try {
       const res = await api.post('/patinadores/asociar', { dniPadre, dniMadre });
-      setPatinadores(res.data);
+      const datos = Array.isArray(res.data)
+        ? res.data.map((p) => ({
+            ...p,
+            foto: getImageUrl(p.foto),
+            fotoRostro: getImageUrl(p.fotoRostro)
+          }))
+        : [];
+      setPatinadores(datos);
       setError('');
     } catch (err) {
       setPatinadores([]);

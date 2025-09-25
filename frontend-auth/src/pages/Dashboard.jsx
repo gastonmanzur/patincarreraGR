@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import LogoutButton from '../components/LogoutButton';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function Dashboard() {
   const [rol, setRol] = useState('');
@@ -9,13 +10,28 @@ export default function Dashboard() {
 
   useEffect(() => {
     setRol(localStorage.getItem('rol'));
-    setFoto(localStorage.getItem('foto'));
+    const storedFoto = getImageUrl(localStorage.getItem('foto'));
+    if (storedFoto) {
+      localStorage.setItem('foto', storedFoto);
+      setFoto(storedFoto);
+    } else {
+      localStorage.removeItem('foto');
+      setFoto('');
+    }
 
     // Podés cargar más info si querés desde el backend
     const cargarDatos = async () => {
       try {
         const res = await api.get('/protegido/usuario');
-        setUsuario(res.data.usuario);
+        const usuarioData = {
+          ...res.data.usuario,
+          foto: getImageUrl(res.data.usuario?.foto)
+        };
+        setUsuario(usuarioData);
+        if (usuarioData.foto) {
+          localStorage.setItem('foto', usuarioData.foto);
+          setFoto(usuarioData.foto);
+        }
       } catch (err) {
         console.log(err);
       }
@@ -40,8 +56,11 @@ export default function Dashboard() {
       });
 
       alert('Foto actualizada');
-      localStorage.setItem('foto', res.data.foto);
-      setFoto(res.data.foto);
+      const nuevaFoto = getImageUrl(res.data.foto);
+      if (nuevaFoto) {
+        localStorage.setItem('foto', nuevaFoto);
+        setFoto(nuevaFoto);
+      }
       setNuevaFoto(null);
     } catch (err) {
       console.error(err);

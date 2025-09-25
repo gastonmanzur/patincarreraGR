@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function Home() {
   const [news, setNews] = useState([]);
@@ -13,7 +14,13 @@ export default function Home() {
     const cargarNoticias = async () => {
       try {
         const newsRes = await api.get('/news');
-        setNews(newsRes.data);
+        const normalized = Array.isArray(newsRes.data)
+          ? newsRes.data.map((item) => ({
+              ...item,
+              imagen: getImageUrl(item.imagen)
+            }))
+          : [];
+        setNews(normalized);
       } catch (err) {
         console.error(err);
       }
@@ -22,7 +29,14 @@ export default function Home() {
     const cargarPatinadores = async () => {
       try {
         const userRes = await api.get('/protegido/usuario');
-        setPatinadores(userRes.data.usuario.patinadores || []);
+        const patinadoresData = Array.isArray(userRes.data.usuario?.patinadores)
+          ? userRes.data.usuario.patinadores.map((p) => ({
+              ...p,
+              foto: getImageUrl(p.foto),
+              fotoRostro: getImageUrl(p.fotoRostro)
+            }))
+          : [];
+        setPatinadores(patinadoresData);
       } catch (err) {
         console.error(err);
       }
@@ -31,7 +45,12 @@ export default function Home() {
     const cargarCompetencia = async () => {
       try {
         const compRes = await api.get('/competencias');
-        const comps = compRes.data;
+        const comps = Array.isArray(compRes.data)
+          ? compRes.data.map((comp) => ({
+              ...comp,
+              imagen: getImageUrl(comp.imagen)
+            }))
+          : [];
         if (comps.length > 0) {
           const sorted = comps.sort(
             (a, b) => new Date(a.fecha) - new Date(b.fecha)

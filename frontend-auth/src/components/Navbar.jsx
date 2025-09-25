@@ -2,12 +2,22 @@ import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import LogoutButton from './LogoutButton';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function Navbar() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const rol = localStorage.getItem('rol');
-  const foto = localStorage.getItem('foto');
+  const storedFoto = localStorage.getItem('foto');
+  const normalisedFoto = getImageUrl(storedFoto);
+  if (storedFoto && normalisedFoto !== storedFoto) {
+    if (normalisedFoto) {
+      localStorage.setItem('foto', normalisedFoto);
+    } else {
+      localStorage.removeItem('foto');
+    }
+  }
+  const foto = normalisedFoto;
   const isLoggedIn = localStorage.getItem('token');
   const [unread, setUnread] = useState(0);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
@@ -99,7 +109,12 @@ export default function Navbar() {
             }
           }
         );
-      localStorage.setItem('foto', res.data.foto);
+      const nuevaFoto = getImageUrl(res.data.foto);
+      if (nuevaFoto) {
+        localStorage.setItem('foto', nuevaFoto);
+      } else {
+        localStorage.removeItem('foto');
+      }
       window.location.reload();
     } catch (err) {
       console.error(err);

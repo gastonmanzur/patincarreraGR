@@ -1,5 +1,6 @@
 import api from '../api';
 import { useNavigate } from 'react-router-dom';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -9,15 +10,21 @@ export default function LoginForm() {
     const email = e.target.email.value;
     const password = e.target.password.value;
 
-      try {
-        const res = await api.post('/auth/login', { email, password });
+    try {
+      const res = await api.post('/auth/login', { email, password });
 
       const { token, usuario } = res.data;
 
       // Guardamos el token y rol en localStorage
       localStorage.setItem('token', token);
       localStorage.setItem('rol', usuario.rol);
-      localStorage.setItem('foto', usuario.foto || '');
+
+      const foto = getImageUrl(usuario.foto);
+      if (foto) {
+        localStorage.setItem('foto', foto);
+      } else {
+        localStorage.removeItem('foto');
+      }
 
       alert(`Bienvenido ${usuario.nombre}`);
       // Redirigir a la página de noticias
