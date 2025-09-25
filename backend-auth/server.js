@@ -163,6 +163,33 @@ const allowedOrigins = Array.from(
 
 const app = express();
 
+// Some hosting setups strip the `/api` prefix before forwarding requests to the
+// Express app. To keep backwards compatibility we automatically register a
+// legacy alias without the prefix for every explicitly defined REST route.
+const METHODS_WITH_OPTIONAL_API_PREFIX = ['get', 'post', 'put', 'patch', 'delete'];
+METHODS_WITH_OPTIONAL_API_PREFIX.forEach((method) => {
+  const original = app[method].bind(app);
+  app[method] = (path, ...handlers) => {
+    const registration = original(path, ...handlers);
+
+    const registerAlias = (originalPath) => {
+      if (typeof originalPath !== 'string') return;
+      if (!originalPath.startsWith('/api/')) return;
+
+      const legacyPath = originalPath.replace(/^\/api/, '') || '/';
+      original(legacyPath, ...handlers);
+    };
+
+    if (Array.isArray(path)) {
+      path.forEach(registerAlias);
+    } else {
+      registerAlias(path);
+    }
+
+    return registration;
+  };
+});
+
 
 
 // Fallback CORS handler to guarantee headers are always sent
