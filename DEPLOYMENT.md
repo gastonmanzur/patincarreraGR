@@ -24,7 +24,11 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    # NODE_ENV=production (present in the example file) ensures the backend
    # uses https://patincarrera.net as the default domain for redirects & CORS.
    npm install
-   pm2 start server.js --name patincarrera-backend
+   # PM2 is now configured via backend-auth/ecosystem.config.js so we can
+   # keep the runtime options under version control. The file assumes the
+   # project lives in /home/deploy/apps/patincarreraGR; adjust `cwd`,
+   # log paths or environment variables if your setup differs.
+   pm2 startOrReload ecosystem.config.js --update-env
    pm2 save
    cd ..
    ```
@@ -71,3 +75,13 @@ sudo certbot --nginx -d patincarrera.net -d www.patincarrera.net
 ## Notes
 - Update environment variables as needed for production.
 - PM2 will keep the backend running and revive it on reboot (`pm2 startup`).
+- For future releases you can deploy everything in one step from the project
+  root:
+
+  ```bash
+  ./deploy.sh
+  ```
+
+  The script performs `git pull --rebase`, installs production dependencies for
+  the backend and frontend, rebuilds the Vite bundle and reloads PM2 using the
+  tracked ecosystem configuration.
