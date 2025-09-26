@@ -63,7 +63,7 @@ export default function Notificaciones() {
   if (notificaciones.length === 0) {
     return (
       <div className="container mt-4 text-black fw-normal">
-        <h1 className="mb-4 fw-normal">Notificaciones</h1>
+        <h1 className="mb-4 fw-normal text-center">Notificaciones</h1>
         <p>No hay notificaciones.</p>
       </div>
     );
@@ -71,7 +71,7 @@ export default function Notificaciones() {
 
   return (
     <div className="container mt-4 text-black fw-normal">
-      <h1 className="mb-4 fw-normal">Notificaciones</h1>
+      <h1 className="mb-4 fw-normal text-center">Notificaciones</h1>
       <ul className="list-group">
         {notificaciones.map((n) => (
           <li key={n._id} className={`list-group-item ${n.leido ? '' : 'list-group-item-warning'}`}>

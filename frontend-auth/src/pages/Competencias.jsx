@@ -105,7 +105,7 @@ export default function Competencias() {
 
   return (
     <div className="container mt-3">
-      <h2>Competencias</h2>
+      <h2 className="text-center">Competencias</h2>
       {rol === 'Delegado' && (
         <form onSubmit={crearCompetencia} className="row g-2 mb-3" encType="multipart/form-data">
           <div className="col-md-4">

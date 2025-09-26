@@ -29,7 +29,7 @@ export default function VerNoticia() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-3">{noticia.titulo}</h1>
+      <h1 className="mb-3 text-center">{noticia.titulo}</h1>
       {noticia.imagen && (
         <img
           src={noticia.imagen}

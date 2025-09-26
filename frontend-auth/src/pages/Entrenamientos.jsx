@@ -124,7 +124,7 @@ export default function Entrenamientos() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-4">Entrenamientos</h1>
+      <h1 className="mb-4 text-center">Entrenamientos</h1>
       {asistencias.length === 0 ? (
         <>
           <button className="btn btn-primary mb-3" onClick={iniciarNuevo}>

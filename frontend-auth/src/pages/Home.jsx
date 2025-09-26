@@ -113,7 +113,7 @@ export default function Home() {
       )}
       <div className="container mt-4">
 
-        <h1 className="mb-4">Noticias Falsas</h1>
+        <h1 className="mb-4 text-center">Noticias</h1>
 
         <div className="news-grid">
           {displayedNews[0] && (
@@ -125,7 +125,7 @@ export default function Home() {
               <div className="top-news-text">
                 <div className="news-label-top">NOTICIA</div>
                 <div className="news-label-top-line" />
-                <h5>{displayedNews[0].titulo}</h5>
+                <h5 className="text-center">{displayedNews[0].titulo}</h5>
                 <p>{displayedNews[0].contenido?.slice(0, 100)}...</p>
               </div>
               {displayedNews[0].imagen && (
@@ -142,7 +142,7 @@ export default function Home() {
                   <img src={currentPatinador.foto} alt="foto patinador" />
                 )}
                 <div className="overlay">
-                  <h6>
+                  <h6 className="text-center">
                     {currentPatinador.primerNombre} {currentPatinador.apellido}
                   </h6>
                 </div>
@@ -167,7 +167,7 @@ export default function Home() {
                 </div>
               )}
               <div className="news-info">
-                <h6>{displayedNews[1].titulo}</h6>
+                <h6 className="text-center">{displayedNews[1].titulo}</h6>
                 <p>{displayedNews[1].contenido?.slice(0, 80)}...</p>
                 <div className="news-divider" />
                 <div className="news-footer">
@@ -195,7 +195,7 @@ export default function Home() {
                 </div>
               )}
               <div className="news-info">
-                <h6>{displayedNews[2].titulo}</h6>
+                <h6 className="text-center">{displayedNews[2].titulo}</h6>
                 <p>{displayedNews[2].contenido?.slice(0, 80)}...</p>
                 <div className="news-divider" />
                 <div className="news-footer">
@@ -223,7 +223,7 @@ export default function Home() {
                 </div>
               )}
               <div className="news-info">
-                <h6>{displayedNews[3].titulo}</h6>
+                <h6 className="text-center">{displayedNews[3].titulo}</h6>
                 <p>{displayedNews[3].contenido?.slice(0, 80)}...</p>
                 <div className="news-divider" />
                 <div className="news-footer">
@@ -247,7 +247,7 @@ export default function Home() {
                 <div className="news-label-line" />
               </div>
               <div className="news-info">
-                <h6>{nextCompetition.nombre}</h6>
+                <h6 className="text-center">{nextCompetition.nombre}</h6>
                 <p>{new Date(nextCompetition.fecha).toLocaleDateString()}</p>
                 <div className="news-divider" />
                 <div className="news-footer">
@@ -283,7 +283,7 @@ export default function Home() {
                   />
                   <span>Patín carrera General Rodríguez</span>
                 </div>
-                <h6>
+                <h6 className="text-center">
                   {item.titulo.length > 60
                     ? `${item.titulo.slice(0, 60)}...`
                     : item.titulo}
@@ -310,7 +310,7 @@ export default function Home() {
                   </div>
                 )}
                 <div className="news-info">
-                  <h6>{item.titulo}</h6>
+                  <h6 className="text-center">{item.titulo}</h6>
                   <p>{item.contenido?.slice(0, 80)}...</p>
                   <div className="news-divider" />
                   <div className="news-footer">
@@ -344,7 +344,7 @@ export default function Home() {
                   </div>
                 )}
                 <div className="news-info">
-                  <h6>{item.titulo}</h6>
+                  <h6 className="text-center">{item.titulo}</h6>
                   <p>{item.contenido?.slice(0, 80)}...</p>
                   <div className="news-divider" />
                   <div className="news-footer">

@@ -71,9 +71,11 @@ export default function Dashboard() {
 
   return (
     <div className="container mt-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="m-0">Bienvenido al Dashboard</h1>
-        <LogoutButton />
+      <div className="d-flex flex-column flex-md-row align-items-center mb-4">
+        <h1 className="m-0 text-center flex-grow-1 w-100">Bienvenido al Dashboard</h1>
+        <div className="mt-3 mt-md-0 ms-md-3">
+          <LogoutButton />
+        </div>
       </div>
 
       <div className="card p-3 mb-4 d-flex flex-row align-items-center gap-3">

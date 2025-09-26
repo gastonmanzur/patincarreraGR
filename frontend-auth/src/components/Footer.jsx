@@ -72,7 +72,7 @@ export default function Footer() {
             </div>
           </div>
           <div className="col-md-3">
-            <h5>Contacto</h5>
+            <h5 className="text-center">Contacto</h5>
             <form onSubmit={handleSubmit}>
               <div className="mb-2">
                 <textarea
@@ -114,7 +114,7 @@ export default function Footer() {
             </ul>
           </div>
           <div className="col-md-4 mb-4 text-center">
-            <h5>Enlaces</h5>
+            <h5 className="text-center">Enlaces</h5>
             <ul className="list-unstyled">
               <li>
                 <Link to="/home" className="text-light text-decoration-none">

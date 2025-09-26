@@ -22,7 +22,7 @@ export default function CrearNoticia() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-4">Crear Noticia</h1>
+      <h1 className="mb-4 text-center">Crear Noticia</h1>
       <form onSubmit={handleSubmit}>
         <div className="mb-3">
           <label className="form-label">Título</label>
