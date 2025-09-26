@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import LogoutButton from '../components/LogoutButton';
 import api from '../api';
 import getImageUrl from '../utils/getImageUrl';
+import defaultAvatar from '../assets/image-placeholder.svg';
 
 export default function Dashboard() {
   const [rol, setRol] = useState('');
@@ -77,7 +78,7 @@ export default function Dashboard() {
 
       <div className="card p-3 mb-4 d-flex flex-row align-items-center gap-3">
         <img
-          src={foto || '/default-user.png'}
+          src={foto || defaultAvatar}
           alt="Perfil"
           className="rounded-circle"
           width="80"
