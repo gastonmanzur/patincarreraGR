@@ -297,9 +297,9 @@ export default function SolicitarSeguro() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-4">Solicitar Seguro</h1>
+      <h1 className="mb-4 text-center">Solicitar Seguro</h1>
         <div className="mb-4">
-          <h5>Deportista</h5>
+          <h5 className="text-center">Deportista</h5>
           <div className="d-flex gap-2">
             <select
               className="form-select"
@@ -328,7 +328,7 @@ export default function SolicitarSeguro() {
           </div>
         </div>
         <div className="mb-4">
-          <h5>Delegado</h5>
+          <h5 className="text-center">Delegado</h5>
           <form className="row g-2" onSubmit={agregarDelegado}>
             <div className="col-md-4">
               <input

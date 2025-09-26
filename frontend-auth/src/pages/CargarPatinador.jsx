@@ -47,7 +47,7 @@ export default function CargarPatinador() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-4">Cargar Patinador</h1>
+      <h1 className="mb-4 text-center">Cargar Patinador</h1>
       <form onSubmit={handleSubmit}>
         <div className="row g-3">
           <div className="col-md-6">

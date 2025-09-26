@@ -85,7 +85,7 @@ export default function Torneos() {
 
   return (
     <div className="container mt-3">
-      <h2>Torneos</h2>
+      <h2 className="text-center">Torneos</h2>
       {rol === 'Delegado' && (
         <form onSubmit={crearTorneo} className="row g-2 mb-3">
           <div className="col-md-4">

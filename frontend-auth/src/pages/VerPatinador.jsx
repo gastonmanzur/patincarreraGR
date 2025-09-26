@@ -34,7 +34,7 @@ export default function VerPatinador() {
 
   return (
     <div className="container mt-4">
-      <h1>
+      <h1 className="text-center">
         {patinador.primerNombre} {patinador.segundoNombre ? `${patinador.segundoNombre} ` : ''}
         {patinador.apellido}
       </h1>

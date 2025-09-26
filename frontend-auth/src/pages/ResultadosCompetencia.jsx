@@ -180,7 +180,7 @@ export default function ResultadosCompetencia() {
 
   return (
     <div className="container mt-3">
-      <h2>Resultados</h2>
+      <h2 className="text-center">Resultados</h2>
       {rol === 'Delegado' && (
         <>
           <form onSubmit={importar} className="mb-3">

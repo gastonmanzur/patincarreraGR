@@ -29,7 +29,7 @@ export default function AsociarPatinadores() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-3">Asociar Patinadores</h1>
+      <h1 className="mb-3 text-center">Asociar Patinadores</h1>
       <form onSubmit={handleSubmit} className="mb-4">
         <div className="mb-3">
           <label className="form-label">DNI del Padre</label>
@@ -58,7 +58,7 @@ export default function AsociarPatinadores() {
             <img src={p.foto} className="card-img-top" alt="foto patinador" />
           )}
           <div className="card-body">
-            <h5 className="card-title">{p.primerNombre} {p.apellido}</h5>
+            <h5 className="card-title text-center">{p.primerNombre} {p.apellido}</h5>
             <p className="card-text"><strong>Categoría:</strong> {p.categoria}</p>
             <p className="card-text"><strong>Edad:</strong> {p.edad}</p>
           </div>

@@ -28,14 +28,14 @@ export default function RankingTorneo() {
 
   return (
     <div className="container mt-3">
-      <h2>Ranking</h2>
-      <h4>Individual por Categoría</h4>
+      <h2 className="text-center">Ranking</h2>
+      <h4 className="text-center">Individual por Categoría</h4>
       {individual.length === 0 ? (
         <p>No hay datos.</p>
       ) : (
         individual.map((cat) => (
           <div key={cat.categoria} className="mb-3">
-            <h5>{cat.categoria}</h5>
+            <h5 className="text-center">{cat.categoria}</h5>
             <ul className="list-group">
               {cat.patinadores.map((p, idx) => (
                 <li

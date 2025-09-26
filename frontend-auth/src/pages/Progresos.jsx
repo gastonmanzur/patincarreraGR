@@ -61,7 +61,7 @@ export default function Progresos() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-4">Progresos</h1>
+      <h1 className="mb-4 text-center">Progresos</h1>
       <div className="mb-3">
         <label className="form-label">Patinador</label>
         <select className="form-select" value={patinadorId} onChange={manejarCambioPatinador}>

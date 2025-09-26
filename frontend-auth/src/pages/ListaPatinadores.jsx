@@ -94,7 +94,7 @@ export default function ListaPatinadores() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-4">Patinadores</h1>
+      <h1 className="mb-4 text-center">Patinadores</h1>
       <div className="row">
         {patinadores.map((p) => (
           <div className="col-md-4 mb-4" key={p._id}>
@@ -107,7 +107,7 @@ export default function ListaPatinadores() {
                 />
               )}
               <div className="card-body d-flex flex-column">
-                <h5 className="card-title">
+                <h5 className="card-title text-center">
                   {p.primerNombre} {p.apellido}
                 </h5>
                 <p className="card-text">Edad: {p.edad}</p>
