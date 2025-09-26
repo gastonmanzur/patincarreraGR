@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import LogoutButton from './LogoutButton';
 import getImageUrl from '../utils/getImageUrl';
+import placeholderAvatar from '../assets/image-placeholder.svg';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ export default function Navbar() {
     }
   }
   const foto = normalisedFoto;
+  const displayPhoto = foto || placeholderAvatar;
+  const isGooglePhoto = Boolean(foto?.includes('googleusercontent'));
   const isLoggedIn = localStorage.getItem('token');
   const [unread, setUnread] = useState(0);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
@@ -262,16 +265,16 @@ export default function Navbar() {
                 </div>
                 <div className="position-relative">
                   <img
-                    src={foto || '/default-user.png'}
+                    src={displayPhoto}
                     alt="Foto perfil"
                     width="40"
                     height="40"
                     className="rounded-circle"
-                    style={{ objectFit: 'cover', cursor: foto?.includes('googleusercontent') ? 'default' : 'pointer' }}
+                    style={{ objectFit: 'cover', cursor: isGooglePhoto ? 'default' : 'pointer' }}
                     referrerPolicy="no-referrer"
-                    onClick={!foto?.includes('googleusercontent') ? triggerFileSelect : undefined}
+                    onClick={!isGooglePhoto ? triggerFileSelect : undefined}
                   />
-                  {!foto?.includes('googleusercontent') && (
+                  {!isGooglePhoto && (
                     <input
                       type="file"
                       accept="image/*"
