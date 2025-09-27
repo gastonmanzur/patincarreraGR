@@ -19,6 +19,13 @@ body {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+/* Center the default page headings across the app */
+h1,
+h2,
+h3 {
+  text-align: center;
+}
+
 .navbar {
   background-color: var(--primary-color) !important;
   transition: background-color 0.3s ease;
