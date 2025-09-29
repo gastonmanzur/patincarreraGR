@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import enviarEmailConfirmacion from '../utils/enviarEmailConfirmacion.js';
 import jwt from 'jsonwebtoken';
+import { comparePasswordWithHash } from '../utils/passwordUtils.js';
 
 // Clave JWT unificada
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
@@ -87,8 +88,24 @@ export const loginUsuario = async (req, res) => {
         });
     }
 
-    const passwordValido = await bcrypt.compare(password, usuario.password);
-    if (!passwordValido) {
+    const comparacion = await comparePasswordWithHash(password, usuario.password);
+
+    if (!comparacion.matches) {
+      if (comparacion.reason === 'invalid-hash') {
+        console.warn(
+          `Hash de contraseña inválido detectado para el usuario ${email}. Se solicita restablecer contraseña.`
+        );
+        return res.status(400).json({
+          mensaje:
+            'No pudimos validar tus credenciales. Restablecé tu contraseña o contactá al administrador.'
+        });
+      }
+
+      if (comparacion.reason === 'error') {
+        console.error('Error comparando la contraseña del usuario', comparacion.error);
+        return res.status(500).json({ mensaje: 'Error al iniciar sesión' });
+      }
+
       return res.status(401).json({ mensaje: 'Contraseña incorrecta' });
     }
 
