@@ -24,6 +24,7 @@ import Progreso from './models/Progreso.js';
 import ExcelJS from 'exceljs';
 import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
+import { comparePasswordWithHash } from './utils/passwordUtils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -461,8 +462,24 @@ app.post('/api/auth/login', async (req, res) => {
           'Este usuario se registró con Google y no tiene una contraseña local. Iniciá sesión con Google.'
       });
     }
-    const valido = bcrypt.compareSync(password, usuario.password);
-    if (!valido) {
+    const comparacion = await comparePasswordWithHash(password, usuario.password);
+
+    if (!comparacion.matches) {
+      if (comparacion.reason === 'invalid-hash') {
+        console.warn(
+          `Hash de contraseña inválido para el usuario ${email}. Se requiere restablecer la contraseña.`
+        );
+        return res.status(400).json({
+          mensaje:
+            'Las credenciales no son válidas. Restablecé tu contraseña o contactá al administrador.'
+        });
+      }
+
+      if (comparacion.reason === 'error') {
+        console.error('Error comparando contraseña para el usuario', email, comparacion.error);
+        return res.status(500).json({ mensaje: 'Error al iniciar sesión' });
+      }
+
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
     }
     // Extendemos la duración del token para evitar que la sesión
