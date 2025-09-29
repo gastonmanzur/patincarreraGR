@@ -262,6 +262,27 @@ app.use((err, req, res, next) => {
 app.use('/uploads', express.static(UPLOADS_DIR));
 app.use('/api/uploads', express.static(UPLOADS_DIR));
 
+const mongoConnectionStates = {
+  0: 'disconnected',
+  1: 'connected',
+  2: 'connecting',
+  3: 'disconnecting'
+};
+
+app.get('/api/health', (_req, res) => {
+  const connectionState = mongoose.connection.readyState;
+  const isDatabaseConnected = connectionState === 1;
+
+  res
+    .status(isDatabaseConnected ? 200 : 503)
+    .set('Cache-Control', 'no-store')
+    .json({
+      status: isDatabaseConnected ? 'ok' : 'degraded',
+      uptime: process.uptime(),
+      database: mongoConnectionStates[connectionState] ?? 'unknown'
+    });
+});
+
 
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
