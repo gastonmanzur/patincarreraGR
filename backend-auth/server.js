@@ -27,14 +27,9 @@ import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
 import { comparePasswordWithHash } from './utils/passwordUtils.js';
 
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
+dotenv.config();
 
-const ORIGIN = process.env.CLIENT_ORIGIN || 'https://patincarrera.net';
-app.use(cors({ origin: ORIGIN, credentials: true }));
-app.use(express.json());
-app.get('/api/health', (req,res)=>res.status(200).json({ok:true}));
+mongoose.set('strictQuery', true);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -137,12 +132,15 @@ mongoose
 const isProduction = process.env.NODE_ENV === 'production';
 
 
+const CLIENT_ORIGIN = (process.env.CLIENT_ORIGIN || 'https://patincarrera.net').replace(/\/+$/, '');
+
 const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://patincarrera.net',
   'http://www.patincarrera.net',
   'https://patincarrera.net',
-  'https://www.patincarrera.net'
+  'https://www.patincarrera.net',
+  CLIENT_ORIGIN
 ];
 
 const FALLBACK_FRONTEND_URL = isProduction

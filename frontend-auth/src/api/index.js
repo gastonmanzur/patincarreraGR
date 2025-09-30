@@ -4,7 +4,8 @@ import axios from 'axios';
 // values received from the environment so every deployment ends up
 // calling the backend under the expected `/api` prefix.
 const buildApiBaseUrl = () => {
-  const rawEnvUrl = import.meta.env.VITE_API_URL?.trim();
+  const rawEnvUrl =
+    import.meta.env.VITE_API_BASE?.trim() || import.meta.env.VITE_API_URL?.trim();
 
   if (rawEnvUrl) {
     const normalised = rawEnvUrl.replace(/\/+$/, '');
@@ -34,12 +35,9 @@ const buildApiBaseUrl = () => {
 
 
 
-// const api = axios.create({
-//   baseURL: buildApiBaseUrl()
-// });
-
 const api = axios.create({
   baseURL: buildApiBaseUrl(),
+  withCredentials: true
 });
 
 
