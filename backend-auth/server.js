@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
@@ -25,6 +26,15 @@ import ExcelJS from 'exceljs';
 import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
 import { comparePasswordWithHash } from './utils/passwordUtils.js';
+
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+
+const ORIGIN = process.env.CLIENT_ORIGIN || 'https://patincarrera.net';
+app.use(cors({ origin: ORIGIN, credentials: true }));
+app.use(express.json());
+app.get('/api/health', (req,res)=>res.status(200).json({ok:true}));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
