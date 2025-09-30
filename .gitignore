@@ -1,7 +1,14 @@
-node_modules
-frontend-auth/node_modules
-backend-auth/node_modules
+node_modules/
+frontend-auth/node_modules/
+backend-auth/node_modules/
 backend-auth/usuarios.db
+
+# Build artifacts
+frontend-auth/dist/
+
+# Environment files
 .env
+*.env.local
 backend-auth/.env
-frontend-auth/.env
+frontend-auth/.env*
+!frontend-auth/.env.production
