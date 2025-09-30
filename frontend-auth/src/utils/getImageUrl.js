@@ -30,12 +30,16 @@ export default function getImageUrl(rawPath) {
   const normalizeHost = (host) => host?.replace(/^www\./i, '') || '';
 
   let backendHost = '';
+  let backendProtocol = '';
   try {
-    backendHost = normalizeHost(new URL(base).hostname);
+    const backendUrl = new URL(base);
+    backendHost = normalizeHost(backendUrl.hostname);
+    backendProtocol = backendUrl.protocol;
   } catch (error) {
     console.warn('No se pudo determinar el host base para las imágenes.', error);
   }
   const currentHost = normalizeHost(window.location.hostname);
+  const isPageServedOverHttps = window.location.protocol === 'https:';
 
   // Las URLs absolutas son válidas siempre que no apunten a hosts locales
   // (como `http://localhost:5000`) que quedan inaccesibles en producción.
@@ -53,7 +57,8 @@ export default function getImageUrl(rawPath) {
         (candidateHost === backendHost || candidateHost === currentHost);
       const shouldRewriteHttpSameDomain =
         parsed.protocol === 'http:' &&
-        isSameBackendHost;
+        isSameBackendHost &&
+        (backendProtocol === 'https:' || isPageServedOverHttps);
       const pathWithoutLeadingSlash = parsed.pathname.replace(/^\/+/, '');
       const isUploadPath = /^((api\/)?uploads\/)/i.test(pathWithoutLeadingSlash);
 

@@ -129,18 +129,20 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:5173',
+  'http://patincarrera.net',
+  'http://www.patincarrera.net',
   'https://patincarrera.net',
   'https://www.patincarrera.net'
 ];
 
 const FALLBACK_FRONTEND_URL = isProduction
-  ? 'https://patincarrera.net'
+  ? 'http://patincarrera.net'
   : 'http://localhost:5173';
 const FALLBACK_FRONTEND_URL_WWW = isProduction
-  ? 'https://www.patincarrera.net'
+  ? 'http://www.patincarrera.net'
   : 'http://localhost:5173';
 const FALLBACK_BACKEND_URL = isProduction
-  ? 'https://patincarrera.net'
+  ? 'http://patincarrera.net'
   : 'http://localhost:5000';
 
 const FRONTEND_URL = (process.env.FRONTEND_URL || FALLBACK_FRONTEND_URL).replace(/\/+$/, '');
@@ -1870,7 +1872,7 @@ app.get('/api/progreso/:id', protegerRuta, async (req, res) => {
 app.get('/api/auth/google', (req, res) => {
   const redirectUri =
     process.env.GOOGLE_REDIRECT_URI ||
-    'https://patincarrera.net/api/auth/google/callback';
+    'http://patincarrera.net/api/auth/google/callback';
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID || '',
     redirect_uri: redirectUri,
@@ -1892,7 +1894,7 @@ app.get('/api/auth/google/callback', async (req, res) => {
   try {
     const redirectUri =
       process.env.GOOGLE_REDIRECT_URI ||
-      'https://patincarrera.net/api/auth/google/callback';
+      'http://patincarrera.net/api/auth/google/callback';
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
