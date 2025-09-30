@@ -22,7 +22,7 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    cp .env.example .env
    # edit .env with real values (Mongo URI, JWT secret, email creds, etc.)
    # NODE_ENV=production (present in the example file) ensures the backend
-   # uses https://patincarrera.net as the default domain for redirects & CORS.
+   # uses http://patincarrera.net as the default domain for redirects & CORS.
    npm install
    # PM2 is now configured via backend-auth/ecosystem.config.js so we can
    # keep the runtime options under version control. The file assumes the
