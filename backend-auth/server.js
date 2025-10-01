@@ -177,7 +177,6 @@ app.use((err, req, res, next) => {
 });
 
 // Static uploads (también podés servirlos con Nginx alias)
-app.use('/uploads', express.static(UPLOADS_DIR));
 app.use('/api/uploads', express.static(UPLOADS_DIR));
 
 // Request log liviano
@@ -413,7 +412,7 @@ app.get('/api/protegido/usuarios', protegerRuta, permitirRol('Delegado', 'Admin'
 app.post('/api/protegido/foto-perfil', protegerRuta, upload.single('foto'), async (req, res) => {
   try {
     const user = await User.findById(req.usuario.id);
-    user.foto = `${BACKEND_URL}/uploads/${req.file.filename}`;
+    user.foto = `${BACKEND_URL}/api/uploads/${req.file.filename}`;
     await user.save();
     res.json({ mensaje: 'Foto actualizada', foto: user.foto });
   } catch (err) {
@@ -435,8 +434,8 @@ app.post('/api/patinadores', protegerRuta, upload.fields([{ name: 'fotoRostro', 
     const patinador = await Patinador.create({
       primerNombre, segundoNombre, apellido, edad, fechaNacimiento, dni, cuil, direccion,
       dniMadre, dniPadre, telefono, sexo, nivel, seguro, numeroCorredor, categoria,
-      fotoRostro: fotoRostroFile ? `${BACKEND_URL}/uploads/${fotoRostroFile.filename}` : undefined,
-      foto: fotoFile ? `${BACKEND_URL}/uploads/${fotoFile.filename}` : undefined
+      fotoRostro: fotoRostroFile ? `${BACKEND_URL}/api/uploads/${fotoRostroFile.filename}` : undefined,
+      foto: fotoFile ? `${BACKEND_URL}/api/uploads/${fotoFile.filename}` : undefined
     });
 
     res.status(201).json(patinador);
@@ -528,8 +527,8 @@ app.put('/api/patinadores/:id', protegerRuta, upload.fields([{ name: 'fotoRostro
     const fotoRostroFile = req.files?.fotoRostro?.[0];
     const fotoFile = req.files?.foto?.[0];
 
-    if (fotoRostroFile) actualizacion.fotoRostro = `${BACKEND_URL}/uploads/${fotoRostroFile.filename}`;
-    if (fotoFile) actualizacion.foto = `${BACKEND_URL}/uploads/${fotoFile.filename}`;
+    if (fotoRostroFile) actualizacion.fotoRostro = `${BACKEND_URL}/api/uploads/${fotoRostroFile.filename}`;
+    if (fotoFile) actualizacion.foto = `${BACKEND_URL}/api/uploads/${fotoFile.filename}`;
 
     const patinadorActualizado = await Patinador.findByIdAndUpdate(
       req.params.id, actualizacion, { new: true, runValidators: true }
@@ -609,7 +608,7 @@ app.get('/api/news/:id', async (req, res) => {
 app.post('/api/news', protegerRuta, permitirRol('Delegado', 'Tecnico'), upload.single('imagen'), async (req, res) => {
   try {
     const { titulo, contenido } = req.body;
-    const imagen = req.file ? `${BACKEND_URL}/uploads/${req.file.filename}` : undefined;
+    const imagen = req.file ? `${BACKEND_URL}/api/uploads/${req.file.filename}` : undefined;
     const noticia = await News.create({ titulo, contenido, imagen, autor: req.usuario.id });
     await crearNotificacionesParaTodos(`Nueva noticia: ${titulo}`);
     res.status(201).json(noticia);
@@ -735,7 +734,7 @@ app.post('/api/tournaments/:id/competitions', protegerRuta, permitirRol('Delegad
   try {
     const torneo = await Torneo.findById(req.params.id);
     if (!torneo) return res.status(404).json({ mensaje: 'Torneo no encontrado' });
-    const imagen = req.file ? `${BACKEND_URL}/uploads/${req.file.filename}` : undefined;
+    const imagen = req.file ? `${BACKEND_URL}/api/uploads/${req.file.filename}` : undefined;
     const competencia = await Competencia.create({ nombre, fecha, torneo: torneo._id, ...(imagen ? { imagen } : {}) });
     await crearNotificacionesParaTodos(`Nueva competencia ${nombre}`, competencia._id);
     res.status(201).json(competencia);
@@ -768,7 +767,7 @@ app.get('/api/tournaments/:id/competitions', protegerRuta, async (req, res) => {
 app.put('/api/competitions/:id', protegerRuta, permitirRol('Delegado'), upload.single('imagen'), async (req, res) => {
   const { nombre, fecha } = req.body;
   const update = { nombre, fecha };
-  if (req.file) update.imagen = `${BACKEND_URL}/uploads/${req.file.filename}`;
+  if (req.file) update.imagen = `${BACKEND_URL}/api/uploads/${req.file.filename}`;
   try {
     const comp = await Competencia.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
     if (!comp) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
@@ -1280,7 +1279,7 @@ app.post(
       const user = await User.findById(req.usuario.id);
       // Use the configured backend URL when returning the uploaded image so the
       // path is valid even when requests are proxied through another host.
-      user.foto = `${BACKEND_URL}/uploads/${req.file.filename}`;
+      user.foto = `${BACKEND_URL}/api/uploads/${req.file.filename}`;
       await user.save();
       res.json({ mensaje: 'Foto actualizada', foto: user.foto });
     } catch (err) {
@@ -1339,10 +1338,10 @@ app.post(
         numeroCorredor,
         categoria,
         fotoRostro: fotoRostroFile
-          ? `${BACKEND_URL}/uploads/${fotoRostroFile.filename}`
+          ? `${BACKEND_URL}/api/uploads/${fotoRostroFile.filename}`
           : undefined,
         foto: fotoFile
-          ? `${BACKEND_URL}/uploads/${fotoFile.filename}`
+          ? `${BACKEND_URL}/api/uploads/${fotoFile.filename}`
           : undefined
       });
 
@@ -1467,10 +1466,10 @@ app.put(
       const fotoFile = req.files?.foto?.[0];
 
       if (fotoRostroFile) {
-        actualizacion.fotoRostro = `${BACKEND_URL}/uploads/${fotoRostroFile.filename}`;
+        actualizacion.fotoRostro = `${BACKEND_URL}/api/uploads/${fotoRostroFile.filename}`;
       }
       if (fotoFile) {
-        actualizacion.foto = `${BACKEND_URL}/uploads/${fotoFile.filename}`;
+        actualizacion.foto = `${BACKEND_URL}/api/uploads/${fotoFile.filename}`;
       }
 
       const patinadorActualizado = await Patinador.findByIdAndUpdate(
@@ -1588,7 +1587,7 @@ app.post(
     try {
       const { titulo, contenido } = req.body;
       const imagen = req.file
-        ? `${BACKEND_URL}/uploads/${req.file.filename}`
+        ? `${BACKEND_URL}/api/uploads/${req.file.filename}`
         : undefined;
       const noticia = await News.create({
         titulo,
@@ -1748,7 +1747,7 @@ app.post(
       const torneo = await Torneo.findById(req.params.id);
       if (!torneo) return res.status(404).json({ mensaje: 'Torneo no encontrado' });
       const imagen = req.file
-        ? `${BACKEND_URL}/uploads/${req.file.filename}`
+        ? `${BACKEND_URL}/api/uploads/${req.file.filename}`
         : undefined;
       const competencia = await Competencia.create({
         nombre,
@@ -1794,7 +1793,7 @@ app.put(
     const { nombre, fecha } = req.body;
     const update = { nombre, fecha };
     if (req.file) {
-      update.imagen = `${BACKEND_URL}/uploads/${req.file.filename}`;
+      update.imagen = `${BACKEND_URL}/api/uploads/${req.file.filename}`;
     }
     try {
       const comp = await Competencia.findByIdAndUpdate(req.params.id, update, {
