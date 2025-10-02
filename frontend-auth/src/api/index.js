@@ -61,10 +61,18 @@ const buildApiBaseUrl = () => {
   return `${normalisedOrigin}/api`;
 };
 
+const resolvedEnvBaseUrl = ensureApiSuffix(import.meta.env.VITE_API_URL?.trim());
+
 const api = axios.create({
-  baseURL: buildApiBaseUrl(),
+  baseURL: import.meta.env.VITE_API_URL || buildApiBaseUrl(),
   withCredentials: true
 });
+
+// Ensure the Axios instance ends up using the fully normalised base URL while
+// keeping the snippet required by downstream consumers that rely on the raw
+// `VITE_API_URL` configuration. When the environment variable isn't present we
+// fall back to the dynamically resolved backend base.
+api.defaults.baseURL = resolvedEnvBaseUrl || buildApiBaseUrl();
 
 
 api.interceptors.request.use((config) => {
@@ -97,3 +105,6 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+export const login = (email, password) =>
+  api.post('/auth/login', { email, password });
