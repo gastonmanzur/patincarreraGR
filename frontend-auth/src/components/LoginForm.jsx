@@ -1,4 +1,4 @@
-import api from '../api';
+import api, { login } from '../api';
 import { useNavigate } from 'react-router-dom';
 import getImageUrl from '../utils/getImageUrl';
 
@@ -11,7 +11,7 @@ export default function LoginForm() {
     const password = e.target.password.value;
 
     try {
-      const res = await api.post('/auth/login', { email, password });
+      const res = await login(email, password);
 
       const { token, usuario } = res.data;
 
