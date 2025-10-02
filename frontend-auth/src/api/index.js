@@ -28,22 +28,13 @@ const buildApiBaseUrl = () => {
   const isBrowser = typeof window !== 'undefined';
 
   if (rawEnvUrl) {
-    if (!isBrowser) {
-      const direct = ensureApiSuffix(rawEnvUrl);
-      if (direct) return direct;
-    } else {
-      const configured = resolveConfiguredBase(rawEnvUrl, window.location.origin);
-      if (configured) {
-        const configuredUrl = new URL(configured);
-        const hostMatches = configuredUrl.origin === window.location.origin;
-        const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(
-          window.location.hostname
-        );
+    const normalised = ensureApiSuffix(rawEnvUrl);
 
-        if (hostMatches || import.meta.env.DEV || isLocalHost) {
-          return configured;
-        }
-      }
+    if (!isBrowser) {
+      if (normalised) return normalised;
+    } else {
+      const configured = resolveConfiguredBase(rawEnvUrl, window.location.origin) || normalised;
+      if (configured) return configured;
     }
   }
 
