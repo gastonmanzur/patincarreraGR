@@ -43,9 +43,34 @@ const resolveUploadsDir = () => {
   if (configured) return path.resolve(configured);
   return path.join(__dirname, 'uploads');
 };
+const normalizeDirectories = (dirs) =>
+  Array.from(
+    new Set(
+      (dirs || [])
+        .filter(Boolean)
+        .map((dir) => path.resolve(dir))
+    )
+  );
+
 const UPLOADS_DIR = resolveUploadsDir();
 process.env.UPLOADS_DIR = UPLOADS_DIR;
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const parseFallbackDirs = (raw) => {
+  if (!raw || typeof raw !== 'string') return [];
+  return raw
+    .split(/[,;:\n]+/)
+    .map((dir) => dir.trim())
+    .filter(Boolean);
+};
+
+const candidateFallbackDirs = [
+  ...parseFallbackDirs(process.env.UPLOADS_FALLBACK_DIRS),
+  path.resolve(__dirname, '..', 'uploads'),
+  path.resolve(process.cwd(), 'uploads')
+];
+
+const UPLOADS_DIRS = normalizeDirectories([UPLOADS_DIR, ...candidateFallbackDirs]);
 
 // --------- Mongo URI ---------
 mongoose.set('strictQuery', true);
@@ -177,8 +202,56 @@ app.use((err, req, res, next) => {
   return next(err);
 });
 
-// Static uploads (también podés servirlos con Nginx alias)
-app.use('/api/uploads', express.static(UPLOADS_DIR));
+// Static uploads (permite buscar en múltiples directorios para mantener archivos históricos)
+const serveUpload = (req, res, next) => {
+  const rawPath = req.params[0] || '';
+  let decodedPath = rawPath;
+
+  try {
+    decodedPath = decodeURIComponent(rawPath);
+  } catch {
+    if (req.method === 'HEAD') return res.sendStatus(400);
+    return res.status(400).json({ mensaje: 'Ruta de archivo inválida' });
+  }
+
+  const normalizedPath = path
+    .normalize(decodedPath)
+    .replace(/^([.]{1,2}[\/])+/, '')
+    .replace(/\\/g, '/');
+
+  if (!normalizedPath) {
+    if (req.method === 'HEAD') return res.sendStatus(404);
+    return res.status(404).json({ mensaje: 'Archivo no encontrado' });
+  }
+
+  if (normalizedPath.split('/').some((segment) => segment === '..')) {
+    if (req.method === 'HEAD') return res.sendStatus(400);
+    return res.status(400).json({ mensaje: 'Ruta de archivo inválida' });
+  }
+
+  for (const dir of UPLOADS_DIRS) {
+    const candidate = path.join(dir, normalizedPath);
+    try {
+      const stat = fs.statSync(candidate);
+      if (stat.isFile()) {
+        if (dir !== UPLOADS_DIR) {
+          console.log(`Sirviendo ${normalizedPath} desde directorio alternativo: ${dir}`);
+        }
+        return res.sendFile(candidate);
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        return next(error);
+      }
+    }
+  }
+
+  if (req.method === 'HEAD') return res.sendStatus(404);
+  return res.status(404).json({ mensaje: 'Archivo no encontrado' });
+};
+
+app.get('/api/uploads/*', serveUpload);
+app.head('/api/uploads/*', serveUpload);
 
 // Request log liviano
 app.use((req, _res, next) => {
