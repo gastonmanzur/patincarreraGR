@@ -21,6 +21,9 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    cd backend-auth
    cp .env.example .env
    # edit .env with real values (Mongo URI, JWT secret, email creds, etc.)
+   # UPLOADS_DIR defaults to backend-auth/uploads. If you have legacy
+   # assets in another directory you can list them in
+   # UPLOADS_FALLBACK_DIRS=/ruta/vieja/uploads
    # NODE_ENV=production (present in the example file) ensures the backend
    # uses http://patincarrera.net as the default domain for redirects & CORS.
    npm install
