@@ -33,7 +33,8 @@ import { comparePasswordWithHash } from './utils/passwordUtils.js';
 dotenv.config();
 
 // --------- Paths / TZ ---------
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 process.env.TZ = 'America/Argentina/Buenos_Aires';
 
 // --------- Uploads dir ---------
