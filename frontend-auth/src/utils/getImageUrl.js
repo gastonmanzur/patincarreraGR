@@ -1,10 +1,29 @@
 import api from '../api';
 
+const resolveUploadsBasePath = () => {
+  const raw =
+    import.meta.env.VITE_UPLOADS_BASE_PATH ||
+    import.meta.env.VITE_UPLOADS_PUBLIC_PATH ||
+    '/uploads';
+  const trimmed = typeof raw === 'string' ? raw.trim() : '';
+  if (!trimmed) return '/uploads';
+  return `/${trimmed.replace(/^\/+/, '').replace(/\/+$/, '')}`;
+};
+
+const uploadsBasePath = resolveUploadsBasePath();
+
+const stripLeadingUploadsSegments = (value) =>
+  value
+    .replace(/^\/+/, '')
+    .replace(/\\+/g, '/')
+    .replace(/^api(?:\/+|$)/i, '')
+    .replace(/^uploads(?:\/+|$)/i, '');
+
 /**
  * Normaliza las rutas de imágenes provenientes del backend.
  * Muchos registros antiguos almacenan solo el nombre del archivo o
  * un path relativo como `uploads/archivo.png`. Esta función garantiza
- * que siempre devolvamos una URL absoluta válida hacia `/api/uploads`.
+ * que siempre devolvamos una URL absoluta válida hacia `/uploads`.
  *
  * @param {string | undefined | null} rawPath Ruta cruda recibida desde la API.
  * También reescribe URLs absolutas que apuntan a `localhost` u otros hosts
@@ -31,10 +50,12 @@ export default function getImageUrl(rawPath) {
 
   let backendHost = '';
   let backendProtocol = '';
+  let backendOrigin = '';
   try {
     const backendUrl = new URL(base);
     backendHost = normalizeHost(backendUrl.hostname);
     backendProtocol = backendUrl.protocol;
+    backendOrigin = backendUrl.origin;
   } catch (error) {
     console.warn('No se pudo determinar el host base para las imágenes.', error);
   }
@@ -65,14 +86,17 @@ export default function getImageUrl(rawPath) {
       if (!isLocalHost && !shouldRewriteHttpSameDomain && (!isSameBackendHost || !isUploadPath)) {
         return candidate;
       }
-      // Tomamos únicamente la ruta, preservando posibles prefijos como `/api`.
-      candidate = `${parsed.pathname}${parsed.search || ''}`;
+      // Tomamos únicamente la ruta, preservando posibles prefijos como `/api` y
+      // parámetros de consulta.
+      const search = parsed.search || '';
+      candidate = `${parsed.pathname}${search}`;
 
       if (isSameBackendHost && isUploadPath) {
-        candidate = pathWithoutLeadingSlash.replace(/^api\/+/, '');
-        if (!candidate) {
+        const cleanedPath = pathWithoutLeadingSlash.replace(/^api\/+/, '');
+        if (!cleanedPath) {
           return '';
         }
+        candidate = `${cleanedPath}${search}`;
       }
     } catch (error) {
       console.warn('URL de imagen inválida recibida, se usará el valor original.', error);
@@ -88,19 +112,27 @@ export default function getImageUrl(rawPath) {
   // Normalizamos la ruta relativa eliminando barras iniciales, el prefijo
   // `api/` si estuviera presente y convirtiendo backslashes en forward
   // slashes.
-  let normalized = candidate.replace(/^\/+/, '').replace(/\\+/g, '/');
-
-  normalized = normalized.replace(new RegExp('^api/+', 'i'), '');
-
-  if (!normalized.startsWith('uploads/')) {
-    normalized = `uploads/${normalized}`;
+  let pathPortion = candidate;
+  let query = '';
+  const queryIndex = pathPortion.indexOf('?');
+  if (queryIndex !== -1) {
+    query = pathPortion.slice(queryIndex);
+    pathPortion = pathPortion.slice(0, queryIndex);
   }
 
-  try {
-    return new URL(normalized, `${base}/`).href;
-  } catch (err) {
-    console.error('No se pudo construir la URL de la imagen:', err);
-    return `${base}/${normalized}`;
+  const normalized = stripLeadingUploadsSegments(pathPortion);
+
+  if (!normalized) {
+    return '';
   }
+
+  const origin = backendOrigin || window.location.origin || '';
+  const uploadsBaseUrl = origin
+    ? `${origin.replace(/\/+$/, '')}${uploadsBasePath}`
+    : uploadsBasePath;
+
+  const baseWithoutTrailingSlash = uploadsBaseUrl.replace(/\/+$/, '');
+
+  return `${baseWithoutTrailingSlash}/${normalized}${query}`;
 }
 

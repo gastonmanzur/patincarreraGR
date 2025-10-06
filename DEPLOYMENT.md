@@ -24,6 +24,9 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    # UPLOADS_DIR defaults to backend-auth/uploads. If you have legacy
    # assets in another directory you can list them in
    # UPLOADS_FALLBACK_DIRS=/ruta/vieja/uploads
+   # PUBLIC_UPLOADS_PATH defaults to /uploads and must match the path that
+   # Nginx exposes in its static file location. Leave it untouched unless you
+   # intentionally expose the assets under a different public prefix.
    # NODE_ENV=production (present in the example file) ensures the backend
    # uses http://patincarrera.net as the default domain for redirects & CORS.
    npm install
@@ -59,7 +62,9 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    sudo ln -s /etc/nginx/sites-available/patincarrera /etc/nginx/sites-enabled/
    # If you placed the frontend bundle in a different directory, edit the
    # server block and update the `root` directive accordingly before
-   # restarting Nginx.
+   # restarting Nginx. Ensure the `alias` directive for `/uploads/` matches
+   # the absolute path of the backend `uploads` directory (defaults to
+   # /var/www/patincarrera/backend/uploads/ when following this guide).
    sudo nano /etc/nginx/sites-available/patincarrera
    sudo nginx -t
    sudo systemctl restart nginx
