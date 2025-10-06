@@ -12,6 +12,21 @@ const DEFAULT_BACKEND_URL =
 
 const BACKEND_URL = (process.env.BACKEND_URL || DEFAULT_BACKEND_URL).replace(/\/+$/, '');
 
+const resolvePublicUploadsPath = () => {
+  const raw = process.env.PUBLIC_UPLOADS_PATH || process.env.UPLOADS_PUBLIC_PATH;
+  const trimmed = raw && raw.trim();
+  if (!trimmed) return '/uploads';
+  return `/${trimmed.replace(/^\/+/, '').replace(/\/+$/, '')}`;
+};
+
+const PUBLIC_UPLOADS_PATH = resolvePublicUploadsPath();
+const uploadsBase = `${BACKEND_URL}${PUBLIC_UPLOADS_PATH}`.replace(/\/+$/, '');
+
+const buildUploadUrl = (filename) => {
+  if (!filename) return '';
+  return `${uploadsBase}/${String(filename).replace(/^\/+/, '')}`;
+};
+
 
 router.get('/usuario', protegerRuta, async (req, res) => {
   const usuario = await User.findById(req.usuario.id).select('-password');
@@ -32,7 +47,7 @@ router.get('/usuarios', protegerRuta, permitirRol('admin'), async (req, res) => 
 router.post('/foto-perfil', protegerRuta, upload.single('foto'), async (req, res) => {
   try {
     const user = await User.findById(req.usuario.id);
-    user.foto = `${BACKEND_URL}/api/uploads/${req.file.filename}`;
+    user.foto = buildUploadUrl(req.file.filename);
     await user.save();
     res.json({ mensaje: 'Foto actualizada', foto: user.foto });
   } catch (err) {
