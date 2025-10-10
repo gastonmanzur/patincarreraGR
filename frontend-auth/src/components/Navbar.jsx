@@ -133,6 +133,7 @@ export default function Navbar() {
     ? [
         { label: 'Inicio', path: '/home' },
         { label: 'Torneos', path: '/torneos' },
+        { label: 'Títulos del Club', path: '/titulos-club' },
         ...(rol === 'Tecnico'
           ? [
               { label: 'Entrenamientos', path: '/entrenamientos' },
@@ -144,9 +145,6 @@ export default function Navbar() {
           : []),
         ...(rol === 'Delegado'
           ? [{ label: 'Seguros', path: '/seguros' }]
-          : []),
-        ...(rol === 'Delegado'
-          ? [{ label: 'Títulos del Club', path: '/titulos-club' }]
           : []),
         ...(rol === 'Delegado' || rol === 'Tecnico'
           ? [

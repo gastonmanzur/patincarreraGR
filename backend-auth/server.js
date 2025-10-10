@@ -1015,6 +1015,107 @@ app.post(
   }
 );
 
+app.put(
+  '/api/clubs/local/titulos/:id',
+  protegerRuta,
+  permitirRol('Delegado'),
+  upload.single('imagen'),
+  async (req, res) => {
+    try {
+      const club = await ensureLocalClub();
+      const titulo = club.titulos.id(req.params.id);
+
+      if (!titulo) {
+        return res.status(404).json({ mensaje: 'Título no encontrado' });
+      }
+
+      let datosActualizados = false;
+
+      if ('titulo' in req.body) {
+        const nuevoTitulo = typeof req.body.titulo === 'string' ? req.body.titulo.trim() : '';
+        if (!nuevoTitulo) {
+          return res.status(400).json({ mensaje: 'El título del club es obligatorio' });
+        }
+        titulo.titulo = nuevoTitulo;
+        datosActualizados = true;
+      }
+
+      if ('descripcion' in req.body) {
+        const descripcion =
+          typeof req.body.descripcion === 'string' ? req.body.descripcion.trim() : '';
+        titulo.descripcion = descripcion;
+        datosActualizados = true;
+      }
+
+      if ('anio' in req.body) {
+        const rawYear = req.body.anio;
+        if (rawYear === '' || rawYear === null || (typeof rawYear === 'string' && rawYear.trim() === '')) {
+          titulo.anio = undefined;
+        } else {
+          const parsed = Number.parseInt(rawYear, 10);
+          const currentYear = new Date().getFullYear();
+          if (Number.isNaN(parsed) || parsed < 1900 || parsed > currentYear + 1) {
+            return res.status(400).json({ mensaje: 'El año proporcionado no es válido' });
+          }
+          titulo.anio = parsed;
+        }
+        datosActualizados = true;
+      }
+
+      const eliminarImagen = req.body?.eliminarImagen === 'true';
+
+      if (req.file) {
+        titulo.imagen = buildUploadUrl(req.file.filename);
+        datosActualizados = true;
+      } else if (eliminarImagen) {
+        titulo.imagen = '';
+        datosActualizados = true;
+      }
+
+      if (!datosActualizados) {
+        return res.status(400).json({ mensaje: 'No se proporcionaron datos para actualizar' });
+      }
+
+      await club.save();
+
+      const individuales = await computeLocalIndividualTitles(club._id);
+      const payload = await buildLocalClubPayload(club, individuales);
+
+      return res.json({ mensaje: 'Título actualizado correctamente', ...payload });
+    } catch (err) {
+      console.error('Error al actualizar un título del club local', err);
+      return res.status(500).json({ mensaje: 'Error al actualizar el título del club' });
+    }
+  }
+);
+
+app.delete(
+  '/api/clubs/local/titulos/:id',
+  protegerRuta,
+  permitirRol('Delegado'),
+  async (req, res) => {
+    try {
+      const club = await ensureLocalClub();
+      const titulo = club.titulos.id(req.params.id);
+
+      if (!titulo) {
+        return res.status(404).json({ mensaje: 'Título no encontrado' });
+      }
+
+      await titulo.deleteOne();
+      await club.save();
+
+      const individuales = await computeLocalIndividualTitles(club._id);
+      const payload = await buildLocalClubPayload(club, individuales);
+
+      return res.json({ mensaje: 'Título eliminado correctamente', ...payload });
+    } catch (err) {
+      console.error('Error al eliminar un título del club local', err);
+      return res.status(500).json({ mensaje: 'Error al eliminar el título del club' });
+    }
+  }
+);
+
 app.get('/api/clubs/local/titulos/:id', protegerRuta, async (req, res) => {
   try {
     const club = await ensureLocalClub();

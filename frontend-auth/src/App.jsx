@@ -110,11 +110,11 @@ function AppRoutes() {
           <Route path="/notificaciones" element={<ProtectedRoute><Notificaciones /></ProtectedRoute>} />
           <Route
             path="/titulos-club"
-            element={<ProtectedRoute roles={['Delegado']}><TitulosClub /></ProtectedRoute>}
+            element={<ProtectedRoute><TitulosClub /></ProtectedRoute>}
           />
           <Route
             path="/titulos-club/:id"
-            element={<ProtectedRoute roles={['Delegado']}><VerTituloClub /></ProtectedRoute>}
+            element={<ProtectedRoute><VerTituloClub /></ProtectedRoute>}
           />
           <Route
             path="/seguros"
