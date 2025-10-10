@@ -91,52 +91,62 @@ export default function VerTituloClub() {
       )}
 
       {!error && titulo && (
-        <div className="card shadow-sm">
-          {titulo.imagen ? (
-            <img
-              src={titulo.imagen}
-              alt={`Trofeo ${titulo.titulo}`}
-              className="card-img-top object-fit-cover"
-              style={{ maxHeight: '360px' }}
-            />
-          ) : (
-            <div
-              className="card-img-top bg-light d-flex align-items-center justify-content-center text-muted"
-              style={{ height: '240px' }}
-            >
-              Sin fotografía disponible
+        <div className="card shadow-sm overflow-hidden">
+          <div className="row g-0 flex-column flex-lg-row">
+            <div className="col-lg-6">
+              {titulo.imagen ? (
+                <img
+                  src={titulo.imagen}
+                  alt={`Trofeo ${titulo.titulo}`}
+                  className="w-100 h-100 object-fit-cover"
+                  style={{ minHeight: '320px' }}
+                />
+              ) : (
+                <div
+                  className="bg-light d-flex align-items-center justify-content-center text-muted w-100 h-100"
+                  style={{ minHeight: '320px' }}
+                >
+                  Sin fotografía disponible
+                </div>
+              )}
             </div>
-          )}
-          <div className="card-body">
-            <h1 className="h3 mb-2">{titulo.titulo}</h1>
-            <p className="text-muted mb-4">
-              {club?.nombreAmigable || club?.nombre || 'Club local'}
-            </p>
+            <div className="col-lg-6">
+              <div className="card-body d-flex flex-column h-100">
+                <div>
+                  <h1 className="h3 mb-2">{titulo.titulo}</h1>
+                  <p className="text-muted mb-4">
+                    {club?.nombreAmigable || club?.nombre || 'Club local'}
+                  </p>
 
-            {titulo.descripcion && (
-              <p className="mb-4">{titulo.descripcion}</p>
-            )}
+                  {titulo.descripcion && (
+                    <p className="mb-4">{titulo.descripcion}</p>
+                  )}
+                </div>
 
-            <div className="row gy-3">
-              <div className="col-sm-6 col-lg-3">
-                <h2 className="h6 text-uppercase text-muted mb-1">Año</h2>
-                <p className="mb-0 fw-semibold">{formatAnio(titulo.anio)}</p>
-              </div>
-              <div className="col-sm-6 col-lg-3">
-                <h2 className="h6 text-uppercase text-muted mb-1">Registrado por</h2>
-                <p className="mb-0">
-                  {titulo.creadoPor
-                    ? `${titulo.creadoPor.nombre || ''} ${titulo.creadoPor.apellido || ''}`.trim() || '—'
-                    : '—'}
-                </p>
-              </div>
-              <div className="col-sm-6 col-lg-3">
-                <h2 className="h6 text-uppercase text-muted mb-1">Fecha de carga</h2>
-                <p className="mb-0">{formatFecha(titulo.creadoEn)}</p>
-              </div>
-              <div className="col-sm-6 col-lg-3">
-                <h2 className="h6 text-uppercase text-muted mb-1">ID de registro</h2>
-                <p className="mb-0 small text-body-secondary">{titulo._id}</p>
+                <div className="mt-auto pt-4 border-top">
+                  <div className="row gy-3">
+                    <div className="col-sm-6">
+                      <h2 className="h6 text-uppercase text-muted mb-1">Año</h2>
+                      <p className="mb-0 fw-semibold">{formatAnio(titulo.anio)}</p>
+                    </div>
+                    <div className="col-sm-6">
+                      <h2 className="h6 text-uppercase text-muted mb-1">Registrado por</h2>
+                      <p className="mb-0">
+                        {titulo.creadoPor
+                          ? `${titulo.creadoPor.nombre || ''} ${titulo.creadoPor.apellido || ''}`.trim() || '—'
+                          : '—'}
+                      </p>
+                    </div>
+                    <div className="col-sm-6">
+                      <h2 className="h6 text-uppercase text-muted mb-1">Fecha de carga</h2>
+                      <p className="mb-0">{formatFecha(titulo.creadoEn)}</p>
+                    </div>
+                    <div className="col-sm-6">
+                      <h2 className="h6 text-uppercase text-muted mb-1">ID de registro</h2>
+                      <p className="mb-0 small text-body-secondary">{titulo._id}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
