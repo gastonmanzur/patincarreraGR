@@ -21,6 +21,16 @@ export default function TitulosClub() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
+  const [tituloEnEdicion, setTituloEnEdicion] = useState(null);
+  const [formEdicion, setFormEdicion] = useState({
+    titulo: '',
+    anio: '',
+    descripcion: '',
+    eliminarImagen: false
+  });
+  const [archivoEdicion, setArchivoEdicion] = useState(null);
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [tituloEliminando, setTituloEliminando] = useState('');
 
   const rol = sessionStorage.getItem('rol');
   const esDelegado = rol === 'Delegado';
@@ -108,6 +118,50 @@ export default function TitulosClub() {
       .join(' ');
   }, [club]);
 
+  const iniciarEdicion = (titulo) => {
+    if (!esDelegado) return;
+    setTituloEnEdicion(titulo);
+    setFormEdicion({
+      titulo: titulo.titulo || '',
+      anio: Number.isInteger(titulo.anio) ? titulo.anio.toString() : '',
+      descripcion: titulo.descripcion || '',
+      eliminarImagen: false
+    });
+    setArchivoEdicion(null);
+    setMensaje('');
+    setError('');
+  };
+
+  const cancelarEdicion = () => {
+    setTituloEnEdicion(null);
+    setFormEdicion({ titulo: '', anio: '', descripcion: '', eliminarImagen: false });
+    setArchivoEdicion(null);
+    setGuardandoEdicion(false);
+  };
+
+  const handleCambioEdicion = (e) => {
+    const { name, value } = e.target;
+    setFormEdicion((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleArchivoEdicion = (e) => {
+    const file = e.target.files?.[0];
+    if (file && file.size > 0) {
+      setArchivoEdicion(file);
+      setFormEdicion((prev) => ({ ...prev, eliminarImagen: false }));
+    } else {
+      setArchivoEdicion(null);
+    }
+  };
+
+  const handleToggleEliminarImagen = (e) => {
+    const { checked } = e.target;
+    setFormEdicion((prev) => ({ ...prev, eliminarImagen: checked }));
+    if (checked) {
+      setArchivoEdicion(null);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!esDelegado) return;
@@ -162,6 +216,100 @@ export default function TitulosClub() {
       console.error('Error al agregar el título del club', err);
       setError(err.response?.data?.mensaje || 'Error al agregar el título del club');
       setMensaje('');
+    }
+  };
+
+  const handleSubmitEdicion = async (e) => {
+    e.preventDefault();
+    if (!esDelegado || !tituloEnEdicion) return;
+
+    const tituloActualizado = formEdicion.titulo.trim();
+    const descripcionActualizada = formEdicion.descripcion.trim();
+    const anioValor = formEdicion.anio.trim();
+
+    setMensaje('');
+    setError('');
+
+    if (!tituloActualizado) {
+      setError('Ingresá un título para el club.');
+      setMensaje('');
+      return;
+    }
+
+    let anioFormateado = '';
+    if (anioValor) {
+      const parsed = Number.parseInt(anioValor, 10);
+      if (Number.isNaN(parsed) || parsed < 1900 || parsed > currentYear + 1) {
+        setError(`Ingresá un año entre 1900 y ${currentYear + 1}.`);
+        setMensaje('');
+        return;
+      }
+      anioFormateado = parsed.toString();
+    }
+
+    const payload = new FormData();
+    payload.append('titulo', tituloActualizado);
+    payload.append('descripcion', descripcionActualizada);
+    payload.append('anio', anioFormateado);
+
+    if (archivoEdicion) {
+      payload.append('imagen', archivoEdicion, archivoEdicion.name);
+    }
+
+    if (formEdicion.eliminarImagen && !archivoEdicion) {
+      payload.append('eliminarImagen', 'true');
+    }
+
+    try {
+      setGuardandoEdicion(true);
+      await api.put(`/clubs/local/titulos/${tituloEnEdicion._id}`, payload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const success = await loadInfo();
+      if (success) {
+        setMensaje('Título actualizado correctamente.');
+        setError('');
+        cancelarEdicion();
+      } else {
+        setMensaje('');
+      }
+    } catch (err) {
+      console.error('Error al actualizar el título del club', err);
+      setError(err.response?.data?.mensaje || 'Error al actualizar el título del club');
+      setMensaje('');
+    } finally {
+      setGuardandoEdicion(false);
+    }
+  };
+
+  const handleEliminarTitulo = async (titulo) => {
+    if (!esDelegado) return;
+    const confirmar = window.confirm(
+      `¿Estás seguro de eliminar el título "${titulo.titulo}" del historial del club?`
+    );
+    if (!confirmar) return;
+
+    try {
+      setTituloEliminando(titulo._id);
+      setMensaje('');
+      setError('');
+      await api.delete(`/clubs/local/titulos/${titulo._id}`);
+      const success = await loadInfo();
+      if (success) {
+        setMensaje('Título eliminado correctamente.');
+        setError('');
+        if (tituloEnEdicion?._id === titulo._id) {
+          cancelarEdicion();
+        }
+      } else {
+        setMensaje('');
+      }
+    } catch (err) {
+      console.error('Error al eliminar el título del club', err);
+      setError(err.response?.data?.mensaje || 'Error al eliminar el título del club');
+      setMensaje('');
+    } finally {
+      setTituloEliminando('');
     }
   };
 
@@ -257,6 +405,102 @@ export default function TitulosClub() {
         </div>
       )}
 
+      {esDelegado && tituloEnEdicion && (
+        <div className="card mb-4 border-primary shadow-sm">
+          <div className="card-body">
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+              <h2 className="h5 m-0">Editar título del club</h2>
+              <button type="button" className="btn btn-link p-0" onClick={cancelarEdicion}>
+                Cancelar edición
+              </button>
+            </div>
+            <form onSubmit={handleSubmitEdicion} className="row g-3" noValidate>
+              <div className="col-md-6">
+                <label htmlFor="titulo-edicion" className="form-label">Título obtenido</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  id="titulo-edicion"
+                  name="titulo"
+                  value={formEdicion.titulo}
+                  onChange={handleCambioEdicion}
+                  required
+                />
+              </div>
+              <div className="col-md-3">
+                <label htmlFor="anio-edicion" className="form-label">Año</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  id="anio-edicion"
+                  name="anio"
+                  min="1900"
+                  max={currentYear + 1}
+                  value={formEdicion.anio}
+                  onChange={handleCambioEdicion}
+                  placeholder="2024"
+                />
+              </div>
+              <div className="col-md-6">
+                <label htmlFor="imagen-edicion" className="form-label">Actualizar fotografía</label>
+                <input
+                  type="file"
+                  className="form-control"
+                  id="imagen-edicion"
+                  name="imagen"
+                  accept="image/*"
+                  onChange={handleArchivoEdicion}
+                />
+                <div className="form-text">
+                  {tituloEnEdicion.imagen
+                    ? 'Podés reemplazar la imagen actual cargando una nueva.'
+                    : 'Podés adjuntar una foto en formato JPG o PNG (máx. 10MB).'}
+                </div>
+                {tituloEnEdicion.imagen && (
+                  <>
+                    <div className="form-text">
+                      Imagen actual:{' '}
+                      <a href={tituloEnEdicion.imagen} target="_blank" rel="noopener noreferrer">
+                        Ver fotografía
+                      </a>
+                    </div>
+                    <div className="form-check mt-2">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="eliminar-imagen"
+                        checked={formEdicion.eliminarImagen}
+                        onChange={handleToggleEliminarImagen}
+                      />
+                      <label className="form-check-label" htmlFor="eliminar-imagen">
+                        Eliminar imagen actual
+                      </label>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="col-md-3 d-flex align-items-end">
+                <button type="submit" className="btn btn-primary w-100" disabled={guardandoEdicion}>
+                  {guardandoEdicion ? 'Guardando…' : 'Guardar cambios'}
+                </button>
+              </div>
+              <div className="col-12">
+                <label htmlFor="descripcion-edicion" className="form-label">Detalle</label>
+                <textarea
+                  className="form-control"
+                  id="descripcion-edicion"
+                  name="descripcion"
+                  rows="2"
+                  value={formEdicion.descripcion}
+                  onChange={handleCambioEdicion}
+                  placeholder="Agregá la categoría, competencia u otra referencia"
+                ></textarea>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="card mb-4 shadow-sm">
         <div className="card-body">
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
@@ -278,6 +522,7 @@ export default function TitulosClub() {
                     <th>Descripción</th>
                     <th>Registrado por</th>
                     <th>Fecha de carga</th>
+                    {esDelegado && <th className="text-end">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -318,6 +563,31 @@ export default function TitulosClub() {
                         <td>{titulo.descripcion || '—'}</td>
                         <td>{autor || '—'}</td>
                         <td>{formatFecha(titulo.creadoEn)}</td>
+                        {esDelegado && (
+                          <td className="text-end">
+                            <div className="btn-group btn-group-sm" role="group">
+                              <button
+                                type="button"
+                                className="btn btn-outline-primary"
+                                onClick={() => iniciarEdicion(titulo)}
+                                disabled={
+                                  (guardandoEdicion && tituloEnEdicion?._id === titulo._id) ||
+                                  tituloEliminando === titulo._id
+                                }
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-outline-danger"
+                                onClick={() => handleEliminarTitulo(titulo)}
+                                disabled={tituloEliminando === titulo._id}
+                              >
+                                {tituloEliminando === titulo._id ? 'Eliminando…' : 'Eliminar'}
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
