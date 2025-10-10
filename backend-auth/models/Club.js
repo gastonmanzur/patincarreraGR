@@ -1,8 +1,21 @@
 import mongoose from 'mongoose';
 
+const tituloSchema = new mongoose.Schema(
+  {
+    titulo: { type: String, required: true, trim: true },
+    anio: { type: Number },
+    descripcion: { type: String, trim: true },
+    imagen: { type: String, trim: true },
+    creadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    creadoEn: { type: Date, default: Date.now }
+  },
+  { _id: true }
+);
+
 const clubSchema = new mongoose.Schema(
   {
-    nombre: { type: String, required: true, unique: true, trim: true }
+    nombre: { type: String, required: true, unique: true, trim: true },
+    titulos: { type: [tituloSchema], default: [] }
   },
   { timestamps: true }
 );

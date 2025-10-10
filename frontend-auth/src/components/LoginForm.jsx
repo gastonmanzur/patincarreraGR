@@ -15,15 +15,15 @@ export default function LoginForm() {
 
       const { token, usuario } = res.data;
 
-      // Guardamos el token y rol en localStorage
-      localStorage.setItem('token', token);
-      localStorage.setItem('rol', usuario.rol);
+      // Guardamos el token y rol en sessionStorage
+      sessionStorage.setItem('token', token);
+      sessionStorage.setItem('rol', usuario.rol);
 
       const foto = getImageUrl(usuario.foto);
       if (foto) {
-        localStorage.setItem('foto', foto);
+        sessionStorage.setItem('foto', foto);
       } else {
-        localStorage.removeItem('foto');
+        sessionStorage.removeItem('foto');
       }
 
       alert(`Bienvenido ${usuario.nombre}`);

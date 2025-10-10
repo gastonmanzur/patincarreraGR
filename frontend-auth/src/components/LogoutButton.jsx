@@ -4,9 +4,9 @@ export default function LogoutButton() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('rol');
-    localStorage.removeItem('foto');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('rol');
+    sessionStorage.removeItem('foto');
     navigate('/');
   };
 

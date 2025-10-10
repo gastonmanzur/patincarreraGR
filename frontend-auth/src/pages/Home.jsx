@@ -63,7 +63,7 @@ export default function Home() {
     };
 
     cargarNoticias();
-    if (localStorage.getItem('token')) {
+    if (sessionStorage.getItem('token')) {
       cargarPatinadores();
     }
     cargarCompetencia();
@@ -101,7 +101,7 @@ export default function Home() {
 
   return (
     <>
-      {localStorage.getItem('token') && patinadores.length === 0 && (
+      {sessionStorage.getItem('token') && patinadores.length === 0 && (
         <div className="container mt-4">
     
           <div className="d-flex justify-content-end mb-3">

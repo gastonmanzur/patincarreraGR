@@ -13,13 +13,13 @@ export default function GoogleSuccess() {
   useEffect(() => {
     if (token) {
       const datos = jwtDecode(token);
-      localStorage.setItem('token', token);
-      localStorage.setItem('rol', datos.rol);
+      sessionStorage.setItem('token', token);
+      sessionStorage.setItem('rol', datos.rol);
       const foto = getImageUrl(datos.foto);
       if (foto) {
-        localStorage.setItem('foto', foto);
+        sessionStorage.setItem('foto', foto);
       } else {
-        localStorage.removeItem('foto');
+        sessionStorage.removeItem('foto');
       }
   
       navigate('/home');

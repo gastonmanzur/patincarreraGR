@@ -8,20 +8,20 @@ import placeholderAvatar from '../assets/image-placeholder.svg';
 export default function Navbar() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  const rol = localStorage.getItem('rol');
-  const storedFoto = localStorage.getItem('foto');
+  const rol = sessionStorage.getItem('rol');
+  const storedFoto = sessionStorage.getItem('foto');
   const normalisedFoto = getImageUrl(storedFoto);
   if (storedFoto && normalisedFoto !== storedFoto) {
     if (normalisedFoto) {
-      localStorage.setItem('foto', normalisedFoto);
+      sessionStorage.setItem('foto', normalisedFoto);
     } else {
-      localStorage.removeItem('foto');
+      sessionStorage.removeItem('foto');
     }
   }
   const foto = normalisedFoto;
   const displayPhoto = foto || placeholderAvatar;
   const isGooglePhoto = Boolean(foto?.includes('googleusercontent'));
-  const isLoggedIn = localStorage.getItem('token');
+  const isLoggedIn = sessionStorage.getItem('token');
   const [unread, setUnread] = useState(0);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
 
@@ -114,9 +114,9 @@ export default function Navbar() {
         );
       const nuevaFoto = getImageUrl(res.data.foto);
       if (nuevaFoto) {
-        localStorage.setItem('foto', nuevaFoto);
+        sessionStorage.setItem('foto', nuevaFoto);
       } else {
-        localStorage.removeItem('foto');
+        sessionStorage.removeItem('foto');
       }
       window.location.reload();
     } catch (err) {
@@ -144,6 +144,9 @@ export default function Navbar() {
           : []),
         ...(rol === 'Delegado'
           ? [{ label: 'Seguros', path: '/seguros' }]
+          : []),
+        ...(rol === 'Delegado'
+          ? [{ label: 'Títulos del Club', path: '/titulos-club' }]
           : []),
         ...(rol === 'Delegado' || rol === 'Tecnico'
           ? [

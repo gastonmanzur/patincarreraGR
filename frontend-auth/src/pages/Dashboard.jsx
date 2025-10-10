@@ -10,13 +10,13 @@ export default function Dashboard() {
   const [usuario, setUsuario] = useState({});
 
   useEffect(() => {
-    setRol(localStorage.getItem('rol'));
-    const storedFoto = getImageUrl(localStorage.getItem('foto'));
+    setRol(sessionStorage.getItem('rol'));
+    const storedFoto = getImageUrl(sessionStorage.getItem('foto'));
     if (storedFoto) {
-      localStorage.setItem('foto', storedFoto);
+      sessionStorage.setItem('foto', storedFoto);
       setFoto(storedFoto);
     } else {
-      localStorage.removeItem('foto');
+      sessionStorage.removeItem('foto');
       setFoto('');
     }
 
@@ -30,7 +30,7 @@ export default function Dashboard() {
         };
         setUsuario(usuarioData);
         if (usuarioData.foto) {
-          localStorage.setItem('foto', usuarioData.foto);
+          sessionStorage.setItem('foto', usuarioData.foto);
           setFoto(usuarioData.foto);
         }
       } catch (err) {
@@ -59,7 +59,7 @@ export default function Dashboard() {
       alert('Foto actualizada');
       const nuevaFoto = getImageUrl(res.data.foto);
       if (nuevaFoto) {
-        localStorage.setItem('foto', nuevaFoto);
+        sessionStorage.setItem('foto', nuevaFoto);
         setFoto(nuevaFoto);
       }
       setNuevaFoto(null);

@@ -27,10 +27,12 @@ import Entrenamientos from './pages/Entrenamientos';
 import Progresos from './pages/Progresos';
 import Reportes from './pages/Reportes';
 import VerReporte from './pages/VerReporte';
+import TitulosClub from './pages/TitulosClub';
+import VerTituloClub from './pages/VerTituloClub';
 
 function AdminRoute({ children }) {
-  const token = localStorage.getItem('token');
-  const rol = localStorage.getItem('rol');
+  const token = sessionStorage.getItem('token');
+  const rol = sessionStorage.getItem('rol');
   return token && rol === 'admin' ? children : <Navigate to="/" />;
 }
 
@@ -106,6 +108,14 @@ function AppRoutes() {
           <Route path="/asociar-patinadores" element={<ProtectedRoute><AsociarPatinadores /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><PanelAdmin /></AdminRoute>} />
           <Route path="/notificaciones" element={<ProtectedRoute><Notificaciones /></ProtectedRoute>} />
+          <Route
+            path="/titulos-club"
+            element={<ProtectedRoute roles={['Delegado']}><TitulosClub /></ProtectedRoute>}
+          />
+          <Route
+            path="/titulos-club/:id"
+            element={<ProtectedRoute roles={['Delegado']}><VerTituloClub /></ProtectedRoute>}
+          />
           <Route
             path="/seguros"
             element={<ProtectedRoute roles={['Delegado']}><SolicitarSeguro /></ProtectedRoute>}

@@ -6,7 +6,7 @@ import getImageUrl from '../utils/getImageUrl';
 export default function Competencias() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const rol = localStorage.getItem('rol');
+  const rol = sessionStorage.getItem('rol');
   const [competencias, setCompetencias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

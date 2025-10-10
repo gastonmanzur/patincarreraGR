@@ -30,13 +30,15 @@ const patinadorSchema = new mongoose.Schema(
         fecha: { type: Date, default: Date.now }
       }
     ],
-    numeroCorredor: { type: Number, required: true, unique: true },
+    numeroCorredor: { type: Number, required: true },
     categoria: { type: String, required: true },
     fotoRostro: { type: String },
     foto: { type: String }
   },
   { timestamps: true }
 );
+
+patinadorSchema.index({ categoria: 1, numeroCorredor: 1 }, { unique: true });
 
 const Patinador = mongoose.model('Patinador', patinadorSchema, 'patinadors');
 export default Patinador;

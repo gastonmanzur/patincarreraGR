@@ -66,7 +66,7 @@ export default function ResultadosCompetencia() {
     apellido: '',
     club: ''
   });
-  const rol = localStorage.getItem('rol');
+  const rol = sessionStorage.getItem('rol');
 
   useEffect(() => {
     setPatinadorId('');

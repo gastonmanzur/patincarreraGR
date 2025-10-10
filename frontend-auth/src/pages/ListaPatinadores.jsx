@@ -6,7 +6,7 @@ import getImageUrl from '../utils/getImageUrl';
 export default function ListaPatinadores() {
   const [patinadores, setPatinadores] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const rol = localStorage.getItem('rol');
+  const rol = sessionStorage.getItem('rol');
 
   useEffect(() => {
     const obtenerPatinadores = async () => {

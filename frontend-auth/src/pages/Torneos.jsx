@@ -9,7 +9,7 @@ export default function Torneos() {
   const [nombre, setNombre] = useState('');
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
-  const rol = localStorage.getItem('rol');
+  const rol = sessionStorage.getItem('rol');
   const navigate = useNavigate();
 
   useEffect(() => {

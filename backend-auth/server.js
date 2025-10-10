@@ -90,6 +90,45 @@ const buildUploadUrl = (filename) => {
   return `${base}/${normalized}`;
 };
 
+const DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+const LOCAL_CLUB_CANONICAL_NAME = 'GENERAL RODRIGUEZ';
+const LOCAL_CLUB_DISPLAY_NAME = 'General Rodriguez';
+
+const parseDateOnly = (value) => {
+  if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const dateOnlyMatch = DATE_ONLY_REGEX.exec(trimmed);
+    if (dateOnlyMatch) {
+      const year = Number(dateOnlyMatch[1]);
+      const month = Number(dateOnlyMatch[2]);
+      const day = Number(dateOnlyMatch[3]);
+      const date = new Date(year, month - 1, day);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    const parsed = Date.parse(trimmed);
+    if (!Number.isNaN(parsed)) {
+      const date = new Date(parsed);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    return null;
+  }
+
+  if (typeof value === 'number') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  return null;
+};
+
 // --------- Mongo URI ---------
 mongoose.set('strictQuery', true);
 
@@ -135,7 +174,11 @@ mongoose
   .connect(MONGODB_URI)
   .then(async () => {
     console.log('MongoDB conectado');
-    await PatinadorExterno.syncIndexes();
+    try {
+      await Promise.all([Patinador.syncIndexes(), PatinadorExterno.syncIndexes()]);
+    } catch (syncError) {
+      console.error('Error al sincronizar índices de patinadores:', syncError.message);
+    }
   })
   .catch((err) => {
     console.error('Error conectando a MongoDB:', err.message);
@@ -358,6 +401,110 @@ async function crearNotificacionesParaTodos(mensaje, competencia = null) {
   }
 }
 
+const ensureLocalClub = async () => {
+  let club = await Club.findOne({ nombre: LOCAL_CLUB_CANONICAL_NAME });
+  if (!club) {
+    club = await Club.create({ nombre: LOCAL_CLUB_CANONICAL_NAME });
+  }
+  return club;
+};
+
+const computeLocalIndividualTitles = async (clubId) => {
+  if (!clubId) return [];
+
+  const resultados = await Resultado.find({ clubId, posicion: 1 }).populate(
+    'deportistaId',
+    'primerNombre segundoNombre apellido'
+  );
+
+  const acumulado = new Map();
+
+  for (const resultado of resultados) {
+    const deportista = resultado.deportistaId;
+    if (!deportista) continue;
+
+    const id = deportista._id.toString();
+    const nombrePartes = [deportista.primerNombre, deportista.segundoNombre, deportista.apellido]
+      .filter(Boolean)
+      .map((parte) => parte.trim())
+      .filter(Boolean);
+    const nombre = nombrePartes.join(' ').replace(/\s+/g, ' ').trim();
+
+    const existente = acumulado.get(id) || { id, nombre, titulos: 0 };
+    existente.titulos += 1;
+    acumulado.set(id, existente);
+  }
+
+  return Array.from(acumulado.values()).sort((a, b) => {
+    if (b.titulos !== a.titulos) return b.titulos - a.titulos;
+    return a.nombre.localeCompare(b.nombre);
+  });
+};
+
+const buildLocalClubPayload = async (clubDoc, individuales = []) => {
+  if (!clubDoc) {
+    const totalIndividuales = (individuales || []).reduce(
+      (acc, item) => acc + (item.titulos || 0),
+      0
+    );
+    return {
+      club: null,
+      individuales: individuales || [],
+      resumen: { totalClub: 0, totalIndividuales }
+    };
+  }
+
+  await clubDoc.populate('titulos.creadoPor', 'nombre apellido');
+
+  const titulosOrdenados = Array.from(clubDoc.titulos || []).sort((a, b) => {
+    const yearA = Number.isInteger(a.anio) ? a.anio : 0;
+    const yearB = Number.isInteger(b.anio) ? b.anio : 0;
+    if (yearA !== yearB) return yearB - yearA;
+
+    const timeA = a.creadoEn ? new Date(a.creadoEn).getTime() : 0;
+    const timeB = b.creadoEn ? new Date(b.creadoEn).getTime() : 0;
+    return timeB - timeA;
+  });
+
+  const titulos = titulosOrdenados.map((titulo) => ({
+    _id: titulo._id,
+    titulo: titulo.titulo,
+    anio: Number.isInteger(titulo.anio) ? titulo.anio : null,
+    descripcion: titulo.descripcion || '',
+    imagen: titulo.imagen || '',
+    creadoEn: titulo.creadoEn || null,
+    creadoPor: titulo.creadoPor
+      ? {
+          _id: titulo.creadoPor._id,
+          nombre: titulo.creadoPor.nombre,
+          apellido: titulo.creadoPor.apellido
+        }
+      : null
+  }));
+
+  const totalIndividuales = (individuales || []).reduce(
+    (acc, item) => acc + (item.titulos || 0),
+    0
+  );
+
+  return {
+    club: {
+      _id: clubDoc._id,
+      nombre: clubDoc.nombre,
+      nombreAmigable:
+        clubDoc.nombre === LOCAL_CLUB_CANONICAL_NAME
+          ? LOCAL_CLUB_DISPLAY_NAME
+          : clubDoc.nombre,
+      titulos
+    },
+    individuales: individuales || [],
+    resumen: {
+      totalClub: Array.isArray(clubDoc.titulos) ? clubDoc.titulos.length : 0,
+      totalIndividuales
+    }
+  };
+};
+
 // --------- Rutas (Auth / Usuarios / Recursos) ---------
 app.post('/api/auth/registro', async (req, res) => {
   const { nombre, apellido, email, password, confirmarPassword, rol, codigo } = req.body;
@@ -541,6 +688,11 @@ app.post('/api/patinadores', protegerRuta, upload.fields([{ name: 'fotoRostro', 
       return res.status(400).json({ mensaje: mensajes.join(', ') });
     }
     if (err.code === 11000) {
+      if (err.keyPattern?.categoria && err.keyPattern?.numeroCorredor) {
+        return res
+          .status(400)
+          .json({ mensaje: 'El número de corredor ya está asignado en esta categoría' });
+      }
       const campo = Object.keys(err.keyValue || {})[0];
       return res.status(400).json({ mensaje: `${campo} ya existe` });
     }
@@ -577,6 +729,109 @@ app.get('/api/clubs', protegerRuta, async (_req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al obtener clubes' });
+  }
+});
+
+app.get('/api/clubs/local/titulos', protegerRuta, async (_req, res) => {
+  try {
+    const club = await ensureLocalClub();
+    const individuales = await computeLocalIndividualTitles(club._id);
+    const payload = await buildLocalClubPayload(club, individuales);
+    res.json(payload);
+  } catch (err) {
+    console.error('Error al obtener los títulos del club local', err);
+    res.status(500).json({ mensaje: 'Error al obtener los títulos del club' });
+  }
+});
+
+app.post(
+  '/api/clubs/local/titulos',
+  protegerRuta,
+  permitirRol('Delegado'),
+  upload.single('imagen'),
+  async (req, res) => {
+    try {
+      const titulo = typeof req.body?.titulo === 'string' ? req.body.titulo.trim() : '';
+      const descripcion = typeof req.body?.descripcion === 'string' ? req.body.descripcion.trim() : '';
+      const rawYear = req.body?.anio;
+
+      if (!titulo) {
+        return res.status(400).json({ mensaje: 'El título del club es obligatorio' });
+      }
+
+      let anio = null;
+      if (rawYear !== undefined && rawYear !== null && `${rawYear}`.trim() !== '') {
+        const parsed = Number.parseInt(rawYear, 10);
+        const currentYear = new Date().getFullYear();
+        if (Number.isNaN(parsed) || parsed < 1900 || parsed > currentYear + 1) {
+          return res.status(400).json({ mensaje: 'El año proporcionado no es válido' });
+        }
+        anio = parsed;
+      }
+
+      const club = await ensureLocalClub();
+
+      club.titulos.push({
+        titulo,
+        ...(anio ? { anio } : {}),
+        ...(descripcion ? { descripcion } : {}),
+        ...(req.file ? { imagen: buildUploadUrl(req.file.filename) } : {}),
+        creadoPor: req.usuario.id,
+        creadoEn: new Date()
+      });
+
+      await club.save();
+
+      const individuales = await computeLocalIndividualTitles(club._id);
+      const payload = await buildLocalClubPayload(club, individuales);
+
+      res.status(201).json({ mensaje: 'Título agregado correctamente', ...payload });
+    } catch (err) {
+      console.error('Error al agregar un título al club local', err);
+      res.status(500).json({ mensaje: 'Error al agregar el título del club' });
+    }
+  }
+);
+
+app.get('/api/clubs/local/titulos/:id', protegerRuta, async (req, res) => {
+  try {
+    const club = await ensureLocalClub();
+    await club.populate('titulos.creadoPor', 'nombre apellido');
+
+    const titulo = club.titulos.id(req.params.id);
+
+    if (!titulo) {
+      return res.status(404).json({ mensaje: 'Título no encontrado' });
+    }
+
+    const autor = titulo.creadoPor
+      ? {
+          _id: titulo.creadoPor._id,
+          nombre: titulo.creadoPor.nombre,
+          apellido: titulo.creadoPor.apellido
+        }
+      : null;
+
+    return res.json({
+      club: {
+        _id: club._id,
+        nombre: club.nombre,
+        nombreAmigable:
+          club.nombre === LOCAL_CLUB_CANONICAL_NAME ? LOCAL_CLUB_DISPLAY_NAME : club.nombre
+      },
+      titulo: {
+        _id: titulo._id,
+        titulo: titulo.titulo,
+        anio: Number.isInteger(titulo.anio) ? titulo.anio : null,
+        descripcion: titulo.descripcion || '',
+        imagen: titulo.imagen || '',
+        creadoEn: titulo.creadoEn || null,
+        creadoPor: autor
+      }
+    });
+  } catch (err) {
+    console.error('Error al obtener el detalle del título del club local', err);
+    res.status(500).json({ mensaje: 'Error al obtener el título del club' });
   }
 });
 
@@ -632,6 +887,15 @@ app.put('/api/patinadores/:id', protegerRuta, upload.fields([{ name: 'fotoRostro
     res.json(patinadorActualizado);
   } catch (err) {
     console.error(err);
+    if (err.code === 11000) {
+      if (err.keyPattern?.categoria && err.keyPattern?.numeroCorredor) {
+        return res
+          .status(400)
+          .json({ mensaje: 'El número de corredor ya está asignado en esta categoría' });
+      }
+      const campo = Object.keys(err.keyValue || {})[0];
+      return res.status(400).json({ mensaje: `${campo} ya existe` });
+    }
     res.status(500).json({ mensaje: 'Error al actualizar el patinador' });
   }
 });
@@ -775,8 +1039,13 @@ app.delete('/api/notifications/:id', protegerRuta, permitirRol('Delegado', 'Tecn
 app.post('/api/tournaments', protegerRuta, permitirRol('Delegado'), async (req, res) => {
   const { nombre, fechaInicio, fechaFin } = req.body;
   if (!nombre || !fechaInicio || !fechaFin) return res.status(400).json({ mensaje: 'Faltan datos' });
+
+  const inicio = parseDateOnly(fechaInicio);
+  const fin = parseDateOnly(fechaFin);
+  if (!inicio || !fin) return res.status(400).json({ mensaje: 'Fechas inválidas' });
+
   try {
-    const torneo = await Torneo.create({ nombre, fechaInicio, fechaFin });
+    const torneo = await Torneo.create({ nombre, fechaInicio: inicio, fechaFin: fin });
     res.status(201).json(torneo);
   } catch (err) {
     console.error(err);
@@ -796,10 +1065,24 @@ app.get('/api/tournaments', protegerRuta, async (_req, res) => {
 
 app.put('/api/tournaments/:id', protegerRuta, permitirRol('Delegado'), async (req, res) => {
   const { nombre, fechaInicio, fechaFin } = req.body;
+
+  const update = {};
+  if (typeof nombre !== 'undefined') update.nombre = nombre;
+
+  if (typeof fechaInicio !== 'undefined') {
+    const inicio = parseDateOnly(fechaInicio);
+    if (!inicio) return res.status(400).json({ mensaje: 'Fecha de inicio inválida' });
+    update.fechaInicio = inicio;
+  }
+
+  if (typeof fechaFin !== 'undefined') {
+    const fin = parseDateOnly(fechaFin);
+    if (!fin) return res.status(400).json({ mensaje: 'Fecha de fin inválida' });
+    update.fechaFin = fin;
+  }
+
   try {
-    const torneo = await Torneo.findByIdAndUpdate(
-      req.params.id, { nombre, fechaInicio, fechaFin }, { new: true, runValidators: true }
-    );
+    const torneo = await Torneo.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
     if (!torneo) return res.status(404).json({ mensaje: 'Torneo no encontrado' });
     res.json(torneo);
   } catch (err) {
@@ -830,7 +1113,14 @@ app.post('/api/tournaments/:id/competitions', protegerRuta, permitirRol('Delegad
     const torneo = await Torneo.findById(req.params.id);
     if (!torneo) return res.status(404).json({ mensaje: 'Torneo no encontrado' });
     const imagen = req.file ? buildUploadUrl(req.file.filename) : undefined;
-    const competencia = await Competencia.create({ nombre, fecha, torneo: torneo._id, ...(imagen ? { imagen } : {}) });
+    const fechaNormalizada = parseDateOnly(fecha);
+    if (!fechaNormalizada) return res.status(400).json({ mensaje: 'Fecha inválida' });
+    const competencia = await Competencia.create({
+      nombre,
+      fecha: fechaNormalizada,
+      torneo: torneo._id,
+      ...(imagen ? { imagen } : {})
+    });
     await crearNotificacionesParaTodos(`Nueva competencia ${nombre}`, competencia._id);
     res.status(201).json(competencia);
   } catch (err) {
@@ -861,7 +1151,13 @@ app.get('/api/tournaments/:id/competitions', protegerRuta, async (req, res) => {
 
 app.put('/api/competitions/:id', protegerRuta, permitirRol('Delegado'), upload.single('imagen'), async (req, res) => {
   const { nombre, fecha } = req.body;
-  const update = { nombre, fecha };
+  const update = {};
+  if (typeof nombre !== 'undefined') update.nombre = nombre;
+  if (typeof fecha !== 'undefined') {
+    const fechaNormalizada = parseDateOnly(fecha);
+    if (!fechaNormalizada) return res.status(400).json({ mensaje: 'Fecha inválida' });
+    update.fecha = fechaNormalizada;
+  }
   if (req.file) update.imagen = buildUploadUrl(req.file.filename);
   try {
     const comp = await Competencia.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
@@ -914,7 +1210,10 @@ app.post('/api/competitions/:id/resultados/import-pdf', protegerRuta, permitirRo
     let count = 0;
 
     for (const fila of filas) {
-      const patinador = await Patinador.findOne({ numeroCorredor: Number(fila.dorsal) });
+      const patinador = await Patinador.findOne({
+        numeroCorredor: Number(fila.dorsal),
+        categoria: fila.categoria
+      });
       if (!patinador) continue;
       await Resultado.findOneAndUpdate(
         { competenciaId: competencia._id, deportistaId: patinador._id, categoria: fila.categoria },
@@ -948,7 +1247,7 @@ app.post('/api/competitions/:id/resultados/manual', protegerRuta, permitirRol('D
       const pat = await Patinador.findById(patinadorId);
       if (!pat) return res.status(404).json({ mensaje: 'Patinador no encontrado' });
       filtro.deportistaId = pat._id;
-      clubDoc = await Club.findOne({ nombre: 'GENERAL RODRIGUEZ' }) || await Club.create({ nombre: 'GENERAL RODRIGUEZ' });
+      clubDoc = await ensureLocalClub();
     } else if (invitado) {
       const { primerNombre, segundoNombre, apellido, club } = invitado;
       if (!primerNombre || !apellido || !club) {
@@ -1246,8 +1545,10 @@ app.get('/api/tournaments/:id/ranking/individual', protegerRuta, async (req, res
       .populate('invitadoId', 'primerNombre segundoNombre apellido')
       .populate('clubId', 'nombre');
 
-    const clubGR = await Club.findOne({ nombre: 'GENERAL RODRIGUEZ' });
-    const clubDefault = clubGR ? { _id: clubGR._id, nombre: 'General Rodriguez' } : { nombre: 'General Rodriguez' };
+    const clubGR = await Club.findOne({ nombre: LOCAL_CLUB_CANONICAL_NAME });
+    const clubDefault = clubGR
+      ? { _id: clubGR._id, nombre: LOCAL_CLUB_DISPLAY_NAME }
+      : { nombre: LOCAL_CLUB_DISPLAY_NAME };
 
     const agrupado = {};
     for (const r of resultados) {
@@ -1280,8 +1581,10 @@ app.get('/api/tournaments/:id/ranking/club', protegerRuta, async (req, res) => {
     const compIds = comps.map((c) => c._id);
     const resultados = await Resultado.find({ competenciaId: { $in: compIds } }).populate('clubId', 'nombre');
 
-    const clubGR = await Club.findOne({ nombre: 'GENERAL RODRIGUEZ' });
-    const clubDefault = clubGR ? { _id: clubGR._id, nombre: 'General Rodriguez' } : { nombre: 'General Rodriguez' };
+    const clubGR = await Club.findOne({ nombre: LOCAL_CLUB_CANONICAL_NAME });
+    const clubDefault = clubGR
+      ? { _id: clubGR._id, nombre: LOCAL_CLUB_DISPLAY_NAME }
+      : { nombre: LOCAL_CLUB_DISPLAY_NAME };
 
     const ranking = {};
     for (const r of resultados) {
@@ -1451,6 +1754,11 @@ app.post(
       }
 
       if (err.code === 11000) {
+        if (err.keyPattern?.categoria && err.keyPattern?.numeroCorredor) {
+          return res
+            .status(400)
+            .json({ mensaje: 'El número de corredor ya está asignado en esta categoría' });
+        }
         const campo = Object.keys(err.keyValue || {})[0];
         return res.status(400).json({ mensaje: `${campo} ya existe` });
       }
@@ -1580,6 +1888,15 @@ app.put(
       res.json(patinadorActualizado);
     } catch (err) {
       console.error(err);
+      if (err.code === 11000) {
+        if (err.keyPattern?.categoria && err.keyPattern?.numeroCorredor) {
+          return res
+            .status(400)
+            .json({ mensaje: 'El número de corredor ya está asignado en esta categoría' });
+        }
+        const campo = Object.keys(err.keyValue || {})[0];
+        return res.status(400).json({ mensaje: `${campo} ya existe` });
+      }
       res.status(500).json({ mensaje: 'Error al actualizar el patinador' });
     }
   }
@@ -1954,7 +2271,8 @@ app.post(
       let count = 0;
       for (const fila of filas) {
         const patinador = await Patinador.findOne({
-          numeroCorredor: Number(fila.dorsal)
+          numeroCorredor: Number(fila.dorsal),
+          categoria: fila.categoria
         });
         if (!patinador) continue;
         await Resultado.findOneAndUpdate(
@@ -2008,10 +2326,7 @@ app.post(
           return res.status(404).json({ mensaje: 'Patinador no encontrado' });
         }
         filtro.deportistaId = pat._id;
-        clubDoc = await Club.findOne({ nombre: 'GENERAL RODRIGUEZ' });
-        if (!clubDoc) {
-          clubDoc = await Club.create({ nombre: 'GENERAL RODRIGUEZ' });
-        }
+        clubDoc = await ensureLocalClub();
       } else if (invitado) {
         const { primerNombre, segundoNombre, apellido, club } = invitado;
         if (!primerNombre || !apellido || !club) {
@@ -2407,10 +2722,10 @@ app.get('/api/tournaments/:id/ranking/individual', protegerRuta, async (req, res
       .populate('deportistaId', 'primerNombre segundoNombre apellido')
       .populate('invitadoId', 'primerNombre segundoNombre apellido')
       .populate('clubId', 'nombre');
-    const clubGR = await Club.findOne({ nombre: 'GENERAL RODRIGUEZ' });
+    const clubGR = await Club.findOne({ nombre: LOCAL_CLUB_CANONICAL_NAME });
     const clubDefault = clubGR
-      ? { _id: clubGR._id, nombre: 'General Rodriguez' }
-      : { nombre: 'General Rodriguez' };
+      ? { _id: clubGR._id, nombre: LOCAL_CLUB_DISPLAY_NAME }
+      : { nombre: LOCAL_CLUB_DISPLAY_NAME };
     const agrupado = {};
     for (const r of resultados) {
       const categoria = r.categoria;
@@ -2455,10 +2770,10 @@ app.get('/api/tournaments/:id/ranking/club', protegerRuta, async (req, res) => {
     const resultados = await Resultado.find({
       competenciaId: { $in: compIds }
     }).populate('clubId', 'nombre');
-    const clubGR = await Club.findOne({ nombre: 'GENERAL RODRIGUEZ' });
+    const clubGR = await Club.findOne({ nombre: LOCAL_CLUB_CANONICAL_NAME });
     const clubDefault = clubGR
-      ? { _id: clubGR._id, nombre: 'General Rodriguez' }
-      : { nombre: 'General Rodriguez' };
+      ? { _id: clubGR._id, nombre: LOCAL_CLUB_DISPLAY_NAME }
+      : { nombre: LOCAL_CLUB_DISPLAY_NAME };
     const ranking = {};
     for (const r of resultados) {
       const clubDoc = r.clubId
