@@ -441,6 +441,211 @@ const computeLocalIndividualTitles = async (clubId) => {
   });
 };
 
+const pickNonEmptyString = (...values) => {
+  for (const value of values) {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) return trimmed;
+    } else if (value instanceof Date) {
+      if (!Number.isNaN(value.getTime())) return value.toISOString();
+    } else if (value !== undefined && value !== null) {
+      const stringified = `${value}`.trim();
+      if (stringified) return stringified;
+    }
+  }
+  return '';
+};
+
+const parsePossibleYear = (value) => {
+  if (value === undefined || value === null) return null;
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return parsePossibleYear(value.getFullYear());
+  }
+
+  const normalized = typeof value === 'number' ? value : Number.parseInt(`${value}`.trim(), 10);
+  if (!Number.isFinite(normalized)) return null;
+
+  const currentYear = new Date().getFullYear();
+  if (normalized < 1900 || normalized > currentYear + 1) return null;
+
+  return normalized;
+};
+
+const normalizeLegacyImage = (value) => {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '';
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith('data:')) return raw;
+  if (raw.startsWith(PUBLIC_UPLOADS_PATH)) return `${BACKEND_URL}${raw}`;
+  if (raw.startsWith('/')) return `${BACKEND_URL}${raw}`;
+  return buildUploadUrl(raw);
+};
+
+const LEGACY_TITULOS_COLLECTION = 'tituloclubs';
+
+const getLegacyTitulosCollection = async () => {
+  if (!mongoose.connection?.db || mongoose.connection.readyState !== 1) return null;
+
+  try {
+    const collections = await mongoose.connection.db
+      .listCollections({ name: LEGACY_TITULOS_COLLECTION })
+      .toArray();
+    if (!collections.length) return null;
+    return mongoose.connection.db.collection(LEGACY_TITULOS_COLLECTION);
+  } catch (error) {
+    console.error('Error verificando la colección de títulos legados', error);
+    return null;
+  }
+};
+
+const normalizeLegacyTitulo = (doc) => {
+  if (!doc) return null;
+
+  const titulo = pickNonEmptyString(doc.titulo, doc.nombre, doc.tituloClub, doc.titulo_club);
+  if (!titulo) return null;
+
+  const descripcion = pickNonEmptyString(doc.descripcion, doc.detalle, doc.descripcionTitulo);
+  const anio = parsePossibleYear(
+    doc.anio ?? doc.year ?? doc.anioTitulo ?? doc.anio_titulo ?? doc.fecha ?? doc.fechaTitulo
+  );
+  const imagen = normalizeLegacyImage(doc.imagen || doc.foto || doc.image || doc.imageUrl || doc.imagenUrl);
+  const creadoEn =
+    parseDateOnly(doc.creadoEn || doc.createdAt || doc.fecha || doc.fechaTitulo) ||
+    (doc.actualizadoEn instanceof Date ? doc.actualizadoEn : null);
+
+  return {
+    _id: doc._id,
+    titulo,
+    anio,
+    descripcion,
+    imagen,
+    creadoEn,
+    creadoPor: null
+  };
+};
+
+const loadLegacyClubTitles = async () => {
+  try {
+    const collection = await getLegacyTitulosCollection();
+    if (!collection) return null;
+
+    const rawDocs = await collection.find({}).sort({ anio: -1, createdAt: -1 }).toArray();
+    if (!rawDocs.length) return null;
+
+    const titulos = rawDocs.map(normalizeLegacyTitulo).filter(Boolean);
+    if (!titulos.length) return null;
+
+    const referenciaClub = rawDocs.find((doc) =>
+      pickNonEmptyString(doc.nombreClub, doc.club, doc.clubNombre)
+    );
+    const nombreAmigable =
+      pickNonEmptyString(
+        referenciaClub?.nombreClub,
+        referenciaClub?.club,
+        referenciaClub?.clubNombre,
+        referenciaClub?.club_nombre
+      ) || LOCAL_CLUB_DISPLAY_NAME;
+    const nombreCanonico = nombreAmigable ? nombreAmigable.trim().toUpperCase() : LOCAL_CLUB_CANONICAL_NAME;
+
+    return {
+      club: {
+        _id: null,
+        nombre: nombreCanonico,
+        nombreAmigable,
+        titulos
+      },
+      individuales: [],
+      resumen: {
+        totalClub: titulos.length,
+        totalIndividuales: 0
+      }
+    };
+  } catch (error) {
+    console.error('Error al cargar los títulos legados del club', error);
+    return null;
+  }
+};
+
+const mergeLegacyPayload = (payload, legacyPayload) => {
+  if (!legacyPayload?.club?.titulos?.length) return payload;
+
+  const actuales = payload && typeof payload === 'object' ? payload : {};
+  const clubActual = actuales.club || {};
+  const individuales =
+    Array.isArray(actuales.individuales) && actuales.individuales.length
+      ? actuales.individuales
+      : legacyPayload.individuales || [];
+  const totalIndividuales =
+    typeof actuales?.resumen?.totalIndividuales === 'number'
+      ? actuales.resumen.totalIndividuales
+      : legacyPayload?.resumen?.totalIndividuales ?? 0;
+
+  return {
+    club: {
+      _id: clubActual._id ?? legacyPayload.club._id ?? null,
+      nombre: clubActual.nombre || legacyPayload.club.nombre || LOCAL_CLUB_CANONICAL_NAME,
+      nombreAmigable:
+        clubActual.nombreAmigable ||
+        legacyPayload.club.nombreAmigable ||
+        clubActual.nombre ||
+        LOCAL_CLUB_DISPLAY_NAME,
+      titulos: legacyPayload.club.titulos
+    },
+    individuales,
+    resumen: {
+      totalClub: legacyPayload.club.titulos.length,
+      totalIndividuales
+    }
+  };
+};
+
+const loadLegacyClubTitleById = async (id) => {
+  if (!id) return null;
+
+  try {
+    const collection = await getLegacyTitulosCollection();
+    if (!collection) return null;
+
+    const queries = [];
+    if (typeof id === 'string') {
+      queries.push({ _id: id });
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        queries.push({ _id: new mongoose.Types.ObjectId(id) });
+      }
+    } else {
+      queries.push({ _id: id });
+    }
+
+    let raw = null;
+    for (const query of queries) {
+      // eslint-disable-next-line no-await-in-loop
+      raw = await collection.findOne(query);
+      if (raw) break;
+    }
+
+    if (!raw) return null;
+
+    const titulo = normalizeLegacyTitulo(raw);
+    if (!titulo) return null;
+
+    const nombreAmigable =
+      pickNonEmptyString(raw.nombreClub, raw.club, raw.clubNombre, raw.club_nombre) || LOCAL_CLUB_DISPLAY_NAME;
+    const nombreCanonico = nombreAmigable ? nombreAmigable.trim().toUpperCase() : LOCAL_CLUB_CANONICAL_NAME;
+
+    return {
+      club: {
+        _id: null,
+        nombre: nombreCanonico,
+        nombreAmigable
+      },
+      titulo
+    };
+  } catch (error) {
+    console.error('Error al recuperar el título legado del club', error);
+    return null;
+  }
+};
+
 const buildLocalClubPayload = async (clubDoc, individuales = []) => {
   if (!clubDoc) {
     const totalIndividuales = (individuales || []).reduce(
@@ -735,11 +940,28 @@ app.get('/api/clubs', protegerRuta, async (_req, res) => {
 app.get('/api/clubs/local/titulos', protegerRuta, async (_req, res) => {
   try {
     const club = await ensureLocalClub();
-    const individuales = await computeLocalIndividualTitles(club._id);
-    const payload = await buildLocalClubPayload(club, individuales);
+    const individuales = await computeLocalIndividualTitles(club?._id);
+    let payload = await buildLocalClubPayload(club, individuales);
+    const hasTitulos = Array.isArray(payload?.club?.titulos) && payload.club.titulos.length > 0;
+
+    if (!hasTitulos) {
+      const legacyPayload = await loadLegacyClubTitles();
+      if (legacyPayload?.club?.titulos?.length) {
+        payload = mergeLegacyPayload(payload, legacyPayload);
+      }
+    }
+
     res.json(payload);
   } catch (err) {
     console.error('Error al obtener los títulos del club local', err);
+    try {
+      const legacyPayload = await loadLegacyClubTitles();
+      if (legacyPayload?.club?.titulos?.length) {
+        return res.json(legacyPayload);
+      }
+    } catch (legacyError) {
+      console.error('Error al intentar recuperar los títulos legados del club', legacyError);
+    }
     res.status(500).json({ mensaje: 'Error al obtener los títulos del club' });
   }
 });
@@ -801,6 +1023,20 @@ app.get('/api/clubs/local/titulos/:id', protegerRuta, async (req, res) => {
     const titulo = club.titulos.id(req.params.id);
 
     if (!titulo) {
+      const legacy = await loadLegacyClubTitleById(req.params.id);
+      if (legacy?.titulo) {
+        const nombreAmigable =
+          club?.nombre === LOCAL_CLUB_CANONICAL_NAME ? LOCAL_CLUB_DISPLAY_NAME : club?.nombre;
+        return res.json({
+          club: {
+            _id: club?._id ?? legacy.club._id ?? null,
+            nombre: club?.nombre || legacy.club.nombre,
+            nombreAmigable: nombreAmigable || legacy.club.nombreAmigable
+          },
+          titulo: legacy.titulo
+        });
+      }
+
       return res.status(404).json({ mensaje: 'Título no encontrado' });
     }
 
