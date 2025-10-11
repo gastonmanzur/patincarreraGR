@@ -49,7 +49,7 @@ export default function RegisterForm() {
     }
   };
 
-  const requiereCodigo = rol === 'delegado' || rol === 'tecnico';
+  const requiereCodigo = ['delegado', 'tecnico', 'admin'].includes(rol);
 
   return (
     <div>
@@ -88,6 +88,7 @@ export default function RegisterForm() {
             <option value="delegado">Delegado</option>
             <option value="tecnico">Técnico</option>
             <option value="deportista">Deportista</option>
+            <option value="admin">Administrador</option>
           </select>
         </div>
         {requiereCodigo && (

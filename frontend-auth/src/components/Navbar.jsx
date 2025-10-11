@@ -9,6 +9,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const rol = sessionStorage.getItem('rol');
+  const rolLower = typeof rol === 'string' ? rol.toLowerCase() : '';
   const storedFoto = sessionStorage.getItem('foto');
   const normalisedFoto = getImageUrl(storedFoto);
   if (storedFoto && normalisedFoto !== storedFoto) {
@@ -134,6 +135,7 @@ export default function Navbar() {
         { label: 'Inicio', path: '/home' },
         { label: 'Torneos', path: '/torneos' },
         { label: 'Títulos del Club', path: '/titulos-club' },
+        ...(rolLower === 'admin' ? [{ label: 'Administración', path: '/admin' }] : []),
         ...(rol === 'Tecnico'
           ? [
               { label: 'Entrenamientos', path: '/entrenamientos' },

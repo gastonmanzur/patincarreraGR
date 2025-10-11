@@ -34,12 +34,12 @@ router.get('/usuario', protegerRuta, async (req, res) => {
 });
 
 
-router.get('/admin', protegerRuta, permitirRol('admin'), (req, res) => {
+router.get('/admin', protegerRuta, permitirRol('Admin'), (req, res) => {
   res.json({ mensaje: 'Acceso solo para administradores' });
 });
 
 
-router.get('/usuarios', protegerRuta, permitirRol('admin'), async (req, res) => {
+router.get('/usuarios', protegerRuta, permitirRol('Admin'), async (req, res) => {
   const usuarios = await User.find().select('-password');
   res.json(usuarios);
 });

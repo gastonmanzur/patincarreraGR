@@ -19,9 +19,16 @@ export const protegerRuta = (req, res, next) => {
   }
 };
 
+const normalizarRol = (valor) =>
+  typeof valor === 'string' ? valor.trim().toLowerCase() : valor;
+
 export const permitirRol = (...roles) => {
+  const rolesNormalizados = roles.map((rol) => normalizarRol(rol)).filter(Boolean);
+
   return (req, res, next) => {
-    if (!roles.includes(req.usuario.rol)) {
+    const rolUsuario = normalizarRol(req.usuario.rol);
+
+    if (!rolesNormalizados.includes(rolUsuario)) {
       return res.status(403).json({ mensaje: 'Acceso denegado: rol insuficiente' });
     }
     next();

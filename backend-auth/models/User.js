@@ -11,7 +11,11 @@ const userSchema = new mongoose.Schema(
         return !this.googleId;
       }
     },
-    rol: { type: String, enum: ['Delegado', 'Tecnico', 'Deportista'], default: 'Deportista' },
+    rol: {
+      type: String,
+      enum: ['Delegado', 'Tecnico', 'Deportista', 'Admin'],
+      default: 'Deportista'
+    },
     confirmado: { type: Boolean, default: false },
     tokenConfirmacion: { type: String },
     googleId: { type: String }, // por si se loguea con Google

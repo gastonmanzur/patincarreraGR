@@ -34,7 +34,8 @@ import VerTituloClub from './pages/VerTituloClub';
 function AdminRoute({ children }) {
   const token = sessionStorage.getItem('token');
   const rol = sessionStorage.getItem('rol');
-  return token && rol === 'admin' ? children : <Navigate to="/" />;
+  const isAdmin = typeof rol === 'string' && rol.toLowerCase() === 'admin';
+  return token && isAdmin ? children : <Navigate to="/" />;
 }
 
 function AppRoutes() {
