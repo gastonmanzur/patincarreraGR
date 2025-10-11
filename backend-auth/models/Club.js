@@ -15,7 +15,10 @@ const tituloSchema = new mongoose.Schema(
 const clubSchema = new mongoose.Schema(
   {
     nombre: { type: String, required: true, unique: true, trim: true },
-    titulos: { type: [tituloSchema], default: [] }
+    federation: { type: mongoose.Schema.Types.ObjectId, ref: 'Federation' },
+    logo: { type: String, trim: true },
+    titulos: { type: [tituloSchema], default: [] },
+    creadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
   },
   { timestamps: true }
 );

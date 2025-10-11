@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema(
     tokenConfirmacion: { type: String },
     googleId: { type: String }, // por si se loguea con Google
     foto: { type: String },
+    club: { type: mongoose.Schema.Types.ObjectId, ref: 'Club' },
     patinadores: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Patinador' }]
   },
   { timestamps: true }

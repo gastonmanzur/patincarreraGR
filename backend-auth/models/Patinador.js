@@ -33,7 +33,8 @@ const patinadorSchema = new mongoose.Schema(
     numeroCorredor: { type: Number, required: true },
     categoria: { type: String, required: true },
     fotoRostro: { type: String },
-    foto: { type: String }
+    foto: { type: String },
+    club: { type: mongoose.Schema.Types.ObjectId, ref: 'Club', required: true }
   },
   { timestamps: true }
 );

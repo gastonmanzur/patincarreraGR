@@ -13,11 +13,16 @@ export default function LoginForm() {
     try {
       const res = await login(email, password);
 
-      const { token, usuario } = res.data;
+      const { token, usuario, needsClubSelection } = res.data;
 
-      // Guardamos el token y rol en sessionStorage
       sessionStorage.setItem('token', token);
       sessionStorage.setItem('rol', usuario.rol);
+
+      if (usuario.club) {
+        sessionStorage.setItem('clubId', usuario.club);
+      } else {
+        sessionStorage.removeItem('clubId');
+      }
 
       const foto = getImageUrl(usuario.foto);
       if (foto) {
@@ -27,8 +32,11 @@ export default function LoginForm() {
       }
 
       alert(`Bienvenido ${usuario.nombre}`);
-      // Redirigir a la página de noticias
-      navigate('/home');
+      if (needsClubSelection && usuario.rol.toLowerCase() !== 'admin') {
+        navigate('/seleccionar-club');
+      } else {
+        navigate('/home');
+      }
     } catch (err) {
       alert(err.response?.data?.mensaje || 'Error al iniciar sesión');
     }

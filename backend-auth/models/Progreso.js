@@ -6,7 +6,8 @@ const progresoSchema = new mongoose.Schema(
     tecnico: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     descripcion: { type: String, required: true },
     fecha: { type: Date, default: Date.now },
-    enviado: { type: Boolean, default: false }
+    enviado: { type: Boolean, default: false },
+    club: { type: mongoose.Schema.Types.ObjectId, ref: 'Club', required: true }
   },
   { timestamps: true }
 );

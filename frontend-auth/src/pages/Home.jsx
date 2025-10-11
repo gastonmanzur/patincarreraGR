@@ -22,7 +22,9 @@ export default function Home() {
   useEffect(() => {
     const cargarNoticias = async () => {
       try {
-        const newsRes = await api.get('/news');
+        const clubId = sessionStorage.getItem('clubId');
+        const config = clubId ? { params: { clubId } } : {};
+        const newsRes = await api.get('/news', config);
         const normalized = Array.isArray(newsRes.data)
           ? newsRes.data.map((item) => ({
               ...item,
@@ -53,7 +55,9 @@ export default function Home() {
 
     const cargarCompetencia = async () => {
       try {
-        const compRes = await api.get('/competencias');
+        const clubId = sessionStorage.getItem('clubId');
+        const config = clubId ? { params: { clubId } } : {};
+        const compRes = await api.get('/competencias', config);
         const comps = Array.isArray(compRes.data)
           ? compRes.data.map((comp) => ({
               ...comp,

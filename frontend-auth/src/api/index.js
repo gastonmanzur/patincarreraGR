@@ -77,9 +77,14 @@ api.defaults.baseURL = resolvedEnvBaseUrl || buildApiBaseUrl();
 
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('token');
+  const clubId = sessionStorage.getItem('clubId');
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  if (clubId && clubId !== 'null') {
+    config.headers['X-Club-Id'] = clubId;
   }
 
   // Ensure request URLs remain relative so the Axios base URL is respected.
@@ -97,6 +102,7 @@ api.interceptors.response.use(
       sessionStorage.removeItem('token');
       sessionStorage.removeItem('rol');
       sessionStorage.removeItem('foto');
+      sessionStorage.removeItem('clubId');
       window.location.href = '/';
     }
 
