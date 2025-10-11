@@ -8,6 +8,8 @@ export default function LogoutButton() {
     sessionStorage.removeItem('rol');
     sessionStorage.removeItem('foto');
     sessionStorage.removeItem('clubId');
+    sessionStorage.removeItem('clubLogo');
+    sessionStorage.removeItem('clubNombre');
     navigate('/');
   };
 
