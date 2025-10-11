@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../api';
 import LogoutButton from './LogoutButton';
 import getImageUrl from '../utils/getImageUrl';
@@ -7,6 +7,7 @@ import placeholderAvatar from '../assets/image-placeholder.svg';
 
 export default function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef(null);
   const rol = sessionStorage.getItem('rol');
   const rolLower = typeof rol === 'string' ? rol.toLowerCase() : '';
@@ -23,8 +24,20 @@ export default function Navbar() {
   const displayPhoto = foto || placeholderAvatar;
   const isGooglePhoto = Boolean(foto?.includes('googleusercontent'));
   const isLoggedIn = sessionStorage.getItem('token');
+  const storedClubLogo = sessionStorage.getItem('clubLogo');
+  const normalisedClubLogo = getImageUrl(storedClubLogo);
+  if (storedClubLogo && normalisedClubLogo !== storedClubLogo) {
+    if (normalisedClubLogo) {
+      sessionStorage.setItem('clubLogo', normalisedClubLogo);
+    } else {
+      sessionStorage.removeItem('clubLogo');
+    }
+  }
+  const storedClubName = sessionStorage.getItem('clubNombre') || '';
   const [unread, setUnread] = useState(0);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+  const [clubLogo, setClubLogo] = useState(normalisedClubLogo);
+  const [clubName, setClubName] = useState(storedClubName);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -95,6 +108,64 @@ export default function Navbar() {
     document.body.classList.toggle('dark-mode', darkMode);
     localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setClubLogo('');
+      setClubName('');
+      sessionStorage.removeItem('clubLogo');
+      sessionStorage.removeItem('clubNombre');
+      return undefined;
+    }
+
+    let active = true;
+
+    const fetchClubInfo = async () => {
+      try {
+        const res = await api.get('/clubs');
+        if (!active) return;
+
+        const clubs = Array.isArray(res.data) ? res.data : [];
+        if (clubs.length === 0) {
+          setClubLogo('');
+          setClubName('');
+          sessionStorage.removeItem('clubLogo');
+          sessionStorage.removeItem('clubNombre');
+          return;
+        }
+
+        const storedClubId = sessionStorage.getItem('clubId');
+        const currentClub =
+          (storedClubId && clubs.find((club) => club._id === storedClubId)) || clubs[0];
+        const normalisedLogo = getImageUrl(currentClub?.logo);
+        const resolvedName = currentClub?.nombre || '';
+
+        if (normalisedLogo) {
+          setClubLogo(normalisedLogo);
+          sessionStorage.setItem('clubLogo', normalisedLogo);
+        } else {
+          setClubLogo('');
+          sessionStorage.removeItem('clubLogo');
+        }
+
+        setClubName(resolvedName);
+        if (resolvedName) {
+          sessionStorage.setItem('clubNombre', resolvedName);
+        } else {
+          sessionStorage.removeItem('clubNombre');
+        }
+      } catch (err) {
+        if (!active) return;
+        console.error('Error al cargar el logo del club', err);
+      }
+    };
+
+    void fetchClubInfo();
+
+    return () => {
+      active = false;
+    };
+  }, [isLoggedIn, location.key]);
 
   const handleNavigate = (path) => navigate(path);
 
@@ -186,11 +257,12 @@ export default function Navbar() {
           style={{ cursor: 'pointer' }}
         >
           <img
-            src="/vite.svg"
-            alt="Logo"
+            src={clubLogo || '/vite.svg'}
+            alt={clubName ? `Logo de ${clubName}` : 'Logo del club'}
             width="80"
             height="80"
             className="rounded-circle"
+            style={{ objectFit: 'cover' }}
           />
         </a>
         <button
