@@ -7,6 +7,7 @@ export default function LogoutButton() {
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('rol');
     sessionStorage.removeItem('foto');
+    sessionStorage.removeItem('clubId');
     navigate('/');
   };
 

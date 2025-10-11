@@ -6,7 +6,8 @@ const competenciaSchema = new mongoose.Schema(
     torneo: { type: mongoose.Schema.Types.ObjectId, ref: 'Torneo', required: true },
     fecha: { type: Date, required: true },
     imagen: { type: String },
-    listaBuenaFe: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Patinador' }]
+    listaBuenaFe: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Patinador' }],
+    club: { type: mongoose.Schema.Types.ObjectId, ref: 'Club', required: true }
   },
   { timestamps: true }
 );

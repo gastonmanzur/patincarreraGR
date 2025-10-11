@@ -13,7 +13,9 @@ export default function VerNoticia() {
   useEffect(() => {
     const fetchNoticia = async () => {
       try {
-        const res = await api.get(`/news/${id}`);
+        const clubId = sessionStorage.getItem('clubId');
+        const config = clubId ? { params: { clubId } } : {};
+        const res = await api.get(`/news/${id}`, config);
         setNoticia({
           ...res.data,
           imagen: getImageUrl(res.data?.imagen)

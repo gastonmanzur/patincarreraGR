@@ -15,7 +15,9 @@ export default function EditarNoticia() {
   useEffect(() => {
     const fetchNoticia = async () => {
       try {
-        const res = await api.get(`/news/${id}`);
+        const clubId = sessionStorage.getItem('clubId');
+        const config = clubId ? { params: { clubId } } : {};
+        const res = await api.get(`/news/${id}`, config);
         setTitulo(res.data?.titulo || '');
         setContenido(res.data?.contenido || '');
         setImagenActual(getImageUrl(res.data?.imagen));

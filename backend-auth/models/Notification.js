@@ -5,6 +5,7 @@ const notificationSchema = new mongoose.Schema(
     destinatario: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     mensaje: { type: String, required: true },
     leido: { type: Boolean, default: false },
+    club: { type: mongoose.Schema.Types.ObjectId, ref: 'Club' },
     competencia: { type: mongoose.Schema.Types.ObjectId, ref: 'Competencia' },
     progreso: { type: mongoose.Schema.Types.ObjectId, ref: 'Progreso' },
     estadoRespuesta: {

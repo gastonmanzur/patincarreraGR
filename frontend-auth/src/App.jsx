@@ -30,6 +30,7 @@ import Reportes from './pages/Reportes';
 import VerReporte from './pages/VerReporte';
 import TitulosClub from './pages/TitulosClub';
 import VerTituloClub from './pages/VerTituloClub';
+import SelectClub from './pages/SelectClub';
 
 function AdminRoute({ children }) {
   const token = sessionStorage.getItem('token');
@@ -66,6 +67,10 @@ function AppRoutes() {
             element={<ProtectedRoute><ResultadosCompetencia /></ProtectedRoute>}
           />
           <Route path="/google-success" element={<GoogleSuccess />} />
+          <Route
+            path="/seleccionar-club"
+            element={<ProtectedRoute allowWithoutClub><SelectClub /></ProtectedRoute>}
+          />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route
             path="/cargar-patinador"

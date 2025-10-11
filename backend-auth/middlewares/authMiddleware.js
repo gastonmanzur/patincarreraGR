@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 
-export const protegerRuta = (req, res, next) => {
+export const protegerRuta = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith('Bearer ')) {
@@ -12,7 +13,17 @@ export const protegerRuta = (req, res, next) => {
 
   try {
     const decodificado = jwt.verify(token, JWT_SECRET);
-    req.usuario = decodificado; // { id, rol }
+
+    const usuario = await User.findById(decodificado.id).select('rol club');
+    if (!usuario) {
+      return res.status(401).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    req.usuario = {
+      id: usuario._id.toString(),
+      rol: usuario.rol,
+      club: usuario.club ? usuario.club.toString() : null
+    };
     next();
   } catch (error) {
     return res.status(401).json({ mensaje: 'Token inválido' });

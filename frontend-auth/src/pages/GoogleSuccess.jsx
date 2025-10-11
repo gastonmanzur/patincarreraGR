@@ -15,14 +15,23 @@ export default function GoogleSuccess() {
       const datos = jwtDecode(token);
       sessionStorage.setItem('token', token);
       sessionStorage.setItem('rol', datos.rol);
+      if (datos.club) {
+        sessionStorage.setItem('clubId', datos.club);
+      } else {
+        sessionStorage.removeItem('clubId');
+      }
       const foto = getImageUrl(datos.foto);
       if (foto) {
         sessionStorage.setItem('foto', foto);
       } else {
         sessionStorage.removeItem('foto');
       }
-  
-      navigate('/home');
+
+      if (datos.needsClubSelection && datos.rol?.toLowerCase() !== 'admin') {
+        navigate('/seleccionar-club');
+      } else {
+        navigate('/home');
+      }
     }
   }, [token, navigate]);
   
