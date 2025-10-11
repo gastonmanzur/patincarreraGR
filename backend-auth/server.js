@@ -415,6 +415,21 @@ const ensureClubForRequest = async (req, res, { allowFallbackToLocal = false } =
   return null;
 };
 
+const loadClubForRequest = async (req, res, { allowFallbackToLocal = false } = {}) => {
+  const clubId = await ensureClubForRequest(req, res, { allowFallbackToLocal });
+  if (clubId === null) return null;
+
+  const clubDoc = await Club.findById(clubId);
+  if (clubDoc) return clubDoc;
+
+  if (allowFallbackToLocal) {
+    return ensureLocalClub();
+  }
+
+  res.status(404).json({ mensaje: 'Club no encontrado' });
+  return null;
+};
+
 const scopeQueryByClub = async (req, res, query = {}, options = {}) => {
   const clubId = await ensureClubForRequest(req, res, options);
   if (clubId === null) return null;
@@ -1270,14 +1285,18 @@ app.delete('/api/federaciones/:id', protegerRuta, permitirRol('Admin'), async (r
   }
 });
 
-app.get('/api/clubs/local/titulos', protegerRuta, async (_req, res) => {
+app.get('/api/clubs/local/titulos', protegerRuta, async (req, res) => {
+  let club = null;
   try {
-    const club = await ensureLocalClub();
+    club = await loadClubForRequest(req, res, { allowFallbackToLocal: true });
+    if (!club) return;
     const individuales = await computeLocalIndividualTitles(club?._id);
     let payload = await buildLocalClubPayload(club, individuales);
     const hasTitulos = Array.isArray(payload?.club?.titulos) && payload.club.titulos.length > 0;
 
-    if (!hasTitulos) {
+    const isLocalClub = club.nombre === LOCAL_CLUB_CANONICAL_NAME;
+
+    if (!hasTitulos && isLocalClub) {
       const legacyPayload = await loadLegacyClubTitles();
       if (legacyPayload?.club?.titulos?.length) {
         payload = mergeLegacyPayload(payload, legacyPayload);
@@ -1287,13 +1306,15 @@ app.get('/api/clubs/local/titulos', protegerRuta, async (_req, res) => {
     res.json(payload);
   } catch (err) {
     console.error('Error al obtener los títulos del club local', err);
-    try {
-      const legacyPayload = await loadLegacyClubTitles();
-      if (legacyPayload?.club?.titulos?.length) {
-        return res.json(legacyPayload);
+    if (!club || club.nombre === LOCAL_CLUB_CANONICAL_NAME) {
+      try {
+        const legacyPayload = await loadLegacyClubTitles();
+        if (legacyPayload?.club?.titulos?.length) {
+          return res.json(legacyPayload);
+        }
+      } catch (legacyError) {
+        console.error('Error al intentar recuperar los títulos legados del club', legacyError);
       }
-    } catch (legacyError) {
-      console.error('Error al intentar recuperar los títulos legados del club', legacyError);
     }
     res.status(500).json({ mensaje: 'Error al obtener los títulos del club' });
   }
@@ -1324,7 +1345,8 @@ app.post(
         anio = parsed;
       }
 
-      const club = await ensureLocalClub();
+      const club = await loadClubForRequest(req, res);
+      if (!club) return;
 
       club.titulos.push({
         titulo,
@@ -1355,7 +1377,8 @@ app.put(
   upload.single('imagen'),
   async (req, res) => {
     try {
-      const club = await ensureLocalClub();
+      const club = await loadClubForRequest(req, res);
+      if (!club) return;
       const titulo = club.titulos.id(req.params.id);
 
       if (!titulo) {
@@ -1428,7 +1451,8 @@ app.delete(
   permitirRol('Delegado'),
   async (req, res) => {
     try {
-      const club = await ensureLocalClub();
+      const club = await loadClubForRequest(req, res);
+      if (!club) return;
       const titulo = club.titulos.id(req.params.id);
 
       if (!titulo) {
@@ -1450,25 +1474,29 @@ app.delete(
 );
 
 app.get('/api/clubs/local/titulos/:id', protegerRuta, async (req, res) => {
+  let club = null;
   try {
-    const club = await ensureLocalClub();
+    club = await loadClubForRequest(req, res, { allowFallbackToLocal: true });
+    if (!club) return;
     await club.populate('titulos.creadoPor', 'nombre apellido');
 
     const titulo = club.titulos.id(req.params.id);
 
     if (!titulo) {
-      const legacy = await loadLegacyClubTitleById(req.params.id);
-      if (legacy?.titulo) {
-        const nombreAmigable =
-          club?.nombre === LOCAL_CLUB_CANONICAL_NAME ? LOCAL_CLUB_DISPLAY_NAME : club?.nombre;
-        return res.json({
-          club: {
-            _id: club?._id ?? legacy.club._id ?? null,
-            nombre: club?.nombre || legacy.club.nombre,
-            nombreAmigable: nombreAmigable || legacy.club.nombreAmigable
-          },
-          titulo: legacy.titulo
-        });
+      if (club.nombre === LOCAL_CLUB_CANONICAL_NAME) {
+        const legacy = await loadLegacyClubTitleById(req.params.id);
+        if (legacy?.titulo) {
+          const nombreAmigable =
+            club?.nombre === LOCAL_CLUB_CANONICAL_NAME ? LOCAL_CLUB_DISPLAY_NAME : club?.nombre;
+          return res.json({
+            club: {
+              _id: club?._id ?? legacy.club._id ?? null,
+              nombre: club?.nombre || legacy.club.nombre,
+              nombreAmigable: nombreAmigable || legacy.club.nombreAmigable
+            },
+            titulo: legacy.titulo
+          });
+        }
       }
 
       return res.status(404).json({ mensaje: 'Título no encontrado' });
@@ -1501,6 +1529,25 @@ app.get('/api/clubs/local/titulos/:id', protegerRuta, async (req, res) => {
     });
   } catch (err) {
     console.error('Error al obtener el detalle del título del club local', err);
+    if (!club || club.nombre === LOCAL_CLUB_CANONICAL_NAME) {
+      try {
+        const legacy = await loadLegacyClubTitleById(req.params.id);
+        if (legacy?.titulo) {
+          const nombreAmigable =
+            club?.nombre === LOCAL_CLUB_CANONICAL_NAME ? LOCAL_CLUB_DISPLAY_NAME : club?.nombre;
+          return res.json({
+            club: {
+              _id: club?._id ?? legacy.club._id ?? null,
+              nombre: club?.nombre || legacy.club.nombre,
+              nombreAmigable: nombreAmigable || legacy.club.nombreAmigable
+            },
+            titulo: legacy.titulo
+          });
+        }
+      } catch (legacyError) {
+        console.error('Error al recuperar el título legado del club', legacyError);
+      }
+    }
     res.status(500).json({ mensaje: 'Error al obtener el título del club' });
   }
 });
