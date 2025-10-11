@@ -1916,36 +1916,29 @@ app.get('/api/tournaments/:id/ranking/club', protegerRuta, async (req, res) => {
   try {
     const comps = await Competencia.find({ torneo: req.params.id }, '_id');
     const compIds = comps.map((c) => c._id);
-    const resultados = await Resultado.find({ competenciaId: { $in: compIds } }).populate('clubId', 'nombre');
-
+    const resultados = await Resultado.find({
+      competenciaId: { $in: compIds }
+    }).populate('clubId', 'nombre');
     const clubGR = await Club.findOne({ nombre: LOCAL_CLUB_CANONICAL_NAME });
     const clubDefault = clubGR
       ? { _id: clubGR._id, nombre: LOCAL_CLUB_DISPLAY_NAME }
       : { nombre: LOCAL_CLUB_DISPLAY_NAME };
-
     const ranking = {};
     for (const r of resultados) {
-      const clubDoc = r.clubId ? { _id: r.clubId._id, nombre: r.clubId.nombre } : clubDefault;
+      const clubDoc = r.clubId
+        ? { _id: r.clubId._id, nombre: r.clubId.nombre }
+        : clubDefault;
       const cid = String(clubDoc._id || 'default');
-      if (!ranking[cid]) ranking
-
-
-      return res.status(400).json({ mensaje: 'Credenciales inválidas' });
+      if (!ranking[cid]) {
+        ranking[cid] = { club: clubDoc, puntos: 0 };
+      }
+      ranking[cid].puntos += r.puntos || 0;
     }
-    // Extendemos la duración del token para evitar que la sesión
-    // se cierre de manera prematura. Antes el token expiraba en 1 hora,
-    // lo cual provocaba que el usuario perdiera la sesión rápidamente.
-    // Ahora el token tiene una vigencia de 24 horas.
-    const token = jwt.sign({ id: usuario._id, rol: usuario.rol }, JWT_SECRET, {
-      expiresIn: '24h'
-    });
-    return res.json({
-      token,
-      usuario: { nombre: usuario.nombre, rol: usuario.rol, foto: usuario.foto || '' }
-    });
+    const respuesta = Object.values(ranking).sort((a, b) => b.puntos - a.puntos);
+    res.json(respuesta);
   } catch (err) {
-    console.error('Error en /api/auth/login', err);
-    res.status(500).json({ mensaje: 'Error al iniciar sesión' });
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al obtener ranking por club' });
   }
 });
 
