@@ -1314,6 +1314,53 @@ app.post('/api/news', protegerRuta, permitirRol('Delegado', 'Tecnico'), upload.s
   }
 });
 
+app.put('/api/news/:id', protegerRuta, permitirRol('Delegado', 'Tecnico'), upload.single('imagen'), async (req, res) => {
+  try {
+    const actualizacion = {};
+    if (typeof req.body.titulo !== 'undefined') actualizacion.titulo = req.body.titulo;
+    if (typeof req.body.contenido !== 'undefined') actualizacion.contenido = req.body.contenido;
+    if (req.file) actualizacion.imagen = buildUploadUrl(req.file.filename);
+
+    const noticiaActualizada = await News.findByIdAndUpdate(req.params.id, actualizacion, {
+      new: true,
+      runValidators: true
+    }).populate('autor', 'nombre apellido');
+
+    if (!noticiaActualizada) {
+      return res.status(404).json({ mensaje: 'Noticia no encontrada' });
+    }
+
+    const respuesta = {
+      _id: noticiaActualizada._id,
+      titulo: noticiaActualizada.titulo,
+      contenido: noticiaActualizada.contenido,
+      imagen: noticiaActualizada.imagen,
+      autor: noticiaActualizada.autor
+        ? `${noticiaActualizada.autor.nombre} ${noticiaActualizada.autor.apellido}`
+        : 'Anónimo',
+      fecha: noticiaActualizada.fecha
+    };
+
+    res.json(respuesta);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al actualizar la noticia' });
+  }
+});
+
+app.delete('/api/news/:id', protegerRuta, permitirRol('Delegado', 'Tecnico'), async (req, res) => {
+  try {
+    const noticia = await News.findByIdAndDelete(req.params.id);
+    if (!noticia) {
+      return res.status(404).json({ mensaje: 'Noticia no encontrada' });
+    }
+    res.json({ mensaje: 'Noticia eliminada' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al eliminar la noticia' });
+  }
+});
+
 // Notifications
 app.post('/api/notifications', protegerRuta, permitirRol('Delegado', 'Tecnico'), async (req, res) => {
   const { mensaje } = req.body;

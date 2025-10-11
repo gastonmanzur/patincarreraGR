@@ -9,6 +9,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CargarPatinador from './pages/CargarPatinador';
 import CrearNoticia from './pages/CrearNoticia';
+import EditarNoticia from './pages/EditarNoticia';
 import ListaPatinadores from './pages/ListaPatinadores';
 import VerPatinador from './pages/VerPatinador';
 import EditarPatinador from './pages/EditarPatinador';
@@ -84,6 +85,10 @@ function AppRoutes() {
           <Route
             path="/crear-noticia"
             element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><CrearNoticia /></ProtectedRoute>}
+          />
+          <Route
+            path="/noticias/:id/editar"
+            element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><EditarNoticia /></ProtectedRoute>}
           />
           <Route
             path="/crear-notificacion"
