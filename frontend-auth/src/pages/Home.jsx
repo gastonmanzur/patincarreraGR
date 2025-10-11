@@ -9,6 +9,15 @@ export default function Home() {
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
   const [currentPatIndex, setCurrentPatIndex] = useState(0);
   const [nextCompetition, setNextCompetition] = useState(null);
+  const [federaciones, setFederaciones] = useState([]);
+
+  const normaliseFederationUrl = (url) => {
+    if (typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+    if (/^(https?:\/\/|mailto:|tel:)/i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+  };
 
   useEffect(() => {
     const cargarNoticias = async () => {
@@ -62,11 +71,21 @@ export default function Home() {
       }
     };
 
+    const cargarFederaciones = async () => {
+      try {
+        const fedRes = await api.get('/federaciones');
+        setFederaciones(Array.isArray(fedRes.data) ? fedRes.data : []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
     cargarNoticias();
     if (sessionStorage.getItem('token')) {
       cargarPatinadores();
     }
     cargarCompetencia();
+    cargarFederaciones();
     const interval = setInterval(cargarCompetencia, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -357,6 +376,41 @@ export default function Home() {
                   </div>
                 </div>
               </Link>
+            ))}
+          </div>
+        </div>
+      )}
+      {federaciones.length > 0 && (
+        <div className="container mb-5">
+          <h2 className="text-center mb-4">Federaciones asociadas a la CAP</h2>
+          <div className="row g-4">
+            {federaciones.map((federacion) => (
+              <div className="col-12 col-md-6 col-lg-4" key={federacion._id}>
+                <div className="card h-100 shadow-sm">
+                  <div className="card-body d-flex flex-column">
+                    <h5 className="card-title">{federacion.nombre}</h5>
+                    {federacion.descripcion && (
+                      <p className="card-text flex-grow-1">{federacion.descripcion}</p>
+                    )}
+                    {(federacion.sitioWeb || federacion.contacto) && (
+                      <ul className="list-unstyled small mb-0 mt-3">
+                        {federacion.sitioWeb && (
+                          <li>
+                            <a
+                              href={normaliseFederationUrl(federacion.sitioWeb)}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {federacion.sitioWeb}
+                            </a>
+                          </li>
+                        )}
+                        {federacion.contacto && <li>{federacion.contacto}</li>}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </div>

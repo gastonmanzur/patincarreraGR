@@ -23,6 +23,7 @@ import Competencia from './models/Competencia.js';
 import Resultado from './models/Resultado.js';
 import PatinadorExterno from './models/PatinadorExterno.js';
 import Club from './models/Club.js';
+import Federation from './models/Federation.js';
 import Entrenamiento from './models/Entrenamiento.js';
 import Progreso from './models/Progreso.js';
 import ExcelJS from 'exceljs';
@@ -341,6 +342,7 @@ app.get('/api/health', (_req, res) => {
 // --------- Config / Constantes ---------
 const CODIGO_DELEGADO = process.env.CODIGO_DELEGADO || 'DEL123';
 const CODIGO_TECNICO = process.env.CODIGO_TECNICO || 'TEC456';
+const CODIGO_ADMIN = process.env.CODIGO_ADMIN || 'ADM789';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
 const CLUB_LOCAL = process.env.CLUB_LOCAL || 'Gral. Rodríguez';
 
@@ -454,6 +456,22 @@ const pickNonEmptyString = (...values) => {
     }
   }
   return '';
+};
+
+const escapeRegExp = (value) =>
+  value.replace(/[.*+?^${}()|\[\]\\]/g, '\$&');
+
+const trimmedOrNull = (value) => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+};
+
+const normaliseUrlOrNull = (value) => {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  if (!trimmed) return null;
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
 };
 
 const parsePossibleYear = (value) => {
@@ -731,6 +749,9 @@ app.post('/api/auth/registro', async (req, res) => {
   if (rol === 'tecnico' && codigo !== CODIGO_TECNICO) {
     return res.status(400).json({ mensaje: 'Código de técnico incorrecto' });
   }
+  if (rol === 'admin' && codigo !== CODIGO_ADMIN) {
+    return res.status(400).json({ mensaje: 'Código de administrador incorrecto' });
+  }
 
   const existente = await User.findOne({ email });
   if (existente) {
@@ -846,7 +867,7 @@ app.get('/api/protegido/usuario', protegerRuta, async (req, res) => {
   }
 });
 
-app.get('/api/protegido/usuarios', protegerRuta, permitirRol('Delegado', 'Admin', 'admin'), async (_req, res) => {
+app.get('/api/protegido/usuarios', protegerRuta, permitirRol('Delegado', 'Admin'), async (_req, res) => {
   try {
     const usuarios = await User.find().select('-password').sort({ apellido: 1, nombre: 1 });
     res.json(usuarios);
@@ -934,6 +955,118 @@ app.get('/api/clubs', protegerRuta, async (_req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al obtener clubes' });
+  }
+});
+
+app.get('/api/federaciones', async (_req, res) => {
+  try {
+    const federaciones = await Federation.find().sort({ nombre: 1 });
+    res.json(federaciones);
+  } catch (err) {
+    console.error('Error al obtener federaciones', err);
+    res.status(500).json({ mensaje: 'Error al obtener las federaciones' });
+  }
+});
+
+app.post('/api/federaciones', protegerRuta, permitirRol('Admin'), async (req, res) => {
+  try {
+    const nombre = trimmedOrNull(req.body?.nombre);
+    if (!nombre) {
+      return res.status(400).json({ mensaje: 'El nombre de la federación es obligatorio' });
+    }
+
+    const descripcion = trimmedOrNull(req.body?.descripcion);
+    const contacto = trimmedOrNull(req.body?.contacto);
+    const sitioWeb = normaliseUrlOrNull(req.body?.sitioWeb);
+    const nameRegex = new RegExp(`^${escapeRegExp(nombre)}$`, 'i');
+
+    const existente = await Federation.findOne({ nombre: nameRegex });
+
+    if (existente) {
+      return res.status(400).json({ mensaje: 'Ya existe una federación con ese nombre' });
+    }
+
+    const federacion = await Federation.create({
+      nombre,
+      descripcion: descripcion ?? undefined,
+      contacto: contacto ?? undefined,
+      sitioWeb: sitioWeb ?? undefined
+    });
+
+    res.status(201).json(federacion);
+  } catch (err) {
+    console.error('Error al crear federación', err);
+    if (err.code === 11000) {
+      return res.status(400).json({ mensaje: 'Ya existe una federación con ese nombre' });
+    }
+    res.status(500).json({ mensaje: 'Error al crear la federación' });
+  }
+});
+
+app.put('/api/federaciones/:id', protegerRuta, permitirRol('Admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const nombre = trimmedOrNull(req.body?.nombre);
+
+    if (!nombre) {
+      return res.status(400).json({ mensaje: 'El nombre de la federación es obligatorio' });
+    }
+
+    const descripcion = trimmedOrNull(req.body?.descripcion);
+    const contacto = trimmedOrNull(req.body?.contacto);
+    const sitioWeb = normaliseUrlOrNull(req.body?.sitioWeb);
+    const nameRegex = new RegExp(`^${escapeRegExp(nombre)}$`, 'i');
+
+    const conflicto = await Federation.findOne({ _id: { $ne: id }, nombre: nameRegex });
+
+    if (conflicto) {
+      return res.status(400).json({ mensaje: 'Ya existe una federación con ese nombre' });
+    }
+
+    const federacion = await Federation.findByIdAndUpdate(
+      id,
+      {
+        nombre,
+        descripcion: descripcion ?? undefined,
+        contacto: contacto ?? undefined,
+        sitioWeb: sitioWeb ?? undefined
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!federacion) {
+      return res.status(404).json({ mensaje: 'Federación no encontrada' });
+    }
+
+    res.json(federacion);
+  } catch (err) {
+    console.error('Error al actualizar federación', err);
+    if (err.name === 'CastError') {
+      return res.status(404).json({ mensaje: 'Federación no encontrada' });
+    }
+    if (err.code === 11000) {
+      return res.status(400).json({ mensaje: 'Ya existe una federación con ese nombre' });
+    }
+    res.status(500).json({ mensaje: 'Error al actualizar la federación' });
+  }
+});
+
+app.delete('/api/federaciones/:id', protegerRuta, permitirRol('Admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const federacion = await Federation.findByIdAndDelete(id);
+
+    if (!federacion) {
+      return res.status(404).json({ mensaje: 'Federación no encontrada' });
+    }
+
+    res.json({ mensaje: 'Federación eliminada' });
+  } catch (err) {
+    console.error('Error al eliminar federación', err);
+    if (err.name === 'CastError') {
+      return res.status(404).json({ mensaje: 'Federación no encontrada' });
+    }
+    res.status(500).json({ mensaje: 'Error al eliminar la federación' });
   }
 });
 
@@ -2031,7 +2164,7 @@ app.get('/api/protegido/usuario', protegerRuta, async (req, res) => {
 app.get(
   '/api/protegido/usuarios',
   protegerRuta,
-  permitirRol('Delegado', 'Admin', 'admin'),
+  permitirRol('Delegado', 'Admin'),
   async (req, res) => {
     try {
       const usuarios = await User.find()

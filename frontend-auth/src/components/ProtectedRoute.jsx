@@ -5,6 +5,14 @@ export default function ProtectedRoute({ children, roles }) {
   const rol = sessionStorage.getItem('rol');
 
   if (!token) return <Navigate to="/" />;
-  if (roles && !roles.includes(rol)) return <Navigate to="/home" />;
+
+  if (roles) {
+    const rolNormalizado = typeof rol === 'string' ? rol.toLowerCase() : '';
+    const rolesNormalizados = roles.map((item) => item.toLowerCase());
+
+    if (!rolesNormalizados.includes(rolNormalizado)) {
+      return <Navigate to="/home" />;
+    }
+  }
   return children;
 }

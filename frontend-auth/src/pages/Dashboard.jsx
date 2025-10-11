@@ -69,6 +69,8 @@ export default function Dashboard() {
     }
   };
 
+  const esAdmin = typeof rol === 'string' && rol.toLowerCase() === 'admin';
+
   return (
     <div className="container mt-4">
       <div className="d-flex flex-column flex-md-row align-items-center mb-4">
@@ -111,7 +113,7 @@ export default function Dashboard() {
         </form>
       )}
 
-      {rol === 'admin' ? (
+      {esAdmin ? (
         <p>Contenido exclusivo para administradores.</p>
       ) : (
         <p>Contenido exclusivo para usuarios comunes.</p>
