@@ -10,7 +10,9 @@ export default function Home() {
   const [currentPatIndex, setCurrentPatIndex] = useState(0);
   const [nextCompetition, setNextCompetition] = useState(null);
   const [federaciones, setFederaciones] = useState([]);
+  const [userFederationId, setUserFederationId] = useState(null);
   const rolActual = sessionStorage.getItem('rol');
+  const token = sessionStorage.getItem('token');
   const esAdmin = typeof rolActual === 'string' && rolActual.toLowerCase() === 'admin';
 
   const normaliseFederationUrl = (url) => {
@@ -58,6 +60,11 @@ export default function Home() {
             }))
           : [];
         setPatinadores(patinadoresData);
+
+        const federation = userRes.data.usuario?.club?.federation;
+        const federationId =
+          federation && typeof federation === 'object' ? federation._id : federation;
+        setUserFederationId(federationId || null);
       } catch (err) {
         console.error(err);
       }
@@ -97,6 +104,8 @@ export default function Home() {
     cargarNoticias();
     if (sessionStorage.getItem('token')) {
       cargarPatinadores();
+    } else {
+      setUserFederationId(null);
     }
     cargarCompetencia();
     cargarFederaciones();
@@ -131,6 +140,15 @@ export default function Home() {
   const latestNews = news.slice(0, 4);
   const wideNews = news.slice(4, 7);
   const additionalNews = news.slice(7, 11);
+
+  const normalisedUserFederationId =
+    userFederationId && typeof userFederationId === 'object'
+      ? userFederationId._id
+      : userFederationId;
+
+  const federacionesParaMostrar = token
+    ? federaciones.filter((fed) => fed._id === normalisedUserFederationId)
+    : federaciones;
 
   if (esAdmin) {
     return (
@@ -410,11 +428,11 @@ export default function Home() {
           </div>
         </div>
       )}
-      {federaciones.length > 0 && (
+      {federacionesParaMostrar.length > 0 && (
         <div className="container mb-5">
           <h2 className="text-center mb-4">Federaciones asociadas a la CAP</h2>
           <div className="row g-4">
-            {federaciones.map((federacion) => (
+            {federacionesParaMostrar.map((federacion) => (
               <div className="col-12 col-md-6 col-lg-4" key={federacion._id}>
                 <div className="card h-100 shadow-sm">
                   <div className="card-body d-flex flex-column">
