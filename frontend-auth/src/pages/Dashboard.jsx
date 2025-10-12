@@ -114,7 +114,7 @@ export default function Dashboard() {
       )}
 
       {esAdmin ? (
-        <p>Contenido exclusivo para administradores.</p>
+        <p>Gestioná federaciones y clubes desde el Panel de Administración.</p>
       ) : (
         <p>Contenido exclusivo para usuarios comunes.</p>
       )}

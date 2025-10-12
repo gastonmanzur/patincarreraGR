@@ -380,6 +380,66 @@ const normaliseObjectId = (value) => {
 
 const isAdminUser = (req) => (req.usuario?.rol || '').toLowerCase() === 'admin';
 
+const ensureAdminHasNoAssociations = async (usuario) => {
+  if (!usuario) return usuario;
+  const rol = (usuario.rol || '').toLowerCase();
+  if (rol !== 'admin') return usuario;
+
+  let modified = false;
+  if (usuario.club) {
+    if (typeof usuario.set === 'function') {
+      usuario.set('club', undefined);
+    } else {
+      usuario.club = undefined;
+    }
+    modified = true;
+  }
+
+  if (Array.isArray(usuario.patinadores) && usuario.patinadores.length > 0) {
+    if (typeof usuario.set === 'function') {
+      usuario.set('patinadores', []);
+    } else {
+      usuario.patinadores = [];
+    }
+    modified = true;
+  }
+
+  if (modified && typeof usuario.save === 'function') {
+    await usuario.save();
+  }
+
+  return usuario;
+};
+
+const decodeUserFromAuthHeader = async (req) => {
+  const header = req.headers?.authorization;
+  if (!header || !header.startsWith('Bearer ')) return null;
+  const token = header.slice(7).trim();
+  if (!token) return null;
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    const usuario = await User.findById(payload.id).select('rol club');
+    if (!usuario) return null;
+    return {
+      id: usuario._id.toString(),
+      rol: usuario.rol,
+      club: usuario.club ? usuario.club.toString() : null
+    };
+  } catch {
+    return null;
+  }
+};
+
+const ensureRequestUser = async (req) => {
+  if (req.usuario) return req.usuario;
+  const usuario = await decodeUserFromAuthHeader(req);
+  if (usuario) {
+    req.usuario = usuario;
+  }
+  return usuario;
+};
+
 const getClubIdFromRequest = (req) => {
   if (req.query?.clubId && isValidObjectId(req.query.clubId)) {
     return req.query.clubId;
@@ -488,7 +548,8 @@ async function crearNotificacionesParaClub(clubId, mensaje, competencia = null) 
   if (!clubId) return;
 
   try {
-    const usuarios = await User.find({ club: clubId }, '_id');
+    const clubFilter = normaliseObjectId(clubId) ?? clubId;
+    const usuarios = await User.find({ club: clubFilter, rol: { $ne: 'Admin' } }, '_id');
     const notificaciones = usuarios.map((u) => ({
       destinatario: u._id,
       mensaje,
@@ -993,6 +1054,8 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
     }
 
+    await ensureAdminHasNoAssociations(usuario);
+
     const tokenPayload = {
       id: usuario._id,
       rol: usuario.rol,
@@ -1152,7 +1215,7 @@ app.get('/api/clubs', protegerRuta, async (req, res) => {
       filtro._id = normaliseObjectId(clubId);
     }
 
-    const clubs = await Club.find(filtro).sort({ nombre: 1 });
+    const clubs = await Club.find(filtro).sort({ nombre: 1 }).populate('federation', 'nombre');
     res.json(clubs);
   } catch (err) {
     console.error(err);
@@ -1282,6 +1345,149 @@ app.delete('/api/federaciones/:id', protegerRuta, permitirRol('Admin'), async (r
       return res.status(404).json({ mensaje: 'Federación no encontrada' });
     }
     res.status(500).json({ mensaje: 'Error al eliminar la federación' });
+  }
+});
+
+app.post('/api/admin/clubs', protegerRuta, permitirRol('Admin'), upload.single('logo'), async (req, res) => {
+  try {
+    const nombre = trimmedOrNull(req.body?.nombre);
+    if (!nombre) {
+      return res.status(400).json({ mensaje: 'El nombre del club es obligatorio' });
+    }
+
+    const nameRegex = new RegExp(`^${escapeRegExp(nombre)}$`, 'i');
+    const existente = await Club.findOne({ nombre: nameRegex });
+    if (existente) {
+      return res.status(400).json({ mensaje: 'Ya existe un club con ese nombre' });
+    }
+
+    let federationId = null;
+    if (Object.prototype.hasOwnProperty.call(req.body ?? {}, 'federation')) {
+      const federationRaw = trimmedOrNull(req.body.federation);
+      if (federationRaw) {
+        if (!isValidObjectId(federationRaw)) {
+          return res.status(400).json({ mensaje: 'Federación inválida' });
+        }
+        const federationDoc = await Federation.findById(federationRaw);
+        if (!federationDoc) {
+          return res.status(404).json({ mensaje: 'Federación no encontrada' });
+        }
+        federationId = federationDoc._id;
+      }
+    }
+
+    const creadorId = normaliseObjectId(req.usuario?.id);
+    const club = await Club.create({
+      nombre,
+      federation: federationId ?? undefined,
+      logo: req.file ? buildUploadUrl(req.file.filename) : undefined,
+      creadoPor: creadorId ?? undefined
+    });
+
+    const poblado = await Club.findById(club._id).populate('federation', 'nombre').lean();
+    res.status(201).json(poblado || club);
+  } catch (err) {
+    console.error('Error al crear club', err);
+    if (err.code === 11000) {
+      return res.status(400).json({ mensaje: 'Ya existe un club con ese nombre' });
+    }
+    res.status(500).json({ mensaje: 'Error al crear el club' });
+  }
+});
+
+app.put('/api/admin/clubs/:id', protegerRuta, permitirRol('Admin'), upload.single('logo'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ mensaje: 'Club inválido' });
+    }
+
+    const club = await Club.findById(id);
+    if (!club) {
+      return res.status(404).json({ mensaje: 'Club no encontrado' });
+    }
+
+    const nombre = trimmedOrNull(req.body?.nombre);
+    if (!nombre) {
+      return res.status(400).json({ mensaje: 'El nombre del club es obligatorio' });
+    }
+
+    const nameRegex = new RegExp(`^${escapeRegExp(nombre)}$`, 'i');
+    const conflicto = await Club.findOne({ _id: { $ne: club._id }, nombre: nameRegex });
+    if (conflicto) {
+      return res.status(400).json({ mensaje: 'Ya existe un club con ese nombre' });
+    }
+
+    club.nombre = nombre;
+
+    if (Object.prototype.hasOwnProperty.call(req.body ?? {}, 'federation')) {
+      const federationRaw = trimmedOrNull(req.body.federation);
+      if (federationRaw) {
+        if (!isValidObjectId(federationRaw)) {
+          return res.status(400).json({ mensaje: 'Federación inválida' });
+        }
+        const federationDoc = await Federation.findById(federationRaw);
+        if (!federationDoc) {
+          return res.status(404).json({ mensaje: 'Federación no encontrada' });
+        }
+        club.federation = federationDoc._id;
+      } else {
+        club.federation = undefined;
+      }
+    }
+
+    const removeLogo = Object.prototype.hasOwnProperty.call(req.body ?? {}, 'removeLogo')
+      && String(req.body.removeLogo).toLowerCase() === 'true';
+    if (removeLogo) {
+      club.logo = undefined;
+    }
+    if (req.file) {
+      club.logo = buildUploadUrl(req.file.filename);
+    }
+
+    await club.save();
+    const actualizado = await Club.findById(club._id).populate('federation', 'nombre').lean();
+    res.json(actualizado || club);
+  } catch (err) {
+    console.error('Error al actualizar club', err);
+    if (err.name === 'CastError') {
+      return res.status(404).json({ mensaje: 'Club no encontrado' });
+    }
+    if (err.code === 11000) {
+      return res.status(400).json({ mensaje: 'Ya existe un club con ese nombre' });
+    }
+    res.status(500).json({ mensaje: 'Error al actualizar el club' });
+  }
+});
+
+app.delete('/api/admin/clubs/:id', protegerRuta, permitirRol('Admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ mensaje: 'Club inválido' });
+    }
+
+    const club = await Club.findById(id);
+    if (!club) {
+      return res.status(404).json({ mensaje: 'Club no encontrado' });
+    }
+
+    const usuariosAsociados = await User.countDocuments({ club: club._id });
+    const patinadoresAsociados = await Patinador.countDocuments({ club: club._id });
+    if (usuariosAsociados > 0 || patinadoresAsociados > 0) {
+      return res
+        .status(409)
+        .json({ mensaje: 'No se puede eliminar un club con usuarios o patinadores asociados' });
+    }
+
+    await Club.deleteOne({ _id: club._id });
+    res.json({ mensaje: 'Club eliminado' });
+  } catch (err) {
+    console.error('Error al eliminar club', err);
+    if (err.name === 'CastError') {
+      return res.status(404).json({ mensaje: 'Club no encontrado' });
+    }
+    res.status(500).json({ mensaje: 'Error al eliminar el club' });
   }
 });
 
@@ -1655,6 +1861,9 @@ app.delete('/api/patinadores/:id', protegerRuta, async (req, res) => {
 app.post('/api/patinadores/asociar', protegerRuta, async (req, res) => {
   const { dniPadre, dniMadre } = req.body;
   if (!dniPadre && !dniMadre) return res.status(400).json({ mensaje: 'Debe proporcionar dniPadre o dniMadre' });
+  if (isAdminUser(req)) {
+    return res.status(403).json({ mensaje: 'Los administradores no pueden asociar patinadores' });
+  }
   try {
     const condiciones = [];
     if (dniPadre) condiciones.push({ dniPadre });
@@ -1695,6 +1904,10 @@ app.post('/api/users/club', protegerRuta, async (req, res) => {
       return res.status(404).json({ mensaje: 'Usuario no encontrado' });
     }
 
+    if (usuario.rol === 'Admin') {
+      return res.status(403).json({ mensaje: 'Los administradores no pueden asociarse a clubes' });
+    }
+
     if (usuario.rol !== 'Admin' && usuario.club && usuario.club.toString() !== club._id.toString()) {
       return res.status(400).json({ mensaje: 'No podés cambiar de club una vez asignado' });
     }
@@ -1733,6 +1946,11 @@ app.post('/api/users/club', protegerRuta, async (req, res) => {
 // News
 app.get('/api/news', async (req, res) => {
   try {
+    await ensureRequestUser(req);
+    if (isAdminUser(req)) {
+      return res.json([]);
+    }
+
     const clubId = await ensureClubForRequest(req, res, { allowFallbackToLocal: true });
     if (!clubId) return;
 
@@ -1859,6 +2077,9 @@ app.post('/api/notifications', protegerRuta, permitirRol('Delegado', 'Tecnico'),
 app.get('/api/notifications', protegerRuta, async (req, res) => {
   const userId = req.usuario?.id;
   if (!userId) return res.status(401).json({ mensaje: 'Usuario no autenticado' });
+  if (isAdminUser(req)) {
+    return res.json([]);
+  }
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     console.warn('ID de usuario inválido recibido en /api/notifications', userId);
     return res.status(400).json({ mensaje: 'Identificador de usuario inválido' });
@@ -2880,6 +3101,8 @@ app.get('/api/auth/google/callback', async (req, res) => {
         foto: payload.picture || ''
       });
     }
+
+    await ensureAdminHasNoAssociations(usuario);
 
     const tokenPayload = {
       id: usuario._id,

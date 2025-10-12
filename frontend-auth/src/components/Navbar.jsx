@@ -11,6 +11,7 @@ export default function Navbar() {
   const fileInputRef = useRef(null);
   const rol = sessionStorage.getItem('rol');
   const rolLower = typeof rol === 'string' ? rol.toLowerCase() : '';
+  const isAdmin = rolLower === 'admin';
   const storedFoto = sessionStorage.getItem('foto');
   const normalisedFoto = getImageUrl(storedFoto);
   if (storedFoto && normalisedFoto !== storedFoto) {
@@ -38,9 +39,10 @@ export default function Navbar() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [clubLogo, setClubLogo] = useState(normalisedClubLogo);
   const [clubName, setClubName] = useState(storedClubName);
+  const brandAlt = clubName ? `Logo de ${clubName}` : 'Logo Patín Carrera';
 
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isLoggedIn || isAdmin) {
       setUnread(0);
       return undefined;
     }
@@ -102,7 +104,7 @@ export default function Navbar() {
       }
       window.removeEventListener('notificationsUpdated', handleUpdate);
     };
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isAdmin]);
 
   useEffect(() => {
     document.body.classList.toggle('dark-mode', darkMode);
@@ -111,6 +113,14 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!isLoggedIn) {
+      setClubLogo('');
+      setClubName('');
+      sessionStorage.removeItem('clubLogo');
+      sessionStorage.removeItem('clubNombre');
+      return undefined;
+    }
+
+    if (isAdmin) {
       setClubLogo('');
       setClubName('');
       sessionStorage.removeItem('clubLogo');
@@ -165,7 +175,7 @@ export default function Navbar() {
     return () => {
       active = false;
     };
-  }, [isLoggedIn, location.key]);
+  }, [isLoggedIn, location.key, isAdmin]);
 
   const handleNavigate = (path) => navigate(path);
 
@@ -202,12 +212,17 @@ export default function Navbar() {
   };
 
   const navItems = isLoggedIn
-    ? [
-        { label: 'Inicio', path: '/home' },
-        { label: 'Torneos', path: '/torneos' },
-        { label: 'Títulos del Club', path: '/titulos-club' },
-        ...(rolLower === 'admin' ? [{ label: 'Administración', path: '/admin' }] : []),
-        ...(rol === 'Tecnico'
+    ? isAdmin
+      ? [
+          { label: 'Inicio', path: '/home' },
+          { label: 'Administración', path: '/admin' }
+        ]
+      : [
+          { label: 'Inicio', path: '/home' },
+          { label: 'Torneos', path: '/torneos' },
+          { label: 'Títulos del Club', path: '/titulos-club' },
+          ...(rolLower === 'admin' ? [{ label: 'Administración', path: '/admin' }] : []),
+          ...(rol === 'Tecnico'
           ? [
               { label: 'Entrenamientos', path: '/entrenamientos' },
               { label: 'Progresos', path: '/progresos' }
@@ -258,7 +273,7 @@ export default function Navbar() {
         >
           <img
             src={clubLogo || '/vite.svg'}
-            alt={clubName ? `Logo de ${clubName}` : 'Logo del club'}
+            alt={brandAlt}
             width="80"
             height="80"
             className="rounded-circle"
@@ -326,18 +341,20 @@ export default function Navbar() {
             </button>
             {isLoggedIn && (
               <>
-                <div className="position-relative me-2">
-                  <i
-                    className="bi bi-bell"
-                    style={{ fontSize: '1.5rem', color: unread > 0 ? 'red' : 'gray', cursor: 'pointer' }}
-                    onClick={() => handleNavigate('/notificaciones')}
-                  ></i>
-                  {unread > 0 && (
-                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                      {unread}
-                    </span>
-                  )}
-                </div>
+                {!isAdmin && (
+                  <div className="position-relative me-2">
+                    <i
+                      className="bi bi-bell"
+                      style={{ fontSize: '1.5rem', color: unread > 0 ? 'red' : 'gray', cursor: 'pointer' }}
+                      onClick={() => handleNavigate('/notificaciones')}
+                    ></i>
+                    {unread > 0 && (
+                      <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        {unread}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div className="position-relative">
                   <img
                     src={displayPhoto}

@@ -10,6 +10,8 @@ export default function Home() {
   const [currentPatIndex, setCurrentPatIndex] = useState(0);
   const [nextCompetition, setNextCompetition] = useState(null);
   const [federaciones, setFederaciones] = useState([]);
+  const rolActual = sessionStorage.getItem('rol');
+  const esAdmin = typeof rolActual === 'string' && rolActual.toLowerCase() === 'admin';
 
   const normaliseFederationUrl = (url) => {
     if (typeof url !== 'string') return '';
@@ -20,6 +22,14 @@ export default function Home() {
   };
 
   useEffect(() => {
+    if (esAdmin) {
+      setNews([]);
+      setPatinadores([]);
+      setNextCompetition(null);
+      setFederaciones([]);
+      return;
+    }
+
     const cargarNoticias = async () => {
       try {
         const clubId = sessionStorage.getItem('clubId');
@@ -92,7 +102,7 @@ export default function Home() {
     cargarFederaciones();
     const interval = setInterval(cargarCompetencia, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [esAdmin]);
 
   useEffect(() => {
     if (news.length > 0) {
@@ -121,6 +131,22 @@ export default function Home() {
   const latestNews = news.slice(0, 4);
   const wideNews = news.slice(4, 7);
   const additionalNews = news.slice(7, 11);
+
+  if (esAdmin) {
+    return (
+      <div className="container mt-4">
+        <h1 className="mb-4 text-center">Panel principal del administrador</h1>
+        <p className="text-center">
+          El administrador no está asociado a ningún club. Gestioná federaciones y clubes desde el Panel de Administración.
+        </p>
+        <div className="d-flex justify-content-center mt-4">
+          <Link to="/admin" className="btn btn-primary">
+            Ir al Panel de Administración
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -19,12 +19,19 @@ export default function GoogleSuccess() {
         sessionStorage.setItem('clubId', datos.club);
       } else {
         sessionStorage.removeItem('clubId');
+        sessionStorage.removeItem('clubLogo');
+        sessionStorage.removeItem('clubNombre');
       }
       const foto = getImageUrl(datos.foto);
       if (foto) {
         sessionStorage.setItem('foto', foto);
       } else {
         sessionStorage.removeItem('foto');
+      }
+
+      if (datos.rol?.toLowerCase() === 'admin') {
+        sessionStorage.removeItem('clubLogo');
+        sessionStorage.removeItem('clubNombre');
       }
 
       if (datos.needsClubSelection && datos.rol?.toLowerCase() !== 'admin') {
