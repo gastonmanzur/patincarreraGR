@@ -1,12 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api from '../api';
 import LogoutButton from '../components/LogoutButton';
+import getImageUrl from '../utils/getImageUrl';
 
 const initialFormState = {
   nombre: '',
   descripcion: '',
   sitioWeb: '',
   contacto: ''
+};
+
+const initialClubFormState = {
+  nombre: '',
+  federation: '',
+  logo: null,
+  removeLogo: false
 };
 
 const trimValue = (value) => (typeof value === 'string' ? value.trim() : '');
@@ -19,28 +27,41 @@ const ensureUrlHasProtocol = (value) => {
 };
 
 export default function PanelAdmin() {
-  const [usuarios, setUsuarios] = useState([]);
   const [federaciones, setFederaciones] = useState([]);
   const [form, setForm] = useState(initialFormState);
   const [editingId, setEditingId] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [federationLoading, setFederationLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
+  const [clubs, setClubs] = useState([]);
+  const [clubForm, setClubForm] = useState(initialClubFormState);
+  const [clubEditingId, setClubEditingId] = useState(null);
+  const [clubLoading, setClubLoading] = useState(false);
+  const [clubLogoPreview, setClubLogoPreview] = useState('');
+  const [clubExistingLogo, setClubExistingLogo] = useState('');
+  const clubLogoInputRef = useRef(null);
 
-  const showFeedback = (type, message) => {
+  const showFeedback = useCallback((type, message) => {
     setFeedback({ type, message });
+  }, []);
+
+  const clearClubLogoPreview = () => {
+    if (clubLogoPreview && clubLogoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(clubLogoPreview);
+    }
+    setClubLogoPreview('');
   };
 
-  const loadUsuarios = async () => {
-    try {
-      const res = await api.get('/protegido/usuarios');
-      setUsuarios(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      console.error('Error al obtener usuarios', err);
-      showFeedback('danger', err.response?.data?.mensaje || 'No se pudieron cargar los usuarios');
+  const resetClubForm = () => {
+    clearClubLogoPreview();
+    setClubForm(initialClubFormState);
+    setClubEditingId(null);
+    setClubExistingLogo('');
+    if (clubLogoInputRef.current) {
+      clubLogoInputRef.current.value = '';
     }
   };
 
-  const loadFederaciones = async () => {
+  const loadFederaciones = useCallback(async () => {
     try {
       const res = await api.get('/federaciones');
       setFederaciones(Array.isArray(res.data) ? res.data : []);
@@ -48,12 +69,43 @@ export default function PanelAdmin() {
       console.error('Error al obtener federaciones', err);
       showFeedback('danger', err.response?.data?.mensaje || 'No se pudieron cargar las federaciones');
     }
-  };
+  }, [showFeedback]);
+
+  const loadClubs = useCallback(async () => {
+    try {
+      const res = await api.get('/clubs');
+      const data = Array.isArray(res.data) ? res.data : [];
+      setClubs(
+        data.map((club) => ({
+          ...club,
+          logo: getImageUrl(club.logo),
+          federation:
+            club.federation && typeof club.federation === 'object'
+              ? { _id: club.federation._id, nombre: club.federation.nombre || '' }
+              : club.federation
+                ? { _id: club.federation, nombre: '' }
+                : null
+        }))
+      );
+    } catch (err) {
+      console.error('Error al obtener clubes', err);
+      showFeedback('danger', err.response?.data?.mensaje || 'No se pudieron cargar los clubes');
+    }
+  }, [showFeedback]);
+
+  useEffect(
+    () => () => {
+      if (clubLogoPreview && clubLogoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(clubLogoPreview);
+      }
+    },
+    [clubLogoPreview]
+  );
 
   useEffect(() => {
-    void loadUsuarios();
     void loadFederaciones();
-  }, []);
+    void loadClubs();
+  }, [loadFederaciones, loadClubs]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -65,9 +117,47 @@ export default function PanelAdmin() {
     setEditingId(null);
   };
 
+  const handleClubInputChange = (event) => {
+    const { name, value } = event.target;
+    setClubForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleClubLogoChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (clubLogoPreview && clubLogoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(clubLogoPreview);
+    }
+    if (file) {
+      setClubLogoPreview(URL.createObjectURL(file));
+    } else {
+      setClubLogoPreview(clubExistingLogo);
+    }
+    setClubForm((prev) => ({ ...prev, logo: file, removeLogo: false }));
+  };
+
+  const handleToggleRemoveLogo = (event) => {
+    const shouldRemove = event.target.checked;
+    setClubForm((prev) => ({
+      ...prev,
+      removeLogo: shouldRemove,
+      logo: shouldRemove ? null : prev.logo
+    }));
+    if (shouldRemove) {
+      if (clubLogoPreview && clubLogoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(clubLogoPreview);
+      }
+      setClubLogoPreview('');
+      if (clubLogoInputRef.current) {
+        clubLogoInputRef.current.value = '';
+      }
+    } else {
+      setClubLogoPreview(clubExistingLogo);
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setLoading(true);
+    setFederationLoading(true);
     showFeedback('', '');
 
     const payload = {
@@ -78,7 +168,7 @@ export default function PanelAdmin() {
     };
 
     if (!payload.nombre) {
-      setLoading(false);
+      setFederationLoading(false);
       showFeedback('danger', 'El nombre de la federación es obligatorio');
       return;
     }
@@ -97,7 +187,50 @@ export default function PanelAdmin() {
       const apiMessage = err.response?.data?.mensaje;
       showFeedback('danger', apiMessage || 'No se pudo guardar la federación');
     } finally {
-      setLoading(false);
+      setFederationLoading(false);
+    }
+  };
+
+  const handleClubSubmit = async (event) => {
+    event.preventDefault();
+    setClubLoading(true);
+    showFeedback('', '');
+
+    const nombreNormalizado = trimValue(clubForm.nombre);
+    if (!nombreNormalizado) {
+      setClubLoading(false);
+      showFeedback('danger', 'El nombre del club es obligatorio');
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('nombre', nombreNormalizado);
+      formData.append('federation', clubForm.federation || '');
+      if (clubForm.logo) {
+        formData.append('logo', clubForm.logo);
+      }
+      if (clubEditingId && clubForm.removeLogo) {
+        formData.append('removeLogo', 'true');
+      }
+
+      const config = { headers: { 'Content-Type': 'multipart/form-data' } };
+
+      if (clubEditingId) {
+        await api.put(`/admin/clubs/${clubEditingId}`, formData, config);
+        showFeedback('success', 'Club actualizado correctamente');
+      } else {
+        await api.post('/admin/clubs', formData, config);
+        showFeedback('success', 'Club creado correctamente');
+      }
+
+      await loadClubs();
+      resetClubForm();
+    } catch (err) {
+      const apiMessage = err.response?.data?.mensaje;
+      showFeedback('danger', apiMessage || 'No se pudo guardar el club');
+    } finally {
+      setClubLoading(false);
     }
   };
 
@@ -134,6 +267,51 @@ export default function PanelAdmin() {
     showFeedback('', '');
   };
 
+  const handleClubEdit = (club) => {
+    showFeedback('', '');
+    clearClubLogoPreview();
+    setClubEditingId(club._id);
+    setClubForm({
+      nombre: club.nombre || '',
+      federation: club.federation?._id || '',
+      logo: null,
+      removeLogo: false
+    });
+    const normalisedLogo = getImageUrl(club.logo);
+    setClubExistingLogo(normalisedLogo || '');
+    setClubLogoPreview(normalisedLogo || '');
+    if (clubLogoInputRef.current) {
+      clubLogoInputRef.current.value = '';
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleClubDelete = async (id) => {
+    const confirmed = window.confirm('¿Seguro que querés eliminar este club?');
+    if (!confirmed) return;
+    showFeedback('', '');
+    setClubLoading(true);
+
+    try {
+      await api.delete(`/admin/clubs/${id}`);
+      showFeedback('success', 'Club eliminado correctamente');
+      if (clubEditingId === id) {
+        resetClubForm();
+      }
+      await loadClubs();
+    } catch (err) {
+      const apiMessage = err.response?.data?.mensaje;
+      showFeedback('danger', apiMessage || 'No se pudo eliminar el club');
+    } finally {
+      setClubLoading(false);
+    }
+  };
+
+  const cancelClubEdit = () => {
+    resetClubForm();
+    showFeedback('', '');
+  };
+
   const federacionesConEnlace = useMemo(
     () =>
       federaciones.map((fed) => ({
@@ -142,6 +320,16 @@ export default function PanelAdmin() {
       })),
     [federaciones]
   );
+
+  const federacionesPorId = useMemo(() => {
+    const mapa = new Map();
+    federaciones.forEach((fed) => {
+      if (fed?._id) {
+        mapa.set(fed._id, fed.nombre || '');
+      }
+    });
+    return mapa;
+  }, [federaciones]);
 
   return (
     <div className="container mt-4">
@@ -216,8 +404,8 @@ export default function PanelAdmin() {
                 />
               </div>
               <div className="col-12 d-flex gap-2">
-                <button type="submit" className="btn btn-primary" disabled={loading}>
-                  {loading
+                <button type="submit" className="btn btn-primary" disabled={federationLoading}>
+                  {federationLoading
                     ? editingId
                       ? 'Guardando...'
                       : 'Creando...'
@@ -226,7 +414,7 @@ export default function PanelAdmin() {
                       : 'Crear federación'}
                 </button>
                 {editingId && (
-                  <button type="button" className="btn btn-outline-secondary" onClick={cancelEdit} disabled={loading}>
+                  <button type="button" className="btn btn-outline-secondary" onClick={cancelEdit} disabled={federationLoading}>
                     Cancelar
                   </button>
                 )}
@@ -285,33 +473,173 @@ export default function PanelAdmin() {
       </section>
 
       <section className="mt-5">
-        <h2 className="mb-3 text-center text-md-start">Usuarios registrados</h2>
+        <div className="card shadow-sm">
+          <div className="card-body">
+            <h2 className="h4 mb-3">{clubEditingId ? 'Editar club' : 'Crear club'}</h2>
+            <p className="text-muted small">
+              Administrá los clubes disponibles para los usuarios de la plataforma.
+            </p>
+            <form onSubmit={handleClubSubmit} className="row g-3">
+              <div className="col-12 col-md-6">
+                <label htmlFor="clubNombre" className="form-label">Nombre</label>
+                <input
+                  type="text"
+                  id="clubNombre"
+                  name="nombre"
+                  className="form-control"
+                  value={clubForm.nombre}
+                  onChange={handleClubInputChange}
+                  required
+                  placeholder="Nombre del club"
+                />
+              </div>
+              <div className="col-12 col-md-6">
+                <label htmlFor="clubFederation" className="form-label">Federación</label>
+                <select
+                  id="clubFederation"
+                  name="federation"
+                  className="form-select"
+                  value={clubForm.federation}
+                  onChange={handleClubInputChange}
+                >
+                  <option value="">Sin federación</option>
+                  {federaciones.map((fed) => (
+                    <option key={fed._id} value={fed._id}>{fed.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-12 col-md-6">
+                <label htmlFor="clubLogo" className="form-label">Logo</label>
+                <input
+                  type="file"
+                  id="clubLogo"
+                  name="logo"
+                  className="form-control"
+                  accept="image/*"
+                  ref={clubLogoInputRef}
+                  onChange={handleClubLogoChange}
+                />
+              </div>
+              <div className="col-12 col-md-6 d-flex flex-column flex-md-row align-items-md-center gap-3">
+                {clubLogoPreview || clubExistingLogo ? (
+                  <img
+                    src={clubLogoPreview || clubExistingLogo}
+                    alt="Logo del club"
+                    className="rounded"
+                    style={{ width: '80px', height: '80px', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <span className="text-muted">Sin logo seleccionado</span>
+                )}
+                {clubEditingId && clubExistingLogo && (
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="removeLogo"
+                      name="removeLogo"
+                      checked={clubForm.removeLogo}
+                      onChange={handleToggleRemoveLogo}
+                    />
+                    <label className="form-check-label" htmlFor="removeLogo">
+                      Eliminar logo actual
+                    </label>
+                  </div>
+                )}
+              </div>
+              <div className="col-12 d-flex gap-2">
+                <button type="submit" className="btn btn-primary" disabled={clubLoading}>
+                  {clubLoading
+                    ? clubEditingId
+                      ? 'Guardando...'
+                      : 'Creando...'
+                    : clubEditingId
+                      ? 'Guardar cambios'
+                      : 'Crear club'}
+                </button>
+                {clubEditingId && (
+                  <button type="button" className="btn btn-outline-secondary" onClick={cancelClubEdit} disabled={clubLoading}>
+                    Cancelar
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-5">
+        <h2 className="mb-3 text-center text-md-start">Clubs registrados</h2>
         <div className="table-responsive">
-          <table className="table table-striped">
+          <table className="table table-striped align-middle">
             <thead>
               <tr>
                 <th>Nombre</th>
-                <th>Apellido</th>
-                <th>Email</th>
-                <th>Rol</th>
+                <th>Federación</th>
+                <th>Logo</th>
+                <th className="text-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {usuarios.map((user) => (
-                <tr key={user._id}>
-                  <td>{user.nombre}</td>
-                  <td>{user.apellido}</td>
-                  <td>{user.email}</td>
-                  <td>{user.rol}</td>
-                </tr>
-              ))}
+              {clubs.map((club) => {
+                const federationId =
+                  club.federation && typeof club.federation === 'object'
+                    ? club.federation._id
+                    : club.federation;
+                const federationNombre =
+                  club.federation && typeof club.federation === 'object'
+                    ? club.federation.nombre
+                    : federationId
+                      ? federacionesPorId.get(federationId) || ''
+                      : '';
+
+                return (
+                  <tr key={club._id}>
+                    <td className="fw-semibold">{club.nombre}</td>
+                    <td>{federationNombre ? federationNombre : <span className="text-muted">-</span>}</td>
+                    <td>
+                      {club.logo ? (
+                        <img
+                          src={club.logo}
+                          alt={`Logo ${club.nombre}`}
+                          style={{ width: '60px', height: '60px', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <span className="text-muted">-</span>
+                      )}
+                    </td>
+                    <td className="text-center">
+                      <div className="btn-group btn-group-sm" role="group">
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary"
+                          onClick={() => handleClubEdit(club)}
+                          disabled={clubLoading}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger"
+                          onClick={() => handleClubDelete(club._id)}
+                          disabled={clubLoading}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-        {usuarios.length === 0 && (
-          <p className="text-muted text-center mt-3">Todavía no hay usuarios registrados.</p>
+        {clubs.length === 0 && (
+          <p className="text-muted text-center mt-3">Todavía no hay clubes registrados.</p>
         )}
       </section>
+
+
     </div>
   );
 }

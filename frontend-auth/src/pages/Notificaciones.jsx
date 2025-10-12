@@ -5,6 +5,8 @@ import api from '../api';
 export default function Notificaciones() {
   const [notificaciones, setNotificaciones] = useState([]);
   const navigate = useNavigate();
+  const rol = sessionStorage.getItem('rol');
+  const esAdmin = typeof rol === 'string' && rol.toLowerCase() === 'admin';
 
   const cargar = async () => {
     try {
@@ -16,8 +18,18 @@ export default function Notificaciones() {
   };
 
   useEffect(() => {
+    if (esAdmin) return;
     cargar();
-  }, []);
+  }, [esAdmin]);
+
+  if (esAdmin) {
+    return (
+      <div className="container mt-4 text-black fw-normal">
+        <h1 className="mb-4 fw-normal text-center">Notificaciones</h1>
+        <p>Los administradores no reciben notificaciones.</p>
+      </div>
+    );
+  }
 
   const marcarLeida = async (id) => {
     try {

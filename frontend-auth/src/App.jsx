@@ -116,16 +116,22 @@ function AppRoutes() {
             path="/reportes/:id"
             element={<ProtectedRoute roles={['Delegado', 'Deportista']}><VerReporte /></ProtectedRoute>}
           />
-          <Route path="/asociar-patinadores" element={<ProtectedRoute><AsociarPatinadores /></ProtectedRoute>} />
+          <Route
+            path="/asociar-patinadores"
+            element={<ProtectedRoute roles={['Delegado', 'Tecnico', 'Deportista']}><AsociarPatinadores /></ProtectedRoute>}
+          />
           <Route path="/admin" element={<AdminRoute><PanelAdmin /></AdminRoute>} />
-          <Route path="/notificaciones" element={<ProtectedRoute><Notificaciones /></ProtectedRoute>} />
+          <Route
+            path="/notificaciones"
+            element={<ProtectedRoute roles={['Delegado', 'Tecnico', 'Deportista']}><Notificaciones /></ProtectedRoute>}
+          />
           <Route
             path="/titulos-club"
-            element={<ProtectedRoute><TitulosClub /></ProtectedRoute>}
+            element={<ProtectedRoute roles={['Delegado', 'Tecnico', 'Deportista']}><TitulosClub /></ProtectedRoute>}
           />
           <Route
             path="/titulos-club/:id"
-            element={<ProtectedRoute><VerTituloClub /></ProtectedRoute>}
+            element={<ProtectedRoute roles={['Delegado', 'Tecnico', 'Deportista']}><VerTituloClub /></ProtectedRoute>}
           />
           <Route
             path="/seguros"

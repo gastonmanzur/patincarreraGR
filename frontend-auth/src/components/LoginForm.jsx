@@ -22,6 +22,8 @@ export default function LoginForm() {
         sessionStorage.setItem('clubId', usuario.club);
       } else {
         sessionStorage.removeItem('clubId');
+        sessionStorage.removeItem('clubLogo');
+        sessionStorage.removeItem('clubNombre');
       }
 
       const foto = getImageUrl(usuario.foto);
@@ -29,6 +31,11 @@ export default function LoginForm() {
         sessionStorage.setItem('foto', foto);
       } else {
         sessionStorage.removeItem('foto');
+      }
+
+      if (usuario.rol?.toLowerCase() === 'admin') {
+        sessionStorage.removeItem('clubLogo');
+        sessionStorage.removeItem('clubNombre');
       }
 
       alert(`Bienvenido ${usuario.nombre}`);
