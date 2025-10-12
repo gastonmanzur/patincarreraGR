@@ -430,7 +430,9 @@ export default function Home() {
       )}
       {federacionesParaMostrar.length > 0 && (
         <div className="container mb-5">
-          <h2 className="text-center mb-4">Federaciones asociadas a la CAP</h2>
+          <h2 className="text-center mb-4">
+            {`AFILIADO A "${federacionesParaMostrar[0].nombre}".`}
+          </h2>
           <div className="row g-4">
             {federacionesParaMostrar.map((federacion) => (
               <div className="col-12 col-md-6 col-lg-4" key={federacion._id}>
@@ -440,20 +442,17 @@ export default function Home() {
                     {federacion.descripcion && (
                       <p className="card-text flex-grow-1">{federacion.descripcion}</p>
                     )}
-                    {(federacion.sitioWeb || federacion.contacto) && (
+                    {federacion.sitioWeb && (
                       <ul className="list-unstyled small mb-0 mt-3">
-                        {federacion.sitioWeb && (
-                          <li>
-                            <a
-                              href={normaliseFederationUrl(federacion.sitioWeb)}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              {federacion.sitioWeb}
-                            </a>
-                          </li>
-                        )}
-                        {federacion.contacto && <li>{federacion.contacto}</li>}
+                        <li>
+                          <a
+                            href={normaliseFederationUrl(federacion.sitioWeb)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {federacion.sitioWeb}
+                          </a>
+                        </li>
                       </ul>
                     )}
                   </div>
