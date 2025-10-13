@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api';
 
@@ -53,6 +53,8 @@ export default function ResultadosCompetencia() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [archivo, setArchivo] = useState(null);
+  const [importando, setImportando] = useState(false);
+  const inputArchivoRef = useRef(null);
 
   const [categoria, setCategoria] = useState('');
   const [puntos, setPuntos] = useState('');
@@ -159,19 +161,31 @@ export default function ResultadosCompetencia() {
   };
   const importar = async (e) => {
     e.preventDefault();
-    if (!archivo) return;
+    if (!archivo || importando) return;
     try {
+      setImportando(true);
       const formData = new FormData();
       formData.append('archivo', archivo);
-      await api.post(`/competitions/${id}/resultados/import-pdf`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const { data } = await api.post(`/competitions/${id}/resultados/import-pdf`, formData);
       const res = await api.get(`/competitions/${id}/resultados`);
       setResultados(res.data);
       setArchivo(null);
+      if (inputArchivoRef.current) {
+        inputArchivoRef.current.value = '';
+      }
+      if (data?.mensaje) {
+        const procesados = typeof data.procesados === 'number' ? data.procesados : null;
+        const detalle =
+          procesados === null
+            ? data.mensaje
+            : `${data.mensaje}. ${procesados} ${procesados === 1 ? 'registro procesado' : 'registros procesados'}.`;
+        alert(detalle);
+      }
     } catch (err) {
       console.error(err);
       alert('Error al importar resultados');
+    } finally {
+      setImportando(false);
     }
   };
 
@@ -189,14 +203,15 @@ export default function ResultadosCompetencia() {
                 type="file"
                 accept="application/pdf"
                 className="form-control"
-                onChange={(e) => setArchivo(e.target.files[0])}
+                onChange={(e) => setArchivo(e.target.files[0] || null)}
+                ref={inputArchivoRef}
               />
               <button
                 className="btn btn-primary"
                 type="submit"
-                disabled={!archivo}
+                disabled={!archivo || importando}
               >
-                Importar PDF
+                {importando ? 'Importando…' : 'Importar PDF'}
               </button>
             </div>
           </form>
