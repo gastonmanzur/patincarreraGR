@@ -4,17 +4,27 @@ export default function parseResultadosJson(json) {
   let currentCategoria = null;
 
   for (const line of lines) {
-    // Detect header rows that include the category name, e.g.
-    // "Orden Nro Atleta APELLIDO Y NOMBRES CATEGORIA PDE CLUB ...".
-    const headerMatch = line.match(
-      /orden.*categor[ií]a\s+([^\s]+)\s+club/i
-    );
-    if (headerMatch) {
-      currentCategoria = headerMatch[1];
+    // Detect explicit category lines such as "CATEGORIA CHUPETE" or
+    // "CATEGORIA: PRE-INFANTIL".
+    const categoriaLine = line.match(/^categor[ií]a\s*[:\-]?\s*(.+)$/i);
+    if (categoriaLine) {
+      const posibleCategoria = categoriaLine[1].trim();
+      if (posibleCategoria && !/orden\b/i.test(posibleCategoria)) {
+        currentCategoria = posibleCategoria.replace(/\s{2,}.*/, '').trim();
+      }
       continue;
     }
 
-    if (!currentCategoria) continue; // Skip lines until a category header is found
+    // Detect header rows that include the category name, e.g.
+    // "Orden Nro Atleta APELLIDO Y NOMBRES CATEGORIA CHUPETE CLUB ...".
+    const headerMatch = line.match(/orden.*categor[ií]a\s+([^\s].*?)\s+club/i);
+    if (headerMatch) {
+      const posibleCategoria = headerMatch[1].trim();
+      if (posibleCategoria && !/orden\b/i.test(posibleCategoria)) {
+        currentCategoria = posibleCategoria;
+      }
+      continue;
+    }
 
     // Each data row begins with an order number followed by at least two spaces.
     if (!/^\d+\s{2,}/.test(line)) continue;
@@ -26,30 +36,42 @@ export default function parseResultadosJson(json) {
     const [orden, dorsal, nombre, maybeCategoriaOrClub, ...rest] = columns;
     if (!orden || !dorsal || rest.length === 0) continue;
 
-    // Determine if the row includes an explicit category column. Some PDFs place
-    // the category only in the header, while others repeat it for each row.
+    let categoria = currentCategoria;
     let club = maybeCategoriaOrClub;
-    if (
-      currentCategoria &&
-      maybeCategoriaOrClub.toUpperCase() === currentCategoria.toUpperCase()
-    ) {
+
+    if (!categoria) {
+      // If no category has been detected yet, assume the fourth column contains it.
+      categoria = maybeCategoriaOrClub;
       club = rest.shift();
+    } else if (maybeCategoriaOrClub.toUpperCase() === categoria.toUpperCase()) {
+      // Many PDFs repeat the category in each row.
+      club = rest.shift();
+    } else if (rest.length > 0 && !rest[0].match(/^\d/)) {
+      // If the category changed and there was no explicit header, detect it when the
+      // category name appears in the row and is followed by a club name (non numeric).
+      categoria = maybeCategoriaOrClub;
+      club = rest.shift();
+      currentCategoria = categoria;
     }
 
-    if (!club || rest.length === 0) continue;
+    if (!categoria || !club || rest.length === 0) continue;
 
     // The last element of `rest` is the total points. Intermediate values
     // correspond to per-prueba details which we ignore for this import.
-    const total = parseFloat(rest[rest.length - 1]);
+    const totalRaw = rest[rest.length - 1];
+    const total = parseFloat(totalRaw.replace(',', '.'));
+    if (Number.isNaN(total)) continue;
 
     results.push({
       posicion: parseInt(orden, 10),
       dorsal,
       nombre,
-      categoria: currentCategoria,
+      categoria,
       club,
       puntos: total
     });
+
+    currentCategoria = categoria;
   }
 
   return results;
