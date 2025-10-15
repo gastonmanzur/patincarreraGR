@@ -678,9 +678,6 @@ const pickNonEmptyString = (...values) => {
   return '';
 };
 
-const escapeRegExp = (value) =>
-  value.replace(/[.*+?^${}()|\[\]\\]/g, '\$&');
-
 const trimmedOrNull = (value) => {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
