@@ -378,6 +378,65 @@ const normaliseObjectId = (value) => {
   return new mongoose.Types.ObjectId(value);
 };
 
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const normalizeComparableText = (value) => {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^0-9A-Za-z]+/g, ' ')
+    .trim()
+    .toLowerCase();
+};
+
+const sanitizeDorsalValue = (value) => {
+  if (value === null || value === undefined) return null;
+  const digitsOnly = String(value).replace(/\D+/g, '');
+  if (!digitsOnly) return null;
+  const parsed = Number.parseInt(digitsOnly, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const buildCaseInsensitiveRegex = (value) => {
+  if (value === null || value === undefined) return null;
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+  return new RegExp(`^${escapeRegExp(trimmed)}$`, 'i');
+};
+
+const findPatinadorByDorsalAndCategoria = async (clubId, dorsal, categoria) => {
+  const clubObjectId = normaliseObjectId(clubId);
+  if (!clubObjectId) return null;
+
+  const dorsalNumber = sanitizeDorsalValue(dorsal);
+  if (dorsalNumber === null) return null;
+
+  const baseFilter = { numeroCorredor: dorsalNumber, club: clubObjectId };
+  const candidatos = await Patinador.find(baseFilter);
+  if (candidatos.length === 0) return null;
+  if (!categoria) return candidatos[0];
+
+  const normalisedTarget = normalizeComparableText(categoria);
+  if (normalisedTarget) {
+    const match = candidatos.find(
+      (p) => normalizeComparableText(p.categoria) === normalisedTarget
+    );
+    if (match) return match;
+  }
+
+  const categoriaRegex = buildCaseInsensitiveRegex(categoria);
+  if (categoriaRegex) {
+    const regexMatch = candidatos.find((p) => categoriaRegex.test(p.categoria || ''));
+    if (regexMatch) return regexMatch;
+
+    const dbMatch = await Patinador.findOne({ ...baseFilter, categoria: categoriaRegex });
+    if (dbMatch) return dbMatch;
+  }
+
+  return candidatos[0];
+};
+
 const isAdminUser = (req) => (req.usuario?.rol || '').toLowerCase() === 'admin';
 
 const ensureAdminHasNoAssociations = async (usuario) => {
@@ -2373,17 +2432,20 @@ app.post('/api/competitions/:id/resultados/import-pdf', protegerRuta, permitirRo
     let count = 0;
 
     for (const fila of filas) {
-      const patinador = await Patinador.findOne({
-        numeroCorredor: Number(fila.dorsal),
-        categoria: fila.categoria,
-        club: normaliseObjectId(clubId)
-      });
+      const dorsalNumber = sanitizeDorsalValue(fila.dorsal);
+      if (dorsalNumber === null) continue;
+
+      const patinador = await findPatinadorByDorsalAndCategoria(clubId, dorsalNumber, fila.categoria);
       if (!patinador) continue;
+
+      const categoriaResultado = patinador.categoria || fila.categoria;
+      const dorsalDisplay = String(fila.dorsal ?? '').trim() || String(dorsalNumber);
+
       await Resultado.findOneAndUpdate(
-        { competenciaId: competencia._id, deportistaId: patinador._id, categoria: fila.categoria },
+        { competenciaId: competencia._id, deportistaId: patinador._id, categoria: categoriaResultado },
         {
           puntos: fila.puntos,
-          dorsal: fila.dorsal,
+          dorsal: dorsalDisplay,
           club: clubId,
           fuenteImportacion: { archivo: req.file.originalname, hash }
         },
