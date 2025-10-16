@@ -1,78 +1,252 @@
-export default function parseResultadosJson(json) {
-  const { lines } = json;
-  const results = [];
-  let currentCategoria = null;
+const normaliseComparable = (value) => {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^0-9a-zA-Z]+/g, ' ')
+    .trim()
+    .toLowerCase();
+};
 
-  for (const line of lines) {
-    // Detect explicit category lines such as "CATEGORIA CHUPETE" or
-    // "CATEGORIA: PRE-INFANTIL".
-    const categoriaLine = line.match(/^categor[ií]a\s*[:\-]?\s*(.+)$/i);
-    if (categoriaLine) {
-      const posibleCategoria = categoriaLine[1].trim();
-      if (posibleCategoria && !/orden\b/i.test(posibleCategoria)) {
-        currentCategoria = posibleCategoria.replace(/\s{2,}.*/, '').trim();
-      }
-      continue;
+const areLooselyEqual = (a, b) => {
+  if (!a && !b) return true;
+  return normaliseComparable(a) === normaliseComparable(b);
+};
+
+const isNumeric = (value) => {
+  if (value === null || value === undefined) return false;
+  const trimmed = String(value).trim();
+  if (!trimmed) return false;
+  return /^-?\d+(?:[.,]\d+)?$/.test(trimmed);
+};
+
+const parseNumeric = (value) => {
+  if (!isNumeric(value)) return Number.NaN;
+  return Number.parseFloat(String(value).replace(',', '.'));
+};
+
+const buildRow = ({
+  posicion,
+  dorsal,
+  nombre,
+  categoria,
+  club,
+  puntos,
+  linea,
+  raw,
+  parser
+}) => ({
+  posicion,
+  dorsal,
+  nombre,
+  categoria,
+  club,
+  puntos,
+  linea,
+  raw,
+  parser
+});
+
+const parseColumnsRow = (columns, contexto) => {
+  if (columns.length < 4) return null;
+
+  const [ordenRaw, dorsalRaw, nombreRaw, ...rest] = columns;
+  const posicion = Number.parseInt(ordenRaw, 10);
+  if (Number.isNaN(posicion)) return null;
+
+  const dorsal = dorsalRaw;
+  const valores = [...rest];
+  const puntosIndex = (() => {
+    for (let i = valores.length - 1; i >= 0; i -= 1) {
+      if (isNumeric(valores[i])) return i;
     }
+    return -1;
+  })();
 
-    // Detect header rows that include the category name, e.g.
-    // "Orden Nro Atleta APELLIDO Y NOMBRES CATEGORIA CHUPETE CLUB ...".
-    const headerMatch = line.match(/orden.*categor[ií]a\s+([^\s].*?)\s+club/i);
-    if (headerMatch) {
-      const posibleCategoria = headerMatch[1].trim();
-      if (posibleCategoria && !/orden\b/i.test(posibleCategoria)) {
-        currentCategoria = posibleCategoria;
-      }
-      continue;
-    }
+  if (puntosIndex === -1) return null;
 
-    // Each data row begins with an order number followed by at least two spaces.
-    if (!/^\d+\s{2,}/.test(line)) continue;
+  const puntosRaw = valores.splice(puntosIndex, 1)[0];
+  const puntos = parseNumeric(puntosRaw);
+  if (Number.isNaN(puntos)) return null;
 
-    // Split by two or more spaces to preserve names and club names containing spaces.
-    const columns = line.split(/\s{2,}/).map((c) => c.trim()).filter(Boolean);
-    if (columns.length < 4) continue;
+  let categoria = contexto.currentCategoria || null;
+  let club = '';
 
-    const [orden, dorsal, nombre, maybeCategoriaOrClub, ...rest] = columns;
-    if (!orden || !dorsal || rest.length === 0) continue;
-
-    let categoria = currentCategoria;
-    let club = maybeCategoriaOrClub;
-
-    if (!categoria) {
-      // If no category has been detected yet, assume the fourth column contains it.
-      categoria = maybeCategoriaOrClub;
-      club = rest.shift();
-    } else if (maybeCategoriaOrClub.toUpperCase() === categoria.toUpperCase()) {
-      // Many PDFs repeat the category in each row.
-      club = rest.shift();
-    } else if (rest.length > 0 && !rest[0].match(/^\d/)) {
-      // If the category changed and there was no explicit header, detect it when the
-      // category name appears in the row and is followed by a club name (non numeric).
-      categoria = maybeCategoriaOrClub;
-      club = rest.shift();
-      currentCategoria = categoria;
-    }
-
-    if (!categoria || !club || rest.length === 0) continue;
-
-    // The last element of `rest` is the total points. Intermediate values
-    // correspond to per-prueba details which we ignore for this import.
-    const totalRaw = rest[rest.length - 1];
-    const total = parseFloat(totalRaw.replace(',', '.'));
-    if (Number.isNaN(total)) continue;
-
-    results.push({
-      posicion: parseInt(orden, 10),
-      dorsal,
-      nombre,
-      categoria,
-      club,
-      puntos: total
-    });
-
-    currentCategoria = categoria;
+  if (!categoria && valores.length > 0) {
+    categoria = valores.shift();
+  } else if (categoria && valores.length > 0 && areLooselyEqual(valores[0], categoria)) {
+    valores.shift();
+  } else if (valores.length > 1 && !areLooselyEqual(valores[0], categoria)) {
+    categoria = valores.shift();
   }
 
-  return results;
+  if (valores.length > 0) {
+    club = valores.shift();
+  }
+
+  if (!categoria) return null;
+
+  contexto.currentCategoria = categoria;
+  contexto.detectedCategorias.add(categoria);
+
+  const nombre = nombreRaw;
+  if (!nombre) return null;
+
+  return buildRow({
+    posicion,
+    dorsal,
+    nombre,
+    categoria,
+    club,
+    puntos,
+    linea: contexto.lineaActual,
+    raw: contexto.lineaCruda,
+    parser: 'columnar'
+  });
+};
+
+const parseCompactRow = (line, contexto) => {
+  const tokens = line.split(/\s+/).filter(Boolean);
+  if (tokens.length < 4) return null;
+
+  const posicion = Number.parseInt(tokens.shift(), 10);
+  if (Number.isNaN(posicion)) return null;
+
+  const dorsal = tokens.shift();
+  const puntosToken = tokens[tokens.length - 1];
+  if (!isNumeric(puntosToken)) return null;
+  const puntos = parseNumeric(puntosToken);
+  if (Number.isNaN(puntos)) return null;
+  tokens.pop();
+
+  let categoria = contexto.currentCategoria || null;
+  let club = '';
+
+  if (!categoria && tokens.length > 1) {
+    categoria = tokens.pop();
+  }
+
+  if (tokens.length > 1 && !categoria) {
+    categoria = tokens.pop();
+  }
+
+  if (!categoria) return null;
+
+  if (tokens.length > 1) {
+    club = tokens.pop();
+  }
+
+  const nombre = tokens.join(' ');
+  if (!nombre) return null;
+
+  contexto.currentCategoria = categoria;
+  contexto.detectedCategorias.add(categoria);
+  contexto.fallbackRows += 1;
+
+  return buildRow({
+    posicion,
+    dorsal,
+    nombre,
+    categoria,
+    club,
+    puntos,
+    linea: contexto.lineaActual,
+    raw: contexto.lineaCruda,
+    parser: 'compact'
+  });
+};
+
+const isHeaderLine = (line) => /\b(orden|puesto|posicion)\b/i.test(line);
+
+export default function parseResultadosJson(json) {
+  const sourceLines = Array.isArray(json?.rawLines) && json.rawLines.length > 0 ? json.rawLines : json?.lines || [];
+  const filas = [];
+  const errores = [];
+  const contexto = {
+    currentCategoria: null,
+    detectedCategorias: new Set(),
+    fallbackRows: 0,
+    lineaActual: 0,
+    lineaCruda: ''
+  };
+
+  sourceLines.forEach((rawLine, index) => {
+    contexto.lineaActual = index + 1;
+    contexto.lineaCruda = typeof rawLine === 'string' ? rawLine.trim() : '';
+    const line = (rawLine || '').replace(/\u00a0/g, ' ').trim();
+    if (!line) return;
+
+    const categoriaLine = line.match(/^categor[ií]a\s*[:\-]?\s*(.+)$/i);
+    if (categoriaLine) {
+      const posible = categoriaLine[1]?.trim();
+      if (posible && !/orden\b/i.test(posible)) {
+        contexto.currentCategoria = posible.replace(/\s{2,}.*/, '').trim();
+        if (contexto.currentCategoria) contexto.detectedCategorias.add(contexto.currentCategoria);
+      }
+      return;
+    }
+
+    const headerMatch = line.match(/orden.*categor[ií]a\s+([^\s].*?)\s+club/i);
+    if (headerMatch) {
+      const posible = headerMatch[1]?.trim();
+      if (posible && !/orden\b/i.test(posible)) {
+        contexto.currentCategoria = posible;
+        contexto.detectedCategorias.add(posible);
+      }
+      return;
+    }
+
+    if (!/^\d+/.test(line) || isHeaderLine(line)) return;
+
+    const columns = (rawLine || '')
+      .split(/\s{2,}|\t+/)
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    let fila = parseColumnsRow(columns, contexto);
+    if (!fila) {
+      fila = parseCompactRow(line, contexto);
+    }
+
+    if (!fila) {
+      errores.push({
+        linea: contexto.lineaActual,
+        razon: 'Formato de fila no reconocido',
+        raw: contexto.lineaCruda
+      });
+      return;
+    }
+
+    if (!fila.categoria) {
+      errores.push({
+        linea: contexto.lineaActual,
+        razon: 'Categoría no detectada',
+        raw: contexto.lineaCruda
+      });
+      return;
+    }
+
+    if (Number.isNaN(fila.puntos)) {
+      errores.push({
+        linea: contexto.lineaActual,
+        razon: 'Puntaje inválido',
+        raw: contexto.lineaCruda
+      });
+      return;
+    }
+
+    filas.push(fila);
+  });
+
+  return {
+    filas,
+    errores,
+    metadata: {
+      categoriasDetectadas: Array.from(contexto.detectedCategorias),
+      lineasProcesadas: sourceLines.length,
+      filasValidas: filas.length,
+      filasDescartadas: errores.length,
+      filasConFallback: contexto.fallbackRows
+    }
+  };
 }

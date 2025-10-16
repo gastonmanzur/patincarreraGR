@@ -390,6 +390,136 @@ const normalizeComparableText = (value) => {
     .toLowerCase();
 };
 
+const buildDisplayName = (patinador) => {
+  if (!patinador) return '';
+  return [patinador.apellido, patinador.primerNombre, patinador.segundoNombre]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+};
+
+const buildPatinadorIndexes = (patinadores) => {
+  const dorsalIndex = new Map();
+  const nombreIndex = [];
+
+  (patinadores || []).forEach((patinador) => {
+    if (!patinador) return;
+
+    if (patinador.numeroCorredor !== null && patinador.numeroCorredor !== undefined) {
+      const key = String(patinador.numeroCorredor);
+      if (key) {
+        if (!dorsalIndex.has(key)) dorsalIndex.set(key, []);
+        dorsalIndex.get(key).push(patinador);
+      }
+    }
+
+    const displayName = buildDisplayName(patinador);
+    const comparable = normalizeComparableText(displayName);
+    if (comparable) {
+      nombreIndex.push({ comparable, displayName, patinador });
+    }
+  });
+
+  return { dorsalIndex, nombreIndex };
+};
+
+const buildBigramMap = (value) => {
+  const map = new Map();
+  for (let i = 0; i < value.length - 1; i += 1) {
+    const pair = value.slice(i, i + 2);
+    map.set(pair, (map.get(pair) || 0) + 1);
+  }
+  return map;
+};
+
+const computeBigramSimilarity = (a, b) => {
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  if (a.length < 2 || b.length < 2) return a === b ? 1 : 0;
+
+  const mapA = buildBigramMap(a);
+  let intersection = 0;
+  for (let i = 0; i < b.length - 1; i += 1) {
+    const pair = b.slice(i, i + 2);
+    const count = mapA.get(pair);
+    if (count) {
+      intersection += 1;
+      mapA.set(pair, count - 1);
+    }
+  }
+
+  const totalPairs = (a.length - 1) + (b.length - 1);
+  if (totalPairs === 0) return 0;
+  return (2 * intersection) / totalPairs;
+};
+
+const computeTokenDiceCoefficient = (a, b) => {
+  const tokensA = a.split(' ').filter(Boolean);
+  const tokensB = b.split(' ').filter(Boolean);
+  if (tokensA.length === 0 || tokensB.length === 0) return 0;
+
+  const mapB = new Map();
+  tokensB.forEach((token) => mapB.set(token, (mapB.get(token) || 0) + 1));
+
+  let intersection = 0;
+  tokensA.forEach((token) => {
+    const count = mapB.get(token);
+    if (count) {
+      intersection += 1;
+      mapB.set(token, count - 1);
+    }
+  });
+
+  return (2 * intersection) / (tokensA.length + tokensB.length);
+};
+
+const computeNameSimilarity = (nombreA, nombreB) => {
+  const normA = normalizeComparableText(nombreA);
+  const normB = normalizeComparableText(nombreB);
+  if (!normA || !normB) return 0;
+  if (normA === normB) return 1;
+
+  const dice = computeTokenDiceCoefficient(normA, normB);
+  if (dice >= 0.9) return dice;
+
+  const compactA = normA.replace(/\s+/g, '');
+  const compactB = normB.replace(/\s+/g, '');
+  const bigram = computeBigramSimilarity(compactA, compactB);
+
+  return Math.max(dice, bigram);
+};
+
+const NAME_MATCH_THRESHOLD = 0.82;
+
+const findPatinadorByDorsalIndex = (indexes, dorsal, categoria) => {
+  if (!indexes || !dorsal) return null;
+  const lista = indexes.dorsalIndex.get(String(dorsal));
+  if (!lista || lista.length === 0) return null;
+  if (lista.length === 1) return lista[0];
+
+  const objetivo = normalizeComparableText(categoria);
+  if (!objetivo) return lista[0];
+
+  const exact = lista.find((item) => normalizeComparableText(item.categoria) === objetivo);
+  return exact || lista[0];
+};
+
+const findPatinadorByNombreIndex = (indexes, nombre) => {
+  if (!indexes || !nombre) return null;
+  if (!indexes.nombreIndex || indexes.nombreIndex.length === 0) return null;
+  let mejor = { patinador: null, rating: 0 };
+
+  indexes.nombreIndex.forEach((item) => {
+    const score = computeNameSimilarity(nombre, item.displayName);
+    if (score > mejor.rating) {
+      mejor = { patinador: item.patinador, rating: score };
+    }
+  });
+
+  if (!mejor.patinador || mejor.rating < NAME_MATCH_THRESHOLD) return null;
+  return mejor;
+};
+
 const sanitizeDorsalValue = (value) => {
   if (value === null || value === undefined) return null;
   const digitsOnly = String(value).replace(/\D+/g, '');
@@ -2420,41 +2550,173 @@ app.post('/api/competitions/:id/resultados/import-pdf', protegerRuta, permitirRo
     if (!competencia) return res.status(404).json({ mensaje: 'Competencia no encontrada' });
     if (!req.file) return res.status(400).json({ mensaje: 'Archivo no proporcionado' });
 
-    const buffer = fs.readFileSync(req.file.path);
+    const startedAt = Date.now();
+
+    let buffer;
+    try {
+      buffer = fs.readFileSync(req.file.path);
+    } catch (readErr) {
+      console.error('Error al leer PDF importado:', readErr);
+      return res.status(500).json({ mensaje: 'No se pudo leer el archivo PDF cargado' });
+    }
+
+    console.info('[IMPORTACION PDF]', {
+      archivo: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      path: req.file.path
+    });
+
     const jsonPath = req.file.path.replace(/\.[^./]+$/, '.json');
     const json = await pdfToJson(buffer, jsonPath);
-    fs.unlinkSync(req.file.path);
+    const parseResult = parseResultadosJson(json);
+    const filas = Array.isArray(parseResult?.filas) ? parseResult.filas : [];
+    const parseErrors = Array.isArray(parseResult?.errores) ? parseResult.errores : [];
     const hash = crypto.createHash('md5').update(buffer).digest('hex');
-    const filas = parseResultadosJson(json);
-    let count = 0;
 
-    for (const fila of filas) {
-      const dorsalNumber = sanitizeDorsalValue(fila.dorsal);
-      if (dorsalNumber === null) continue;
-
-      const patinador = await findPatinadorByDorsalAndCategoria(clubId, dorsalNumber, fila.categoria);
-      if (!patinador) continue;
-
-      const categoriaResultado = patinador.categoria || fila.categoria;
-      const dorsalDisplay = String(fila.dorsal ?? '').trim() || String(dorsalNumber);
-
-      await Resultado.findOneAndUpdate(
-        { competenciaId: competencia._id, deportistaId: patinador._id, categoria: categoriaResultado },
-        {
-          puntos: fila.puntos,
-          dorsal: dorsalDisplay,
-          club: clubId,
-          fuenteImportacion: { archivo: req.file.originalname, hash }
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
-      count++;
+    if ((json?.metadata?.textLength || 0) < 10 && filas.length === 0) {
+      return res.status(400).json({
+        mensaje: 'No se pudo extraer texto del PDF. Verifique que el archivo tenga texto legible.',
+        detalle: {
+          archivo: req.file.originalname,
+          textLength: json?.metadata?.textLength || 0
+        }
+      });
     }
+
+    const clubObjectId = normaliseObjectId(clubId);
+    if (!clubObjectId) {
+      return res.status(400).json({ mensaje: 'Club inválido para la importación de resultados' });
+    }
+
+    const patinadoresClub = await Patinador.find({ club: clubObjectId }).lean();
+    const indexes = buildPatinadorIndexes(patinadoresClub);
+
+    let procesados = 0;
+    let coincidenciasPorDorsal = 0;
+    let coincidenciasPorNombre = 0;
+    const errores = [...parseErrors];
+    const erroresDeMatching = [];
+    const detallesProcesados = [];
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      for (const fila of filas) {
+        const dorsalNumber = sanitizeDorsalValue(fila.dorsal);
+        const linea = fila.linea ?? null;
+        const rawLinea = fila.raw ?? '';
+        let patinador = null;
+        let matchType = null;
+        let matchScore = null;
+
+        if (dorsalNumber !== null) {
+          const candidato = findPatinadorByDorsalIndex(indexes, dorsalNumber, fila.categoria);
+          if (candidato) {
+            patinador = candidato;
+            matchType = 'dorsal';
+          }
+        }
+
+        if (!patinador) {
+          const nombreMatch = findPatinadorByNombreIndex(indexes, fila.nombre);
+          if (nombreMatch?.patinador) {
+            patinador = nombreMatch.patinador;
+            matchType = 'nombre';
+            matchScore = nombreMatch.rating ?? null;
+          }
+        }
+
+        if (!patinador) {
+          erroresDeMatching.push({
+            linea,
+            razon:
+              dorsalNumber !== null
+                ? `No se encontró coincidencia para dorsal ${dorsalNumber}`
+                : 'No se encontró coincidencia para la fila detectada',
+            raw: rawLinea
+          });
+          continue;
+        }
+
+        if (matchType === 'dorsal') coincidenciasPorDorsal += 1;
+        if (matchType === 'nombre') coincidenciasPorNombre += 1;
+
+        const categoriaResultado = fila.categoria || patinador.categoria;
+        const dorsalDisplay = String(fila.dorsal ?? '').trim() || String(patinador.numeroCorredor || dorsalNumber || '');
+        const puntosValor = Number.isFinite(fila.puntos) ? fila.puntos : 0;
+
+        await Resultado.findOneAndUpdate(
+          { competenciaId: competencia._id, deportistaId: patinador._id, categoria: categoriaResultado },
+          {
+            puntos: puntosValor,
+            dorsal: dorsalDisplay,
+            club: clubId,
+            fuenteImportacion: { archivo: req.file.originalname, hash, metodo: matchType || 'desconocido' }
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true, session }
+        );
+
+        procesados += 1;
+        detallesProcesados.push({
+          linea,
+          nombre: fila.nombre,
+          categoria: categoriaResultado,
+          dorsal: dorsalDisplay,
+          puntos: puntosValor,
+          parser: fila.parser,
+          matchType,
+          matchScore
+        });
+      }
+
+      await session.commitTransaction();
+    } catch (procesamientoError) {
+      await session.abortTransaction();
+      throw procesamientoError;
+    } finally {
+      session.endSession();
+    }
+
+    const resumenErrores = [...errores, ...erroresDeMatching];
     await recalcularPosiciones(competencia._id);
-    res.json({ mensaje: 'Importación completada', procesados: count, archivoJson: path.basename(jsonPath), resultados: filas });
+
+    const duracionMs = Date.now() - startedAt;
+
+    res.json({
+      mensaje: procesados > 0 ? 'Importación completada' : 'No se pudieron registrar resultados',
+      procesados,
+      archivoJson: path.basename(jsonPath),
+      resultados: filas,
+      errores: resumenErrores,
+      resumen: {
+        archivo: req.file.originalname,
+        hash,
+        totalFilasDetectadas: filas.length,
+        resultadosInsertados: procesados,
+        coincidenciasPorDorsal,
+        coincidenciasPorNombre,
+        omitidas: resumenErrores.length,
+        duracionMs,
+        metadataParser: parseResult?.metadata,
+        metadataPdf: json?.metadata
+      },
+      detallesProcesados
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al importar resultados' });
+  } finally {
+    if (req.file?.path) {
+      try {
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+      } catch (unlinkErr) {
+        console.warn('No se pudo eliminar el archivo temporal de importación:', unlinkErr);
+      }
+    }
   }
 });
 
