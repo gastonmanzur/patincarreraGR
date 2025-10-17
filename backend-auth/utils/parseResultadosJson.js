@@ -34,7 +34,9 @@ const buildRow = ({
   puntos,
   linea,
   raw,
-  parser
+  parser,
+  categoriaDetectada = null,
+  categoriaInferida = null
 }) => ({
   posicion,
   dorsal,
@@ -44,7 +46,9 @@ const buildRow = ({
   puntos,
   linea,
   raw,
-  parser
+  parser,
+  categoriaDetectada,
+  categoriaInferida
 });
 
 const parseColumnsRow = (columns, contexto) => {
@@ -69,25 +73,32 @@ const parseColumnsRow = (columns, contexto) => {
   const puntos = parseNumeric(puntosRaw);
   if (Number.isNaN(puntos)) return null;
 
-  let categoria = contexto.currentCategoria || null;
+  const categoriaAnterior = contexto.currentCategoria || null;
+  let categoria = categoriaAnterior;
+  let categoriaDetectada = null;
   let club = '';
 
   if (!categoria && valores.length > 0) {
     categoria = valores.shift();
+    categoriaDetectada = categoria;
   } else if (categoria && valores.length > 0 && areLooselyEqual(valores[0], categoria)) {
     valores.shift();
   } else if (valores.length > 1 && !areLooselyEqual(valores[0], categoria)) {
     categoria = valores.shift();
+    categoriaDetectada = categoria;
   }
 
   if (valores.length > 0) {
     club = valores.shift();
   }
 
-  if (!categoria) return null;
+  const categoriaFinal = categoria || null;
+  const categoriaInferida = categoriaDetectada ? null : categoriaAnterior;
 
-  contexto.currentCategoria = categoria;
-  contexto.detectedCategorias.add(categoria);
+  if (categoriaFinal) {
+    contexto.currentCategoria = categoriaFinal;
+    contexto.detectedCategorias.add(categoriaFinal);
+  }
 
   const nombre = nombreRaw;
   if (!nombre) return null;
@@ -96,12 +107,14 @@ const parseColumnsRow = (columns, contexto) => {
     posicion,
     dorsal,
     nombre,
-    categoria,
+    categoria: categoriaFinal,
     club,
     puntos,
     linea: contexto.lineaActual,
     raw: contexto.lineaCruda,
-    parser: 'columnar'
+    parser: 'columnar',
+    categoriaDetectada,
+    categoriaInferida
   });
 };
 
@@ -119,18 +132,23 @@ const parseCompactRow = (line, contexto) => {
   if (Number.isNaN(puntos)) return null;
   tokens.pop();
 
-  let categoria = contexto.currentCategoria || null;
+  const categoriaAnterior = contexto.currentCategoria || null;
+  let categoria = categoriaAnterior;
+  let categoriaDetectada = null;
   let club = '';
 
   if (!categoria && tokens.length > 1) {
     categoria = tokens.pop();
+    categoriaDetectada = categoria;
   }
 
   if (tokens.length > 1 && !categoria) {
     categoria = tokens.pop();
+    categoriaDetectada = categoria;
   }
 
-  if (!categoria) return null;
+  const categoriaFinal = categoria || null;
+  const categoriaInferida = categoriaDetectada ? null : categoriaAnterior;
 
   if (tokens.length > 1) {
     club = tokens.pop();
@@ -139,20 +157,24 @@ const parseCompactRow = (line, contexto) => {
   const nombre = tokens.join(' ');
   if (!nombre) return null;
 
-  contexto.currentCategoria = categoria;
-  contexto.detectedCategorias.add(categoria);
+  if (categoriaFinal) {
+    contexto.currentCategoria = categoriaFinal;
+    contexto.detectedCategorias.add(categoriaFinal);
+  }
   contexto.fallbackRows += 1;
 
   return buildRow({
     posicion,
     dorsal,
     nombre,
-    categoria,
+    categoria: categoriaFinal,
     club,
     puntos,
     linea: contexto.lineaActual,
     raw: contexto.lineaCruda,
-    parser: 'compact'
+    parser: 'compact',
+    categoriaDetectada,
+    categoriaInferida
   });
 };
 
@@ -223,7 +245,6 @@ export default function parseResultadosJson(json) {
         razon: 'Categoría no detectada',
         raw: contexto.lineaCruda
       });
-      return;
     }
 
     if (Number.isNaN(fila.puntos)) {
@@ -246,7 +267,8 @@ export default function parseResultadosJson(json) {
       lineasProcesadas: sourceLines.length,
       filasValidas: filas.length,
       filasDescartadas: errores.length,
-      filasConFallback: contexto.fallbackRows
+      filasConFallback: contexto.fallbackRows,
+      filasSinCategoria: filas.filter((fila) => !fila.categoria).length
     }
   };
 }

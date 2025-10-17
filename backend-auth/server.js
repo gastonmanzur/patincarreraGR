@@ -2610,9 +2610,15 @@ app.post('/api/competitions/:id/resultados/import-pdf', protegerRuta, permitirRo
         let patinador = null;
         let matchType = null;
         let matchScore = null;
+        const categoriaParseada = fila.categoria || null;
+        const categoriaInferida = fila.categoriaInferida || null;
 
         if (dorsalNumber !== null) {
-          const candidato = findPatinadorByDorsalIndex(indexes, dorsalNumber, fila.categoria);
+          const candidato = findPatinadorByDorsalIndex(
+            indexes,
+            dorsalNumber,
+            categoriaParseada || categoriaInferida
+          );
           if (candidato) {
             patinador = candidato;
             matchType = 'dorsal';
@@ -2643,7 +2649,8 @@ app.post('/api/competitions/:id/resultados/import-pdf', protegerRuta, permitirRo
         if (matchType === 'dorsal') coincidenciasPorDorsal += 1;
         if (matchType === 'nombre') coincidenciasPorNombre += 1;
 
-        const categoriaResultado = fila.categoria || patinador.categoria;
+        const categoriaResultado =
+          categoriaParseada || categoriaInferida || patinador.categoria;
         const dorsalDisplay = String(fila.dorsal ?? '').trim() || String(patinador.numeroCorredor || dorsalNumber || '');
         const puntosValor = Number.isFinite(fila.puntos) ? fila.puntos : 0;
 
