@@ -528,6 +528,124 @@ const sanitizeDorsalValue = (value) => {
   return Number.isNaN(parsed) ? null : parsed;
 };
 
+const cleanupWhitespace = (value) => (value ? String(value).replace(/\s+/g, ' ').trim() : '');
+
+const toTitleCase = (value) => {
+  const cleaned = cleanupWhitespace(value);
+  if (!cleaned) return '';
+  return cleaned
+    .toLowerCase()
+    .replace(/(^|\s)([\p{L}])/gu, (match, sep, char) => `${sep}${char.toUpperCase()}`);
+};
+
+const splitNombreDesdePdf = (nombre) => {
+  const limpio = cleanupWhitespace(nombre);
+  if (!limpio) {
+    return { apellido: '', primerNombre: '', segundoNombre: '' };
+  }
+
+  const conComa = limpio.split(',');
+  if (conComa.length > 1) {
+    const apellido = toTitleCase(conComa[0]);
+    const nombres = cleanupWhitespace(conComa.slice(1).join(' ')).split(' ').filter(Boolean);
+    const primerNombre = toTitleCase(nombres.shift() || apellido);
+    const segundoNombre = toTitleCase(nombres.join(' '));
+    return { apellido, primerNombre, segundoNombre };
+  }
+
+  const tokens = limpio.split(' ').filter(Boolean);
+  if (tokens.length === 1) {
+    const unico = toTitleCase(tokens[0]);
+    return { apellido: unico, primerNombre: unico, segundoNombre: '' };
+  }
+
+  const apellido = toTitleCase(tokens.shift());
+  const primerNombre = toTitleCase(tokens.shift() || apellido);
+  const segundoNombre = toTitleCase(tokens.join(' '));
+  return { apellido, primerNombre, segundoNombre };
+};
+
+const normaliseClubNombre = (club) => {
+  const cleaned = cleanupWhitespace(club);
+  if (!cleaned) return LOCAL_CLUB_CANONICAL_NAME;
+  return cleaned.toUpperCase();
+};
+
+const ensureClubDocumento = async (nombreClub, session) => {
+  if (!nombreClub) return null;
+  const normalizado = normaliseClubNombre(nombreClub);
+  if (!normalizado) return null;
+
+  let clubDoc = await Club.findOne({ nombre: normalizado }).session(session);
+  if (clubDoc) return clubDoc;
+
+  clubDoc = await Club.findOneAndUpdate(
+    { nombre: normalizado },
+    { nombre: normalizado },
+    { new: true, upsert: true, setDefaultsOnInsert: true, session }
+  );
+
+  return clubDoc;
+};
+
+const ensureInvitadoDesdeFila = async ({ fila, categoria, dorsalNumber, session }) => {
+  const nombres = splitNombreDesdePdf(fila.nombre);
+  if (!nombres.apellido || !nombres.primerNombre) {
+    return { error: 'No se pudo descomponer el nombre de la fila importada.' };
+  }
+
+  const clubNormalizado = normaliseClubNombre(fila.club || fila.clubInferido || '');
+  if (!clubNormalizado) {
+    return { error: 'No se detectó el club de la fila importada.' };
+  }
+
+  if (!categoria) {
+    return { error: 'No se detectó la categoría para la fila importada.' };
+  }
+
+  const query = {
+    primerNombre: nombres.primerNombre,
+    apellido: nombres.apellido,
+    club: clubNormalizado
+  };
+
+  if (nombres.segundoNombre) {
+    query.segundoNombre = nombres.segundoNombre;
+  }
+
+  let invitado = await PatinadorExterno.findOne(query).session(session);
+  let matchType = 'invitado-existente';
+
+  if (!invitado) {
+    const creado = await PatinadorExterno.create(
+      [
+        {
+          ...query,
+          segundoNombre: nombres.segundoNombre || undefined,
+          categoria,
+          numeroCorredor: dorsalNumber !== null ? dorsalNumber : undefined
+        }
+      ],
+      { session }
+    );
+    invitado = creado[0];
+    matchType = 'invitado-creado';
+  } else {
+    let actualizado = false;
+    if (categoria && invitado.categoria !== categoria) {
+      invitado.categoria = categoria;
+      actualizado = true;
+    }
+    if (dorsalNumber !== null && invitado.numeroCorredor !== dorsalNumber) {
+      invitado.numeroCorredor = dorsalNumber;
+      actualizado = true;
+    }
+    if (actualizado) await invitado.save({ session });
+  }
+
+  return { invitado, clubNombre: clubNormalizado, matchType };
+};
+
 const buildCaseInsensitiveRegex = (value) => {
   if (value === null || value === undefined) return null;
   const trimmed = String(value).trim();
@@ -2608,6 +2726,8 @@ app.post('/api/competitions/:id/resultados/import-pdf', protegerRuta, permitirRo
         const linea = fila.linea ?? null;
         const rawLinea = fila.raw ?? '';
         let patinador = null;
+        let invitado = null;
+        let invitadoClubDoc = null;
         let matchType = null;
         let matchScore = null;
         const categoriaParseada = fila.categoria || null;
@@ -2635,35 +2755,88 @@ app.post('/api/competitions/:id/resultados/import-pdf', protegerRuta, permitirRo
         }
 
         if (!patinador) {
+          const invitadoResult = await ensureInvitadoDesdeFila({
+            fila,
+            categoria: categoriaParseada || categoriaInferida || null,
+            dorsalNumber,
+            session
+          });
+
+          if (!invitadoResult || invitadoResult.error) {
+            erroresDeMatching.push({
+              linea,
+              razon:
+                invitadoResult?.error ||
+                (dorsalNumber !== null
+                  ? `No se encontró coincidencia para dorsal ${dorsalNumber}`
+                  : 'No se encontró coincidencia para la fila detectada'),
+              raw: rawLinea
+            });
+            continue;
+          }
+
+          invitado = invitadoResult.invitado;
+          invitadoClubDoc = await ensureClubDocumento(invitadoResult.clubNombre, session);
+          matchType = invitadoResult.matchType;
+        }
+
+        if (patinador && matchType === 'dorsal') coincidenciasPorDorsal += 1;
+        if (patinador && matchType === 'nombre') coincidenciasPorNombre += 1;
+
+        const categoriaResultado =
+          categoriaParseada ||
+          categoriaInferida ||
+          patinador?.categoria ||
+          invitado?.categoria ||
+          null;
+
+        if (!categoriaResultado) {
           erroresDeMatching.push({
             linea,
-            razon:
-              dorsalNumber !== null
-                ? `No se encontró coincidencia para dorsal ${dorsalNumber}`
-                : 'No se encontró coincidencia para la fila detectada',
+            razon: 'No se pudo determinar la categoría para la fila importada.',
             raw: rawLinea
           });
           continue;
         }
 
-        if (matchType === 'dorsal') coincidenciasPorDorsal += 1;
-        if (matchType === 'nombre') coincidenciasPorNombre += 1;
-
-        const categoriaResultado =
-          categoriaParseada || categoriaInferida || patinador.categoria;
-        const dorsalDisplay = String(fila.dorsal ?? '').trim() || String(patinador.numeroCorredor || dorsalNumber || '');
+        const dorsalDisplay =
+          String(fila.dorsal ?? '').trim() ||
+          String(
+            patinador?.numeroCorredor ||
+              invitado?.numeroCorredor ||
+              dorsalNumber ||
+              ''
+          );
         const puntosValor = Number.isFinite(fila.puntos) ? fila.puntos : 0;
 
-        await Resultado.findOneAndUpdate(
-          { competenciaId: competencia._id, deportistaId: patinador._id, categoria: categoriaResultado },
-          {
-            puntos: puntosValor,
-            dorsal: dorsalDisplay,
-            club: clubId,
-            fuenteImportacion: { archivo: req.file.originalname, hash, metodo: matchType || 'desconocido' }
-          },
-          { upsert: true, new: true, setDefaultsOnInsert: true, session }
-        );
+        const filtroResultado = {
+          competenciaId: competencia._id,
+          categoria: categoriaResultado
+        };
+
+        if (patinador) {
+          filtroResultado.deportistaId = patinador._id;
+        } else if (invitado) {
+          filtroResultado.invitadoId = invitado._id;
+        }
+
+        const actualizacionResultado = {
+          puntos: puntosValor,
+          dorsal: dorsalDisplay,
+          club: clubId,
+          fuenteImportacion: { archivo: req.file.originalname, hash, metodo: matchType || 'desconocido' }
+        };
+
+        if (invitadoClubDoc) {
+          actualizacionResultado.clubId = invitadoClubDoc._id;
+        }
+
+        await Resultado.findOneAndUpdate(filtroResultado, actualizacionResultado, {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+          session
+        });
 
         procesados += 1;
         detallesProcesados.push({
@@ -2674,7 +2847,8 @@ app.post('/api/competitions/:id/resultados/import-pdf', protegerRuta, permitirRo
           puntos: puntosValor,
           parser: fila.parser,
           matchType,
-          matchScore
+          matchScore,
+          destino: patinador ? 'patinador' : 'invitado'
         });
       }
 
