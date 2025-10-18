@@ -58,6 +58,27 @@ const parseColumnsRow = (columns, contexto) => {
   const posicion = Number.parseInt(ordenRaw, 10);
   if (Number.isNaN(posicion)) return null;
 
+
+  const dorsal = (() => {
+    if (valores.length >= 3) {
+      const bloques = [];
+      for (let i = 0; i <= valores.length - 3; i += 1) {
+        const posibleDorsal = valores[i];
+        const posiblePos = valores[i + 1];
+        const posiblePuntos = valores[i + 2];
+        if (!posibleDorsal) continue;
+        if (!isNumeric(posiblePos) || !isNumeric(posiblePuntos)) continue;
+        bloques.push({ dorsal: posibleDorsal, index: i });
+      }
+      if (bloques.length > 0) {
+        const preferido = String(bloques[bloques.length - 1].dorsal || '').trim();
+        if (preferido) return preferido;
+      }
+    }
+  
+    return dorsalRaw;
+  })();
+
   const valores = [...rest];
   const dorsal = (() => {
     if (valores.length >= 3) {
