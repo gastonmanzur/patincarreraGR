@@ -3,7 +3,8 @@ import axios from 'axios';
 const ensureApiSuffix = (value) => {
   if (!value) return null;
   const trimmed = value.replace(/\/+$/, '');
-  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+  const withSuffix = trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+  return `${withSuffix}/`;
 };
 
 const resolveConfiguredBase = (rawUrl, origin) => {
@@ -33,12 +34,14 @@ const buildApiBaseUrl = () => {
     if (!isBrowser) {
       if (normalised) return normalised;
     } else {
-      const configured = resolveConfiguredBase(rawEnvUrl, window.location.origin) || normalised;
+      const configured = ensureApiSuffix(
+        resolveConfiguredBase(rawEnvUrl, window.location.origin) || normalised
+      );
       if (configured) return configured;
     }
   }
 
-  if (!isBrowser) return '/api';
+  if (!isBrowser) return ensureApiSuffix('/');
 
   const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim();
   const { protocol, hostname, origin } = window.location;
@@ -50,21 +53,20 @@ const buildApiBaseUrl = () => {
   // pointing requests to the Express server running on the backend port.
   if (isLocalHost || import.meta.env.DEV) {
     const port = backendPort || '5000';
-    return `${protocol}//${hostname}:${port}/api`;
+    return ensureApiSuffix(`${protocol}//${hostname}:${port}`);
   }
 
   if (backendPort) {
-    return `${protocol}//${hostname}:${backendPort}/api`;
+    return ensureApiSuffix(`${protocol}//${hostname}:${backendPort}`);
   }
 
-  const normalisedOrigin = origin.replace(/\/+$/, '');
-  return `${normalisedOrigin}/api`;
+  return ensureApiSuffix(origin);
 };
 
 const resolvedEnvBaseUrl = ensureApiSuffix(import.meta.env.VITE_API_URL?.trim());
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || buildApiBaseUrl(),
+  baseURL: resolvedEnvBaseUrl || buildApiBaseUrl(),
   withCredentials: true
 });
 
@@ -88,8 +90,11 @@ api.interceptors.request.use((config) => {
   }
 
   // Ensure request URLs remain relative so the Axios base URL is respected.
-  if (config.url?.startsWith('/')) {
-    config.url = config.url.slice(1);
+  if (config.baseURL && config.url?.startsWith('/')) {
+    if (!config.baseURL.endsWith('/')) {
+      config.baseURL = `${config.baseURL}/`;
+    }
+    config.url = config.url.replace(/^\/+/, '');
   }
 
   return config;
