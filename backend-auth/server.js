@@ -712,7 +712,14 @@ const ensureAdminHasNoAssociations = async (usuario) => {
   }
 
   if (modified && typeof usuario.save === 'function') {
-    await usuario.save();
+    try {
+      await usuario.save();
+    } catch (error) {
+      console.warn(
+        'No se pudo limpiar las asociaciones del administrador durante el login. Continuando igualmente.',
+        error instanceof Error ? error.message : error
+      );
+    }
   }
 
   return usuario;
@@ -1358,22 +1365,22 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
     }
 
-    await ensureAdminHasNoAssociations(usuario);
+    const sanitizedUser = (await ensureAdminHasNoAssociations(usuario)) || usuario;
 
     const tokenPayload = {
-      id: usuario._id,
-      rol: usuario.rol,
-      club: usuario.club ? usuario.club.toString() : null
+      id: sanitizedUser._id,
+      rol: sanitizedUser.rol,
+      club: sanitizedUser.club ? sanitizedUser.club.toString() : null
     };
-    const needsClubSelection = !usuario.club && usuario.rol !== 'Admin';
+    const needsClubSelection = !sanitizedUser.club && sanitizedUser.rol !== 'Admin';
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
     return res.json({
       token,
       usuario: {
-        nombre: usuario.nombre,
-        rol: usuario.rol,
-        foto: usuario.foto || '',
-        club: usuario.club ? usuario.club.toString() : null
+        nombre: sanitizedUser.nombre,
+        rol: sanitizedUser.rol,
+        foto: sanitizedUser.foto || '',
+        club: sanitizedUser.club ? sanitizedUser.club.toString() : null
       },
       needsClubSelection
     });
@@ -3607,14 +3614,14 @@ app.get('/api/auth/google/callback', async (req, res) => {
       });
     }
 
-    await ensureAdminHasNoAssociations(usuario);
+    const sanitizedUser = (await ensureAdminHasNoAssociations(usuario)) || usuario;
 
     const tokenPayload = {
-      id: usuario._id,
-      rol: usuario.rol,
-      foto: usuario.foto || '',
-      club: usuario.club ? usuario.club.toString() : null,
-      needsClubSelection: !usuario.club && usuario.rol !== 'Admin'
+      id: sanitizedUser._id,
+      rol: sanitizedUser.rol,
+      foto: sanitizedUser.foto || '',
+      club: sanitizedUser.club ? sanitizedUser.club.toString() : null,
+      needsClubSelection: !sanitizedUser.club && sanitizedUser.rol !== 'Admin'
     };
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
