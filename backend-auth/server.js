@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import https from 'https';
 
 import User from './models/User.js';
 import Patinador from './models/Patinador.js';
@@ -3559,6 +3560,77 @@ app.get('/api/progreso/:id', protegerRuta, async (req, res) => {
   }
 });
 
+const postFormUrlencoded = (urlString, params) =>
+  new Promise((resolve, reject) => {
+    try {
+      const parsedUrl = new URL(urlString);
+      const payload =
+        params instanceof URLSearchParams
+          ? params.toString()
+          : new URLSearchParams(params ?? {}).toString();
+
+      const requestOptions = {
+        method: 'POST',
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port || 443,
+        path: `${parsedUrl.pathname}${parsedUrl.search}`,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Accept: 'application/json',
+          'Content-Length': Buffer.byteLength(payload)
+        }
+      };
+
+      const request = https.request(requestOptions, (response) => {
+        let raw = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => {
+          raw += chunk;
+        });
+        response.on('end', () => {
+          let parsedBody = null;
+          if (raw) {
+            try {
+              parsedBody = JSON.parse(raw);
+            } catch (parseError) {
+              parsedBody = null;
+            }
+          }
+
+          const status = response.statusCode ?? 500;
+          if (status >= 200 && status < 300) {
+            resolve(parsedBody ?? {});
+          } else {
+            const error = new Error(
+              `Request failed with status ${status}`
+            );
+            error.status = status;
+            error.body = parsedBody ?? raw;
+            error.headers = response.headers;
+            reject(error);
+          }
+        });
+      });
+
+      request.on('error', reject);
+      if (payload) {
+        request.write(payload);
+      }
+      request.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+
+const exchangeGoogleAuthorizationCode = (code, redirectUri) =>
+  postFormUrlencoded('https://oauth2.googleapis.com/token', {
+    code,
+    client_id: process.env.GOOGLE_CLIENT_ID || '',
+    client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+    redirect_uri: redirectUri,
+    grant_type: 'authorization_code'
+  });
+
 // Inicio de sesión con Google (OAuth 2.0 sin dependencias externas)
 app.get('/api/auth/google', (req, res) => {
   const redirectUri =
@@ -3585,18 +3657,7 @@ app.get('/api/auth/google/callback', async (req, res) => {
     const redirectUri =
       process.env.GOOGLE_REDIRECT_URI ||
       'https://patincarrera.net/api/auth/google/callback';
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: process.env.GOOGLE_CLIENT_ID || '',
-        client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
-        redirect_uri: redirectUri,
-        grant_type: 'authorization_code'
-      })
-    });
-    const tokenData = await tokenRes.json();
+    const tokenData = await exchangeGoogleAuthorizationCode(code, redirectUri);
     const idToken = tokenData.id_token;
     if (!idToken) return res.status(400).json({ mensaje: 'Token de Google no recibido' });
 
@@ -3629,6 +3690,9 @@ app.get('/api/auth/google/callback', async (req, res) => {
     res.redirect(`${FRONTEND_URL}/google-success?token=${token}`);
   } catch (err) {
     console.error('Error en autenticación de Google', err);
+    if (err && typeof err === 'object' && 'body' in err) {
+      console.error('Respuesta recibida del endpoint de Google:', err.body);
+    }
     res.redirect(`${FRONTEND_URL}/login?error=google`);
   }
 });
