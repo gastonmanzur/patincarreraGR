@@ -53,7 +53,8 @@ export default function LoginForm() {
   // URL from our Axios instance avoids hard-coding `localhost` and keeps the
   // frontend portable across environments.
   const handleGoogleLogin = () => {
-    window.location.href = `${api.defaults.baseURL}/auth/google`;
+    const baseUrl = (api.defaults.baseURL || '').replace(/\/+$/, '');
+    window.location.href = `${baseUrl}/auth/google`;
   };
 
   return (
