@@ -35,10 +35,20 @@ export default function Navbar() {
       sessionStorage.removeItem('clubLogo');
     }
   }
+  const storedAppDefaultLogo = sessionStorage.getItem('appDefaultLogo');
+  const normalisedAppDefaultLogo = getImageUrl(storedAppDefaultLogo);
+  if (storedAppDefaultLogo && normalisedAppDefaultLogo !== storedAppDefaultLogo) {
+    if (normalisedAppDefaultLogo) {
+      sessionStorage.setItem('appDefaultLogo', normalisedAppDefaultLogo);
+    } else {
+      sessionStorage.removeItem('appDefaultLogo');
+    }
+  }
   const storedClubName = sessionStorage.getItem('clubNombre') || '';
   const [unread, setUnread] = useState(0);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [clubLogo, setClubLogo] = useState(normalisedClubLogo || '');
+  const [appDefaultLogo, setAppDefaultLogo] = useState(normalisedAppDefaultLogo || '');
   const [clubName, setClubName] = useState(storedClubName);
   const brandAlt = clubName ? `Logo de ${clubName}` : 'Logo Patín Carrera';
 
@@ -111,6 +121,49 @@ export default function Navbar() {
     document.body.classList.toggle('dark-mode', darkMode);
     localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchAppConfig = async () => {
+      try {
+        const res = await api.get('/public/app-config');
+        if (!active) return;
+        const resolvedLogo = getImageUrl(res.data?.defaultBrandLogo);
+        if (resolvedLogo) {
+          setAppDefaultLogo(resolvedLogo);
+          sessionStorage.setItem('appDefaultLogo', resolvedLogo);
+        } else {
+          setAppDefaultLogo('');
+          sessionStorage.removeItem('appDefaultLogo');
+        }
+      } catch (err) {
+        if (!active) return;
+        console.error('Error al obtener la configuración de la aplicación', err);
+      }
+    };
+
+    void fetchAppConfig();
+
+    const handleAppConfigUpdate = (event) => {
+      if (!event || typeof event !== 'object') return;
+      const updatedLogo = getImageUrl(event.detail?.defaultBrandLogo);
+      if (updatedLogo) {
+        setAppDefaultLogo(updatedLogo);
+        sessionStorage.setItem('appDefaultLogo', updatedLogo);
+      } else {
+        setAppDefaultLogo('');
+        sessionStorage.removeItem('appDefaultLogo');
+      }
+    };
+
+    window.addEventListener('appConfigUpdated', handleAppConfigUpdate);
+
+    return () => {
+      active = false;
+      window.removeEventListener('appConfigUpdated', handleAppConfigUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -273,7 +326,7 @@ export default function Navbar() {
           style={{ cursor: 'pointer' }}
         >
           <img
-            src={clubLogo || defaultBrandLogo}
+            src={clubLogo || appDefaultLogo || defaultBrandLogo}
             alt={brandAlt}
             width="80"
             height="80"
