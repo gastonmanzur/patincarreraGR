@@ -39,6 +39,11 @@ export default function PanelAdmin() {
   const [clubLogoPreview, setClubLogoPreview] = useState('');
   const [clubExistingLogo, setClubExistingLogo] = useState('');
   const clubLogoInputRef = useRef(null);
+  const [defaultAppLogo, setDefaultAppLogo] = useState('');
+  const [defaultAppLogoPreview, setDefaultAppLogoPreview] = useState('');
+  const [defaultAppLogoFile, setDefaultAppLogoFile] = useState(null);
+  const [defaultAppLogoLoading, setDefaultAppLogoLoading] = useState(false);
+  const defaultAppLogoInputRef = useRef(null);
 
   const showFeedback = useCallback((type, message) => {
     setFeedback({ type, message });
@@ -93,6 +98,20 @@ export default function PanelAdmin() {
     }
   }, [showFeedback]);
 
+  const loadAppConfig = useCallback(async () => {
+    try {
+      const res = await api.get('/public/app-config');
+      const resolvedLogo = getImageUrl(res.data?.defaultBrandLogo);
+      setDefaultAppLogo(resolvedLogo || '');
+    } catch (err) {
+      console.error('Error al obtener la configuración de la app', err);
+      showFeedback(
+        'danger',
+        err.response?.data?.mensaje || 'No se pudo cargar la configuración de la aplicación'
+      );
+    }
+  }, [showFeedback]);
+
   useEffect(
     () => () => {
       if (clubLogoPreview && clubLogoPreview.startsWith('blob:')) {
@@ -102,10 +121,20 @@ export default function PanelAdmin() {
     [clubLogoPreview]
   );
 
+  useEffect(
+    () => () => {
+      if (defaultAppLogoPreview && defaultAppLogoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(defaultAppLogoPreview);
+      }
+    },
+    [defaultAppLogoPreview]
+  );
+
   useEffect(() => {
     void loadFederaciones();
     void loadClubs();
-  }, [loadFederaciones, loadClubs]);
+    void loadAppConfig();
+  }, [loadFederaciones, loadClubs, loadAppConfig]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -152,6 +181,115 @@ export default function PanelAdmin() {
       }
     } else {
       setClubLogoPreview(clubExistingLogo);
+    }
+  };
+
+  const handleDefaultAppLogoChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (defaultAppLogoPreview && defaultAppLogoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(defaultAppLogoPreview);
+    }
+    if (file) {
+      setDefaultAppLogoPreview(URL.createObjectURL(file));
+    } else {
+      setDefaultAppLogoPreview('');
+    }
+    setDefaultAppLogoFile(file);
+  };
+
+  const handleDefaultAppLogoSubmit = async (event) => {
+    event.preventDefault();
+    if (!defaultAppLogoFile) {
+      showFeedback('danger', 'Seleccioná una imagen para actualizar el logo predeterminado');
+      return;
+    }
+
+    setDefaultAppLogoLoading(true);
+    showFeedback('', '');
+
+    try {
+      const formData = new FormData();
+      formData.append('logo', defaultAppLogoFile);
+
+      const res = await api.put('/admin/app-config/logo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const updatedLogo = getImageUrl(res.data?.defaultBrandLogo);
+
+      if (defaultAppLogoPreview && defaultAppLogoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(defaultAppLogoPreview);
+      }
+
+      setDefaultAppLogoPreview('');
+      setDefaultAppLogoFile(null);
+
+      if (defaultAppLogoInputRef.current) {
+        defaultAppLogoInputRef.current.value = '';
+      }
+
+      if (updatedLogo) {
+        setDefaultAppLogo(updatedLogo);
+        sessionStorage.setItem('appDefaultLogo', updatedLogo);
+      } else {
+        setDefaultAppLogo('');
+        sessionStorage.removeItem('appDefaultLogo');
+      }
+
+      window.dispatchEvent(
+        new CustomEvent('appConfigUpdated', { detail: { defaultBrandLogo: updatedLogo || '' } })
+      );
+
+      showFeedback('success', res.data?.mensaje || 'Logo predeterminado actualizado correctamente');
+    } catch (err) {
+      console.error('Error al actualizar el logo predeterminado de la app', err);
+      const apiMessage = err.response?.data?.mensaje;
+      showFeedback('danger', apiMessage || 'No se pudo actualizar el logo predeterminado de la app');
+    } finally {
+      setDefaultAppLogoLoading(false);
+    }
+  };
+
+  const handleDefaultAppLogoReset = async () => {
+    if (!defaultAppLogo && !defaultAppLogoFile) {
+      showFeedback('danger', 'No hay un logo personalizado para restablecer');
+      return;
+    }
+
+    setDefaultAppLogoLoading(true);
+    showFeedback('', '');
+
+    try {
+      const formData = new FormData();
+      formData.append('removeLogo', 'true');
+
+      const res = await api.put('/admin/app-config/logo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (defaultAppLogoPreview && defaultAppLogoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(defaultAppLogoPreview);
+      }
+
+      setDefaultAppLogoPreview('');
+      setDefaultAppLogoFile(null);
+
+      if (defaultAppLogoInputRef.current) {
+        defaultAppLogoInputRef.current.value = '';
+      }
+
+      setDefaultAppLogo('');
+      sessionStorage.removeItem('appDefaultLogo');
+
+      window.dispatchEvent(new CustomEvent('appConfigUpdated', { detail: { defaultBrandLogo: '' } }));
+
+      showFeedback('success', res.data?.mensaje || 'Logo predeterminado restablecido correctamente');
+    } catch (err) {
+      console.error('Error al restablecer el logo predeterminado de la app', err);
+      const apiMessage = err.response?.data?.mensaje;
+      showFeedback('danger', apiMessage || 'No se pudo restablecer el logo predeterminado de la app');
+    } finally {
+      setDefaultAppLogoLoading(false);
     }
   };
 
@@ -345,6 +483,78 @@ export default function PanelAdmin() {
           {feedback.message}
         </div>
       )}
+
+      <section className="mt-4">
+        <div className="card shadow-sm">
+          <div className="card-body">
+            <h2 className="h4 mb-3">Logo predeterminado de la aplicación</h2>
+            <p className="text-muted small mb-4">
+              Esta imagen se mostrará cuando no haya un usuario autenticado o no se haya seleccionado un club.
+            </p>
+            <div className="d-flex flex-column flex-md-row align-items-start gap-4">
+              <div className="text-center text-md-start">
+                <div className="fw-semibold mb-2">Logo actual</div>
+                {defaultAppLogo ? (
+                  <img
+                    src={defaultAppLogo}
+                    alt="Logo predeterminado de la aplicación"
+                    className="rounded-circle border"
+                    width="96"
+                    height="96"
+                    style={{ objectFit: 'cover' }}
+                  />
+                ) : (
+                  <p className="text-muted mb-0">Sin logo personalizado</p>
+                )}
+              </div>
+              {defaultAppLogoPreview && (
+                <div className="text-center text-md-start">
+                  <div className="fw-semibold mb-2">Vista previa</div>
+                  <img
+                    src={defaultAppLogoPreview}
+                    alt="Vista previa del nuevo logo"
+                    className="rounded-circle border"
+                    width="96"
+                    height="96"
+                    style={{ objectFit: 'cover' }}
+                  />
+                </div>
+              )}
+            </div>
+            <form className="mt-4" onSubmit={handleDefaultAppLogoSubmit}>
+              <div className="mb-3">
+                <label htmlFor="defaultAppLogo" className="form-label">Seleccionar imagen</label>
+                <input
+                  type="file"
+                  id="defaultAppLogo"
+                  className="form-control"
+                  accept="image/*"
+                  ref={defaultAppLogoInputRef}
+                  onChange={handleDefaultAppLogoChange}
+                  disabled={defaultAppLogoLoading}
+                />
+              </div>
+              <div className="d-flex flex-column flex-sm-row gap-2">
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={defaultAppLogoLoading || !defaultAppLogoFile}
+                >
+                  {defaultAppLogoLoading ? 'Guardando...' : 'Guardar logo'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline-danger"
+                  onClick={handleDefaultAppLogoReset}
+                  disabled={defaultAppLogoLoading || (!defaultAppLogo && !defaultAppLogoFile)}
+                >
+                  Restablecer logo predeterminado
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
 
       <section className="mt-4">
         <div className="card shadow-sm">

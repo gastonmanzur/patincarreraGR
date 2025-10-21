@@ -27,6 +27,7 @@ import Club from './models/Club.js';
 import Federation from './models/Federation.js';
 import Entrenamiento from './models/Entrenamiento.js';
 import Progreso from './models/Progreso.js';
+import AppConfig from './models/AppConfig.js';
 import ExcelJS from 'exceljs';
 import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
@@ -130,6 +131,21 @@ const parseDateOnly = (value) => {
 
   return null;
 };
+
+const parseBoolean = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalised = value.trim().toLowerCase();
+    if (!normalised) return false;
+    return ['true', '1', 'si', 'sí', 'on', 'yes'].includes(normalised);
+  }
+  return false;
+};
+
+const normaliseAppConfigResponse = (config) => ({
+  defaultBrandLogo: typeof config?.defaultBrandLogo === 'string' ? config.defaultBrandLogo : ''
+});
 
 // --------- Mongo URI ---------
 mongoose.set('strictQuery', true);
@@ -1551,6 +1567,16 @@ app.get('/api/public/clubs', async (_req, res) => {
   }
 });
 
+app.get('/api/public/app-config', async (_req, res) => {
+  try {
+    const config = await AppConfig.getSingleton();
+    res.json(normaliseAppConfigResponse(config));
+  } catch (err) {
+    console.error('Error al obtener la configuración pública de la app', err);
+    res.status(500).json({ mensaje: 'Error al obtener la configuración de la aplicación' });
+  }
+});
+
 app.get('/api/federaciones', async (_req, res) => {
   try {
     const federaciones = await Federation.find().sort({ nombre: 1 });
@@ -1805,6 +1831,41 @@ app.delete('/api/admin/clubs/:id', protegerRuta, permitirRol('Admin'), async (re
     res.status(500).json({ mensaje: 'Error al eliminar el club' });
   }
 });
+
+app.put(
+  '/api/admin/app-config/logo',
+  protegerRuta,
+  permitirRol('Admin'),
+  upload.single('logo'),
+  async (req, res) => {
+    try {
+      const shouldRemove = parseBoolean(req.body?.removeLogo);
+      if (!shouldRemove && !req.file) {
+        return res.status(400).json({
+          mensaje:
+            'Debés seleccionar una imagen para el logo o indicar que querés restablecer el logo predeterminado'
+        });
+      }
+
+      const updates = shouldRemove
+        ? { defaultBrandLogo: '' }
+        : { defaultBrandLogo: buildUploadUrl(req.file.filename) };
+
+      const config = await AppConfig.updateSingleton(updates);
+      const response = normaliseAppConfigResponse(config);
+
+      res.json({
+        mensaje: shouldRemove
+          ? 'Logo predeterminado restablecido correctamente'
+          : 'Logo predeterminado actualizado correctamente',
+        ...response
+      });
+    } catch (err) {
+      console.error('Error al actualizar la configuración de la app', err);
+      res.status(500).json({ mensaje: 'Error al actualizar la configuración de la aplicación' });
+    }
+  }
+);
 
 app.get('/api/clubs/local/titulos', protegerRuta, async (req, res) => {
   let club = null;
