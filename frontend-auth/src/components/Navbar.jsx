@@ -4,6 +4,7 @@ import api from '../api';
 import LogoutButton from './LogoutButton';
 import getImageUrl from '../utils/getImageUrl';
 import placeholderAvatar from '../assets/image-placeholder.svg';
+import defaultBrandLogo from '../assets/patin-carrera-logo-circle.svg';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function Navbar() {
   const storedClubName = sessionStorage.getItem('clubNombre') || '';
   const [unread, setUnread] = useState(0);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
-  const [clubLogo, setClubLogo] = useState(normalisedClubLogo);
+  const [clubLogo, setClubLogo] = useState(normalisedClubLogo || '');
   const [clubName, setClubName] = useState(storedClubName);
   const brandAlt = clubName ? `Logo de ${clubName}` : 'Logo Patín Carrera';
 
@@ -272,7 +273,7 @@ export default function Navbar() {
           style={{ cursor: 'pointer' }}
         >
           <img
-            src={clubLogo || '/vite.svg'}
+            src={clubLogo || defaultBrandLogo}
             alt={brandAlt}
             width="80"
             height="80"
