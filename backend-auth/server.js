@@ -97,6 +97,16 @@ const DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 const LOCAL_CLUB_CANONICAL_NAME = 'GENERAL RODRIGUEZ';
 const LOCAL_CLUB_DISPLAY_NAME = 'General Rodriguez';
+const DEFAULT_LOCAL_CONTACT_INFO = Object.freeze({
+  phone: '+54 9 117372-6166',
+  email: 'patincarreragr25@gmail.com',
+  address: 'Leandro N. Alem, B1748 Gran Buenos Aires, Provincia de Buenos Aires',
+  mapUrl: 'https://maps.app.goo.gl/t7Wb4ci6P9zZrtGB8',
+  facebook: 'https://www.facebook.com/',
+  instagram: 'https://www.instagram.com/stories/patincarrerag.r/',
+  whatsapp: '5491173726166',
+  x: 'https://x.com/?lang=es'
+});
 
 const parseDateOnly = (value) => {
   if (!value) return null;
@@ -898,7 +908,49 @@ async function crearNotificacionesParaClub(clubId, mensaje, competencia = null) 
 const ensureLocalClub = async () => {
   let club = await Club.findOne({ nombre: LOCAL_CLUB_CANONICAL_NAME });
   if (!club) {
-    club = await Club.create({ nombre: LOCAL_CLUB_CANONICAL_NAME });
+    club = await Club.create({
+      nombre: LOCAL_CLUB_CANONICAL_NAME,
+      nombreAmigable: LOCAL_CLUB_DISPLAY_NAME,
+      contactInfo: { ...DEFAULT_LOCAL_CONTACT_INFO }
+    });
+    return club;
+  }
+
+  let shouldSave = false;
+
+  if (!club.nombreAmigable) {
+    club.nombreAmigable = LOCAL_CLUB_DISPLAY_NAME;
+    shouldSave = true;
+  }
+
+  if (!club.contactInfo || typeof club.contactInfo !== 'object') {
+    club.contactInfo = { ...DEFAULT_LOCAL_CONTACT_INFO };
+    shouldSave = true;
+  } else {
+    const updatedContact = { ...club.contactInfo };
+    let contactUpdated = false;
+
+    for (const [key, defaultValue] of Object.entries(DEFAULT_LOCAL_CONTACT_INFO)) {
+      const existing = updatedContact[key];
+      if (typeof existing === 'string') {
+        if (!existing.trim()) {
+          updatedContact[key] = defaultValue;
+          contactUpdated = true;
+        }
+      } else if (existing === undefined || existing === null) {
+        updatedContact[key] = defaultValue;
+        contactUpdated = true;
+      }
+    }
+
+    if (contactUpdated) {
+      club.contactInfo = updatedContact;
+      shouldSave = true;
+    }
+  }
+
+  if (shouldSave) {
+    await club.save();
   }
   return club;
 };
@@ -961,6 +1013,75 @@ const normaliseUrlOrNull = (value) => {
   if (!trimmed) return null;
   if (/^(https?:\/\/|mailto:|tel:)/i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
+};
+
+const CONTACT_INFO_KEYS = ['phone', 'email', 'address', 'mapUrl', 'facebook', 'instagram', 'whatsapp', 'x'];
+const CONTACT_INFO_URL_KEYS = new Set(['mapUrl', 'facebook', 'instagram', 'x']);
+
+const normaliseContactString = (value) => (typeof value === 'string' ? value.trim() : '');
+
+const normaliseContactUrlValue = (value) => {
+  const trimmed = normaliseContactString(value);
+  if (!trimmed) return '';
+  const normalised = normaliseUrlOrNull(trimmed);
+  return normalised || trimmed;
+};
+
+const sanitiseContactInfoInput = (payload = {}) => {
+  const sanitized = {};
+  for (const key of CONTACT_INFO_KEYS) {
+    const raw = payload?.[key];
+    const value = CONTACT_INFO_URL_KEYS.has(key)
+      ? normaliseContactUrlValue(raw)
+      : normaliseContactString(raw);
+    if (value) {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+};
+
+const createEmptyContactInfo = () =>
+  CONTACT_INFO_KEYS.reduce((acc, key) => {
+    acc[key] = '';
+    return acc;
+  }, {});
+
+const buildClubContactResponse = (club) => {
+  if (!club) {
+    return {
+      club: { _id: null, nombre: '', nombreAmigable: '' },
+      contactInfo: createEmptyContactInfo()
+    };
+  }
+
+  const fallback =
+    club.nombre === LOCAL_CLUB_CANONICAL_NAME ? DEFAULT_LOCAL_CONTACT_INFO : undefined;
+  const stored = club.contactInfo && typeof club.contactInfo === 'object' ? club.contactInfo : {};
+  const merged = { ...(fallback || {}), ...stored };
+
+  const contactInfo = CONTACT_INFO_KEYS.reduce((acc, key) => {
+    const value = CONTACT_INFO_URL_KEYS.has(key)
+      ? normaliseContactUrlValue(merged[key])
+      : normaliseContactString(merged[key]);
+    acc[key] = value;
+    return acc;
+  }, createEmptyContactInfo());
+
+  const nombre = pickNonEmptyString(club.nombre) || '';
+  const nombreAmigable = pickNonEmptyString(
+    club.nombreAmigable,
+    nombre === LOCAL_CLUB_CANONICAL_NAME ? LOCAL_CLUB_DISPLAY_NAME : nombre
+  );
+
+  return {
+    club: {
+      _id: club._id ? club._id.toString() : null,
+      nombre,
+      nombreAmigable
+    },
+    contactInfo
+  };
 };
 
 const parsePossibleYear = (value) => {
@@ -1554,6 +1675,42 @@ app.get('/api/clubs', protegerRuta, async (req, res) => {
   }
 });
 
+app.get('/api/clubs/contact', protegerRuta, async (req, res) => {
+  try {
+    const club = await loadClubForRequest(req, res, { allowFallbackToLocal: true });
+    if (!club) return;
+
+    const payload = buildClubContactResponse(club);
+    res.json(payload);
+  } catch (err) {
+    console.error('Error al obtener la información de contacto del club', err);
+    res.status(500).json({ mensaje: 'Error al obtener la información de contacto del club' });
+  }
+});
+
+app.put(
+  '/api/clubs/contact',
+  protegerRuta,
+  permitirRol('Delegado', 'Tecnico', 'Admin'),
+  async (req, res) => {
+    try {
+      const club = await loadClubForRequest(req, res, { allowFallbackToLocal: true });
+      if (!club) return;
+
+      const sanitized = sanitiseContactInfoInput(req.body || {});
+      club.contactInfo = sanitized;
+      club.markModified('contactInfo');
+      await club.save();
+
+      const payload = buildClubContactResponse(club);
+      res.json({ mensaje: 'Información de contacto actualizada correctamente', ...payload });
+    } catch (err) {
+      console.error('Error al actualizar la información de contacto del club', err);
+      res.status(500).json({ mensaje: 'Error al actualizar la información de contacto del club' });
+    }
+  }
+);
+
 app.get('/api/public/clubs', async (_req, res) => {
   try {
     const clubs = await Club.find()
@@ -1574,6 +1731,28 @@ app.get('/api/public/app-config', async (_req, res) => {
   } catch (err) {
     console.error('Error al obtener la configuración pública de la app', err);
     res.status(500).json({ mensaje: 'Error al obtener la configuración de la aplicación' });
+  }
+});
+
+app.get('/api/public/club-contact', async (req, res) => {
+  try {
+    await ensureRequestUser(req);
+    const clubId = getClubIdFromRequest(req);
+    let club = null;
+
+    if (clubId) {
+      club = await Club.findById(clubId).select('nombre nombreAmigable contactInfo');
+    }
+
+    if (!club) {
+      club = await ensureLocalClub();
+    }
+
+    const payload = buildClubContactResponse(club);
+    res.json(payload);
+  } catch (err) {
+    console.error('Error al obtener la información pública de contacto del club', err);
+    res.status(500).json({ mensaje: 'Error al obtener la información de contacto del club' });
   }
 });
 

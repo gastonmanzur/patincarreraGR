@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 
@@ -6,14 +6,77 @@ export default function Footer() {
   const [historyVisible, setHistoryVisible] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [message, setMessage] = useState('');
+  const [contactInfo, setContactInfo] = useState({
+    phone: '+54 9 117372-6166',
+    email: 'patincarreragr25@gmail.com',
+    address: 'Leandro N. Alem, B1748 Gran Buenos Aires, Provincia de Buenos Aires',
+    mapUrl: 'https://maps.app.goo.gl/t7Wb4ci6P9zZrtGB8',
+    facebook: 'https://www.facebook.com/',
+    instagram: 'https://www.instagram.com/stories/patincarrerag.r/',
+    whatsapp: '5491173726166',
+    x: 'https://x.com/?lang=es'
+  });
 
-  const phoneNumber = '5491173726166';
+  const applyContactInfo = useCallback((data = {}) => {
+    setContactInfo((prev) => ({
+      phone: data.phone || prev.phone || '',
+      email: data.email || prev.email || '',
+      address: data.address || prev.address || '',
+      mapUrl: data.mapUrl || prev.mapUrl || '',
+      facebook: data.facebook || prev.facebook || '',
+      instagram: data.instagram || prev.instagram || '',
+      whatsapp: data.whatsapp || prev.whatsapp || '',
+      x: data.x || prev.x || ''
+    }));
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchContactInfo = async () => {
+      try {
+        const res = await api.get('/public/club-contact');
+        if (!active) return;
+
+        applyContactInfo(res.data?.contactInfo || {});
+      } catch (err) {
+        if (!active) return;
+        console.error('Error al obtener la información de contacto del club', err);
+      }
+    };
+
+    void fetchContactInfo();
+
+    return () => {
+      active = false;
+    };
+  }, [applyContactInfo]);
+
+  useEffect(() => {
+    const handleUpdate = (event) => {
+      if (!event || typeof event !== 'object') return;
+      applyContactInfo(event.detail?.contactInfo || {});
+    };
+
+    window.addEventListener('clubContactInfoUpdated', handleUpdate);
+    return () => {
+      window.removeEventListener('clubContactInfoUpdated', handleUpdate);
+    };
+  }, [applyContactInfo]);
+
+  const cleanDigits = (value) => (typeof value === 'string' ? value.replace(/\D+/g, '') : '');
+  const whatsappNumber = cleanDigits(contactInfo.whatsapp || contactInfo.phone);
   const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(
     navigator.userAgent
   );
-  const whatsappLink = isMobile
-    ? `https://api.whatsapp.com/send?phone=${phoneNumber}`
-    : `https://web.whatsapp.com/send?phone=${phoneNumber}`;
+  let whatsappLink = '';
+  if (whatsappNumber) {
+    whatsappLink = isMobile
+      ? `https://api.whatsapp.com/send?phone=${whatsappNumber}`
+      : `https://web.whatsapp.com/send?phone=${whatsappNumber}`;
+  } else if (typeof contactInfo.whatsapp === 'string' && contactInfo.whatsapp.startsWith('http')) {
+    whatsappLink = contactInfo.whatsapp;
+  }
 
   const togglePinned = () => {
     const newPinned = !pinned;
@@ -94,23 +157,41 @@ export default function Footer() {
         <div className="row">
           <div className="col-md-4 mb-4">
             <ul className="list-unstyled">
-              <li className="mb-2">
-                <i className="bi bi-telephone me-2"></i> +54 9 117372-6166
-              </li>
-              <li className="mb-2">
-                <i className="bi bi-envelope me-2"></i> patincarreragr25@gmail.com
-              </li>
-              <li className="mb-2">
-                <i className="bi bi-geo-alt me-2"></i>
-                <a
-                  href="https://maps.app.goo.gl/t7Wb4ci6P9zZrtGB8"
-                  className="text-light text-decoration-none"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Leandro N. Alem, B1748 Gran Buenos Aires, Provincia de Buenos Aires
-                </a>
-              </li>
+              {contactInfo.phone && (
+                <li className="mb-2">
+                  <i className="bi bi-telephone me-2"></i> {contactInfo.phone}
+                </li>
+              )}
+              {!contactInfo.phone && contactInfo.whatsapp && (
+                <li className="mb-2">
+                  <i className="bi bi-telephone me-2"></i> {contactInfo.whatsapp}
+                </li>
+              )}
+              {contactInfo.email && (
+                <li className="mb-2">
+                  <i className="bi bi-envelope me-2"></i>{' '}
+                  <a href={`mailto:${contactInfo.email}`} className="text-light text-decoration-none">
+                    {contactInfo.email}
+                  </a>
+                </li>
+              )}
+              {(contactInfo.address || contactInfo.mapUrl) && (
+                <li className="mb-2">
+                  <i className="bi bi-geo-alt me-2"></i>
+                  {contactInfo.mapUrl ? (
+                    <a
+                      href={contactInfo.mapUrl}
+                      className="text-light text-decoration-none"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {contactInfo.address || 'Ver ubicación'}
+                    </a>
+                  ) : (
+                    contactInfo.address
+                  )}
+                </li>
+              )}
             </ul>
           </div>
           <div className="col-md-4 mb-4 text-center">
@@ -130,36 +211,32 @@ export default function Footer() {
           </div>
           <div className="col-md-4 mb-4">
             <div className="d-flex gap-3">
-              <a
-                href="https://www.facebook.com/"
-                className="text-light"
-                aria-label="Facebook"
-              >
-                <i className="bi bi-facebook fs-4"></i>
-              </a>
-              <a
-                href="https://www.instagram.com/stories/patincarrerag.r/"
-                className="text-light"
-                aria-label="Instagram"
-              >
-                <i className="bi bi-instagram fs-4"></i>
-              </a>
-              <a
-                href={whatsappLink}
-                className="text-light"
-                aria-label="WhatsApp"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <i className="bi bi-whatsapp fs-4"></i>
-              </a>
-              <a
-                href="https://x.com/?lang=es"
-                className="text-light"
-                aria-label="X"
-              >
-                <i className="bi bi-twitter-x fs-4"></i>
-              </a>
+              {contactInfo.facebook && (
+                <a href={contactInfo.facebook} className="text-light" aria-label="Facebook">
+                  <i className="bi bi-facebook fs-4"></i>
+                </a>
+              )}
+              {contactInfo.instagram && (
+                <a href={contactInfo.instagram} className="text-light" aria-label="Instagram">
+                  <i className="bi bi-instagram fs-4"></i>
+                </a>
+              )}
+              {whatsappLink && (
+                <a
+                  href={whatsappLink}
+                  className="text-light"
+                  aria-label="WhatsApp"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <i className="bi bi-whatsapp fs-4"></i>
+                </a>
+              )}
+              {contactInfo.x && (
+                <a href={contactInfo.x} className="text-light" aria-label="X">
+                  <i className="bi bi-twitter-x fs-4"></i>
+                </a>
+              )}
             </div>
           </div>
         </div>
