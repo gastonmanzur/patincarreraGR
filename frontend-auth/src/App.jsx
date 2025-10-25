@@ -31,6 +31,7 @@ import VerReporte from './pages/VerReporte';
 import TitulosClub from './pages/TitulosClub';
 import VerTituloClub from './pages/VerTituloClub';
 import SelectClub from './pages/SelectClub';
+import ContactoClub from './pages/ContactoClub';
 
 function AdminRoute({ children }) {
   const token = sessionStorage.getItem('token');
@@ -132,6 +133,10 @@ function AppRoutes() {
           <Route
             path="/titulos-club/:id"
             element={<ProtectedRoute roles={['Delegado', 'Tecnico', 'Deportista']}><VerTituloClub /></ProtectedRoute>}
+          />
+          <Route
+            path="/contacto-club"
+            element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><ContactoClub /></ProtectedRoute>}
           />
           <Route
             path="/seguros"

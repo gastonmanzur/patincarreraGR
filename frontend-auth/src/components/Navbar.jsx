@@ -275,6 +275,9 @@ export default function Navbar() {
           { label: 'Inicio', path: '/home' },
           { label: 'Torneos', path: '/torneos' },
           { label: 'Títulos del Club', path: '/titulos-club' },
+          ...(rol === 'Delegado' || rol === 'Tecnico'
+            ? [{ label: 'Contacto del Club', path: '/contacto-club' }]
+            : []),
           ...(rolLower === 'admin' ? [{ label: 'Administración', path: '/admin' }] : []),
           ...(rol === 'Tecnico'
           ? [
