@@ -24,6 +24,163 @@ const sortEntries = (entries) => {
   });
 };
 
+codex/add-crear-padron-section-for-delegates-veonb9
+const formatDateValue = (value) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null;
+  }
+
+  if (value < 1000) {
+    return null;
+  }
+
+  const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+  const date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const year = date.getUTCFullYear();
+  if (year < 1900 || year > 2100) {
+    return null;
+  }
+
+  return date.toLocaleDateString('es-AR');
+};
+
+const formatPrimitive = (value) => {
+  if (value == null) return '';
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (typeof value === 'number') {
+    return Number.isNaN(value) ? '' : value.toString();
+  }
+
+  if (value instanceof Date) {
+    return value.toLocaleDateString('es-AR');
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'Sí' : 'No';
+  }
+
+  return null;
+};
+
+const getCellText = (cell) => {
+  if (cell == null) return '';
+
+  const direct = formatPrimitive(cell);
+  if (typeof direct === 'string') {
+    return direct;
+  }
+
+  if (typeof cell === 'object') {
+    if (typeof cell.text === 'string') {
+      return cell.text.trim();
+    }
+
+    const valueText = formatPrimitive(cell.value);
+    if (typeof valueText === 'string') {
+      return valueText;
+    }
+
+    if (Array.isArray(cell.richText)) {
+      return cell.richText.map((item) => item.text).join('').trim();
+    }
+
+    if (Array.isArray(cell.value?.richText)) {
+      return cell.value.richText.map((item) => item.text).join('').trim();
+    }
+
+    if (cell.result != null) {
+      const resultText = formatPrimitive(cell.result);
+      if (typeof resultText === 'string') {
+        return resultText;
+      }
+      return String(cell.result).trim();
+    }
+
+    if (cell.value?.result != null) {
+      const resultText = formatPrimitive(cell.value.result);
+      if (typeof resultText === 'string') {
+        return resultText;
+      }
+      return String(cell.value.result).trim();
+    }
+  }
+
+  return '';
+};
+
+const normalizeDateOutput = (cellOrValue) => {
+  if (cellOrValue == null) {
+    return '';
+  }
+
+  if (cellOrValue instanceof Date) {
+    return cellOrValue.toLocaleDateString('es-AR');
+  }
+
+  if (typeof cellOrValue === 'object' && 'value' in cellOrValue) {
+    const { value, numFmt } = cellOrValue;
+
+    if (value instanceof Date) {
+      return value.toLocaleDateString('es-AR');
+    }
+
+    if (typeof value === 'number') {
+      if (typeof numFmt === 'string' && /[dmy]/i.test(numFmt)) {
+        const maybeDate = formatDateValue(value);
+        if (maybeDate) return maybeDate;
+      }
+
+      const maybeDate = formatDateValue(value);
+      if (maybeDate) return maybeDate;
+      return value.toString();
+    }
+
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+
+    return getCellText(value);
+  }
+
+  if (typeof cellOrValue === 'number') {
+    const maybeDate = formatDateValue(cellOrValue);
+    return maybeDate ?? cellOrValue.toString();
+  }
+
+  const text = getCellText(cellOrValue);
+  if (!text) {
+    return '';
+  }
+
+  const isoMatch = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+  }
+
+  const genericMatch = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+  if (genericMatch) {
+    let [, day, month, year] = genericMatch;
+    if (year.length === 2) {
+      const numericYear = Number.parseInt(year, 10);
+      year = numericYear > 50 ? `19${year}` : `20${year}`;
+    }
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+  }
+
+  return text;
+};
+
+
 const getCellText = (cell) => {
   if (!cell) return '';
   const { text, value } = cell;
@@ -43,12 +200,16 @@ const getCellText = (cell) => {
   return '';
 };
 
+master
 const getCellNumber = (cell) => {
   const raw = getCellText(cell);
   if (!raw) return null;
   const numeric = Number.parseInt(raw.replace(/[^\d-]/g, ''), 10);
   return Number.isNaN(numeric) ? null : numeric;
 };
+
+ codex/add-crear-padron-section-for-delegates-veonb9
+const parseWorksheetRows = (sheet, fileName) => {
 
 const parseExcelFile = async (file) => {
   const workbook = new ExcelJS.Workbook();
@@ -60,6 +221,7 @@ const parseExcelFile = async (file) => {
     throw new Error('No se encontró ninguna hoja en el archivo.');
   }
 
+ master
   const entries = [];
   let detectedClub = '';
 
@@ -83,6 +245,182 @@ const parseExcelFile = async (file) => {
       apellidoNombre: nombreCompleto,
       categoria: getCellText(row.getCell(5)),
       club: club || detectedClub,
+ codex/add-crear-padron-section-for-delegates-veonb9
+      fechaNacimiento: normalizeDateOutput(row.getCell(7)),
+      dni: getCellText(row.getCell(8)),
+      source: fileName
+    });
+  });
+
+  return { entries, club: detectedClub };
+};
+
+const parseExcelWithExcelJS = async (file) => {
+  const workbook = new ExcelJS.Workbook();
+  const buffer = await file.arrayBuffer();
+  await workbook.xlsx.load(buffer);
+  const sheet = workbook.worksheets.find((ws) => ws?.actualRowCount > 0 || ws?.rowCount > 0);
+
+  if (!sheet) {
+    const error = new Error('NO_SHEETS_AVAILABLE');
+    error.code = 'NO_SHEETS_AVAILABLE';
+    throw error;
+  }
+
+  return parseWorksheetRows(sheet, file.name);
+};
+
+const parseHtmlTableContent = (textContent, fileName) => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(textContent, 'text/html');
+  const table = doc.querySelector('table');
+
+  if (!table) {
+    return null;
+  }
+
+  const rows = Array.from(table.querySelectorAll('tr'));
+  const entries = [];
+  let detectedClub = '';
+
+  rows.forEach((row) => {
+    const cells = Array.from(row.querySelectorAll('td,th')).map((cell) => getCellText(cell.textContent));
+    if (cells.length === 0) return;
+
+    const [indice, seguro, numeroCorredor, apellidoNombre, categoria, clubCell, fechaNacimiento, dni] = cells;
+    const indexValue = getCellNumber(indice);
+
+    if (indexValue == null || !apellidoNombre) {
+      return;
+    }
+
+    if (!detectedClub && clubCell) {
+      detectedClub = clubCell;
+    }
+
+    entries.push({
+      indice: indexValue,
+      seguro,
+      numeroCorredor,
+      apellidoNombre,
+      categoria,
+      club: clubCell || detectedClub,
+      fechaNacimiento: normalizeDateOutput(fechaNacimiento),
+      dni,
+      source: fileName
+    });
+  });
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return { entries, club: detectedClub };
+};
+
+const parsePlainTextContent = (textContent, fileName) => {
+  if (!textContent) return null;
+
+  const normalized = textContent.replace(/\r\n/g, '\n');
+  const lines = normalized
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (lines.length === 0) {
+    return null;
+  }
+
+  const delimiterCandidates = ['\t', ';', ','];
+  const delimiterScores = delimiterCandidates
+    .map((delimiter) => ({
+      delimiter,
+      score: lines.reduce((acc, line) => (line.includes(delimiter) ? acc + 1 : acc), 0)
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  const bestDelimiter = delimiterScores[0];
+  if (!bestDelimiter || bestDelimiter.score === 0) {
+    return null;
+  }
+
+  const entries = [];
+  let detectedClub = '';
+
+  lines.forEach((line) => {
+    const rawCells = line.split(bestDelimiter.delimiter).map((value) => {
+      const unquoted = value.replace(/^\s*["']?(.+?)["']?\s*$/, '$1');
+      return getCellText(unquoted);
+    });
+
+    while (rawCells.length < 8) {
+      rawCells.push('');
+    }
+
+    const [indice, seguro, numeroCorredor, apellidoNombre, categoria, clubCell, fechaNacimiento, dni] = rawCells;
+    const indexValue = getCellNumber(indice);
+
+    if (indexValue == null || !apellidoNombre) {
+      return;
+    }
+
+    if (!detectedClub && clubCell) {
+      detectedClub = clubCell;
+    }
+
+    entries.push({
+      indice: indexValue,
+      seguro,
+      numeroCorredor,
+      apellidoNombre,
+      categoria,
+      club: clubCell || detectedClub,
+      fechaNacimiento: normalizeDateOutput(fechaNacimiento),
+      dni,
+      source: fileName
+    });
+  });
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return { entries, club: detectedClub };
+};
+
+const parseExcelFile = async (file) => {
+  let excelError = null;
+
+  try {
+    return await parseExcelWithExcelJS(file);
+  } catch (error) {
+    if (error instanceof Error && error.code !== 'NO_SHEETS_AVAILABLE') {
+      excelError = new Error('El archivo no tiene un formato de Excel válido o está dañado.');
+    } else if (error instanceof Error) {
+      excelError = new Error('No se encontraron hojas en el archivo. Verifique que contenga datos.');
+    }
+  }
+
+  const textContent = await file.text();
+
+  const htmlResult = parseHtmlTableContent(textContent, file.name);
+  if (htmlResult) {
+    return htmlResult;
+  }
+
+  const plainTextResult = parsePlainTextContent(textContent, file.name);
+  if (plainTextResult) {
+    return plainTextResult;
+  }
+
+  if (excelError) {
+    throw excelError;
+  }
+
+  throw new Error(
+    'No se pudieron leer datos de la lista. Verifique que el archivo corresponda a la lista de buena fe exportada desde el sistema.'
+  );
+
       fechaNacimiento: getCellText(row.getCell(7)),
       dni: getCellText(row.getCell(8)),
       source: file.name
@@ -93,6 +431,7 @@ const parseExcelFile = async (file) => {
     entries,
     club: detectedClub
   };
+ master
 };
 
 export default function CrearPadron() {
