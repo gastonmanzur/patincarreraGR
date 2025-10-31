@@ -154,7 +154,7 @@ const normalizeDateOutput = (cellOrValue) => {
     return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
   }
 
-  const genericMatch = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+  const genericMatch = text.match(/^(\d{1,2})[./\\-](\d{1,2})[./\\-](\d{2,4})$/);
   if (genericMatch) {
     let [, day, month, year] = genericMatch;
     if (year.length === 2) {
@@ -359,6 +359,38 @@ const parsePlainTextContent = (textContent, fileName) => {
   return { entries, club: detectedClub };
 };
 
+const isLikelyBinaryContent = (text) => {
+  if (!text) return false;
+
+  const sample = text.slice(0, 4096);
+  let binaryLike = 0;
+  let inspected = 0;
+
+  for (let i = 0; i < sample.length; i += 1) {
+    const code = sample.charCodeAt(i);
+    inspected += 1;
+
+    if (code === 65533) {
+      binaryLike += 1;
+      continue;
+    }
+
+    if (code === 0) {
+      return true;
+    }
+
+    if (code < 9 || (code > 13 && code < 32)) {
+      binaryLike += 1;
+    }
+  }
+
+  if (inspected === 0) {
+    return false;
+  }
+
+  return binaryLike / inspected > 0.1;
+};
+
 const parseExcelFile = async (file) => {
   let excelError = null;
 
@@ -372,7 +404,34 @@ const parseExcelFile = async (file) => {
     }
   }
 
-  const textContent = await file.text();
+  const fileName = file.name || '';
+  const fileType = (file.type || '').toLowerCase();
+  const isLegacyExcel = /\.xls$/i.test(fileName) && !/\.xlsx$/i.test(fileName);
+  const isLegacyMime = fileType === 'application/vnd.ms-excel';
+
+  if (isLegacyExcel || isLegacyMime) {
+    throw new Error(
+      'Los archivos en formato .xls no son compatibles. Exporte la lista nuevamente en formato .xlsx antes de importarla.'
+    );
+  }
+
+  const isTextLikeFile =
+    fileType.startsWith('text/') || /\.(csv|txt|tsv|htm|html)$/i.test(fileName) || fileType.includes('html');
+
+  if (!isTextLikeFile && !excelError) {
+    throw new Error(
+      'No se pudieron leer datos de la lista. Verifique que el archivo corresponda a la lista de buena fe exportada desde el sistema.'
+    );
+  }
+
+  const textContent = isTextLikeFile ? await file.text() : '';
+
+  if (!textContent || isLikelyBinaryContent(textContent)) {
+    throw excelError ||
+      new Error(
+        'El archivo tiene un formato binario no compatible. Exporte la lista nuevamente en formato .xlsx antes de importarla.'
+      );
+  }
 
   const htmlResult = parseHtmlTableContent(textContent, file.name);
   if (htmlResult) {
