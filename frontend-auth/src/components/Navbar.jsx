@@ -312,7 +312,8 @@ export default function Navbar() {
                 label: 'Crear',
                 children: [
                   { label: 'Crear Noticia', path: '/crear-noticia' },
-                  { label: 'Crear Notificacion', path: '/crear-notificacion' }
+                  { label: 'Crear Notificacion', path: '/crear-notificacion' },
+                  ...(rol === 'Delegado' ? [{ label: 'Crear Padrón', path: '/crear-padron' }] : [])
                 ]
               }
             ]
