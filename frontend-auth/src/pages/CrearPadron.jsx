@@ -24,13 +24,8 @@ const sortEntries = (entries) => {
   });
 };
 
-codex/add-crear-padron-section-for-delegates-veonb9
 const formatDateValue = (value) => {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    return null;
-  }
-
-  if (value < 1000) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 1000) {
     return null;
   }
 
@@ -68,25 +63,15 @@ const formatPrimitive = (value) => {
     return value ? 'Sí' : 'No';
   }
 
-  return null;
+  return '';
 };
 
 const getCellText = (cell) => {
   if (cell == null) return '';
 
-  const direct = formatPrimitive(cell);
-  if (typeof direct === 'string') {
-    return direct;
-  }
-
   if (typeof cell === 'object') {
-    if (typeof cell.text === 'string') {
+    if (typeof cell.text === 'string' && cell.text.trim() !== '') {
       return cell.text.trim();
-    }
-
-    const valueText = formatPrimitive(cell.value);
-    if (typeof valueText === 'string') {
-      return valueText;
     }
 
     if (Array.isArray(cell.richText)) {
@@ -97,24 +82,26 @@ const getCellText = (cell) => {
       return cell.value.richText.map((item) => item.text).join('').trim();
     }
 
-    if (cell.result != null) {
-      const resultText = formatPrimitive(cell.result);
-      if (typeof resultText === 'string') {
-        return resultText;
+    if (cell.value !== undefined) {
+      const nestedValue = getCellText(cell.value);
+      if (nestedValue) {
+        return nestedValue;
       }
-      return String(cell.result).trim();
     }
 
-    if (cell.value?.result != null) {
-      const resultText = formatPrimitive(cell.value.result);
-      if (typeof resultText === 'string') {
-        return resultText;
-      }
-      return String(cell.value.result).trim();
+    if (cell.result != null) {
+      return getCellText(cell.result);
     }
   }
 
-  return '';
+  return formatPrimitive(cell);
+};
+
+const getCellNumber = (cell) => {
+  const raw = getCellText(cell);
+  if (!raw) return null;
+  const numeric = Number.parseInt(raw.replace(/[^\d-]/g, ''), 10);
+  return Number.isNaN(numeric) ? null : numeric;
 };
 
 const normalizeDateOutput = (cellOrValue) => {
@@ -180,48 +167,7 @@ const normalizeDateOutput = (cellOrValue) => {
   return text;
 };
 
-
-const getCellText = (cell) => {
-  if (!cell) return '';
-  const { text, value } = cell;
-  if (typeof text === 'string' && text.trim() !== '') {
-    return text.trim();
-  }
-  if (value == null) return '';
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'number') return value.toString();
-  if (typeof value === 'object') {
-    if (typeof value.text === 'string') return value.text.trim();
-    if (Array.isArray(value.richText)) {
-      return value.richText.map((item) => item.text).join('').trim();
-    }
-    if (value.result != null) return String(value.result).trim();
-  }
-  return '';
-};
-
-master
-const getCellNumber = (cell) => {
-  const raw = getCellText(cell);
-  if (!raw) return null;
-  const numeric = Number.parseInt(raw.replace(/[^\d-]/g, ''), 10);
-  return Number.isNaN(numeric) ? null : numeric;
-};
-
- codex/add-crear-padron-section-for-delegates-veonb9
 const parseWorksheetRows = (sheet, fileName) => {
-
-const parseExcelFile = async (file) => {
-  const workbook = new ExcelJS.Workbook();
-  const buffer = await file.arrayBuffer();
-  await workbook.xlsx.load(buffer);
-  const sheet = workbook.worksheets[0];
-
-  if (!sheet) {
-    throw new Error('No se encontró ninguna hoja en el archivo.');
-  }
-
- master
   const entries = [];
   let detectedClub = '';
 
@@ -233,9 +179,9 @@ const parseExcelFile = async (file) => {
       return;
     }
 
-    const club = getCellText(row.getCell(6));
-    if (!detectedClub && club) {
-      detectedClub = club;
+    const clubCell = getCellText(row.getCell(6));
+    if (!detectedClub && clubCell) {
+      detectedClub = clubCell;
     }
 
     entries.push({
@@ -244,8 +190,7 @@ const parseExcelFile = async (file) => {
       numeroCorredor: getCellText(row.getCell(3)),
       apellidoNombre: nombreCompleto,
       categoria: getCellText(row.getCell(5)),
-      club: club || detectedClub,
- codex/add-crear-padron-section-for-delegates-veonb9
+      club: clubCell || detectedClub,
       fechaNacimiento: normalizeDateOutput(row.getCell(7)),
       dni: getCellText(row.getCell(8)),
       source: fileName
@@ -259,8 +204,33 @@ const parseExcelWithExcelJS = async (file) => {
   const workbook = new ExcelJS.Workbook();
   const buffer = await file.arrayBuffer();
   await workbook.xlsx.load(buffer);
-  const sheet = workbook.worksheets.find((ws) => ws?.actualRowCount > 0 || ws?.rowCount > 0);
 
+  if (workbook.worksheets.length === 0) {
+    const error = new Error('NO_SHEETS_AVAILABLE');
+    error.code = 'NO_SHEETS_AVAILABLE';
+    throw error;
+  }
+
+  const sheetWithContent = workbook.worksheets.find((ws) => {
+    let hasData = false;
+    ws.eachRow((row) => {
+      if (hasData) return;
+      const values = Array.isArray(row.values) ? row.values : [];
+      hasData = values.some((value) => {
+        if (value == null) return false;
+        if (typeof value === 'string') return value.trim() !== '';
+        if (typeof value === 'number') return !Number.isNaN(value);
+        if (value instanceof Date) return true;
+        if (typeof value === 'object') {
+          return getCellText(value) !== '';
+        }
+        return false;
+      });
+    });
+    return hasData;
+  });
+
+  const sheet = sheetWithContent ?? workbook.worksheets[0];
   if (!sheet) {
     const error = new Error('NO_SHEETS_AVAILABLE');
     error.code = 'NO_SHEETS_AVAILABLE';
@@ -321,13 +291,14 @@ const parseHtmlTableContent = (textContent, fileName) => {
 const parsePlainTextContent = (textContent, fileName) => {
   if (!textContent) return null;
 
-  const normalized = textContent.replace(/\r\n/g, '\n');
-  const lines = normalized
+  const sanitized = textContent
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
 
-  if (lines.length === 0) {
+  if (sanitized.length === 0) {
     return null;
   }
 
@@ -335,7 +306,7 @@ const parsePlainTextContent = (textContent, fileName) => {
   const delimiterScores = delimiterCandidates
     .map((delimiter) => ({
       delimiter,
-      score: lines.reduce((acc, line) => (line.includes(delimiter) ? acc + 1 : acc), 0)
+      score: sanitized.reduce((acc, line) => (line.includes(delimiter) ? acc + 1 : acc), 0)
     }))
     .sort((a, b) => b.score - a.score);
 
@@ -347,7 +318,7 @@ const parsePlainTextContent = (textContent, fileName) => {
   const entries = [];
   let detectedClub = '';
 
-  lines.forEach((line) => {
+  sanitized.forEach((line) => {
     const rawCells = line.split(bestDelimiter.delimiter).map((value) => {
       const unquoted = value.replace(/^\s*["']?(.+?)["']?\s*$/, '$1');
       return getCellText(unquoted);
@@ -420,18 +391,6 @@ const parseExcelFile = async (file) => {
   throw new Error(
     'No se pudieron leer datos de la lista. Verifique que el archivo corresponda a la lista de buena fe exportada desde el sistema.'
   );
-
-      fechaNacimiento: getCellText(row.getCell(7)),
-      dni: getCellText(row.getCell(8)),
-      source: file.name
-    });
-  });
-
-  return {
-    entries,
-    club: detectedClub
-  };
- master
 };
 
 export default function CrearPadron() {
@@ -662,7 +621,7 @@ export default function CrearPadron() {
             </thead>
             <tbody>
               {sortedEntries.map((entry, index) => (
-                <tr key={`${entry.source}-${index}-${entry.dni}`}> 
+                <tr key={`${entry.source}-${index}-${entry.dni}`}>
                   <th scope="row">{index + 1}</th>
                   <td>{entry.club || '—'}</td>
                   <td>{entry.numeroCorredor || '—'}</td>
