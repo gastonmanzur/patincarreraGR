@@ -24,6 +24,7 @@ const sortEntries = (entries) => {
   });
 };
 
+codex/add-crear-padron-section-for-delegates-veonb9
 const formatDateValue = (value) => {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return null;
@@ -179,6 +180,27 @@ const normalizeDateOutput = (cellOrValue) => {
   return text;
 };
 
+
+const getCellText = (cell) => {
+  if (!cell) return '';
+  const { text, value } = cell;
+  if (typeof text === 'string' && text.trim() !== '') {
+    return text.trim();
+  }
+  if (value == null) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number') return value.toString();
+  if (typeof value === 'object') {
+    if (typeof value.text === 'string') return value.text.trim();
+    if (Array.isArray(value.richText)) {
+      return value.richText.map((item) => item.text).join('').trim();
+    }
+    if (value.result != null) return String(value.result).trim();
+  }
+  return '';
+};
+
+master
 const getCellNumber = (cell) => {
   const raw = getCellText(cell);
   if (!raw) return null;
@@ -186,7 +208,20 @@ const getCellNumber = (cell) => {
   return Number.isNaN(numeric) ? null : numeric;
 };
 
+ codex/add-crear-padron-section-for-delegates-veonb9
 const parseWorksheetRows = (sheet, fileName) => {
+
+const parseExcelFile = async (file) => {
+  const workbook = new ExcelJS.Workbook();
+  const buffer = await file.arrayBuffer();
+  await workbook.xlsx.load(buffer);
+  const sheet = workbook.worksheets[0];
+
+  if (!sheet) {
+    throw new Error('No se encontró ninguna hoja en el archivo.');
+  }
+
+ master
   const entries = [];
   let detectedClub = '';
 
@@ -210,6 +245,7 @@ const parseWorksheetRows = (sheet, fileName) => {
       apellidoNombre: nombreCompleto,
       categoria: getCellText(row.getCell(5)),
       club: club || detectedClub,
+ codex/add-crear-padron-section-for-delegates-veonb9
       fechaNacimiento: normalizeDateOutput(row.getCell(7)),
       dni: getCellText(row.getCell(8)),
       source: fileName
@@ -384,6 +420,18 @@ const parseExcelFile = async (file) => {
   throw new Error(
     'No se pudieron leer datos de la lista. Verifique que el archivo corresponda a la lista de buena fe exportada desde el sistema.'
   );
+
+      fechaNacimiento: getCellText(row.getCell(7)),
+      dni: getCellText(row.getCell(8)),
+      source: file.name
+    });
+  });
+
+  return {
+    entries,
+    club: detectedClub
+  };
+ master
 };
 
 export default function CrearPadron() {
