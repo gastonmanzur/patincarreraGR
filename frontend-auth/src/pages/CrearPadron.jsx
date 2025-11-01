@@ -424,9 +424,29 @@ const parseExcelFile = async (file) => {
     );
   }
 
-  const textContent = isTextLikeFile ? await file.text() : '';
+  let textContent = '';
 
-  if (!textContent || isLikelyBinaryContent(textContent)) {
+  if (isTextLikeFile) {
+    textContent = await file.text();
+  } else if (excelError) {
+    try {
+      const potentialText = await file.text();
+      if (!isLikelyBinaryContent(potentialText)) {
+        textContent = potentialText;
+      }
+    } catch (readError) {
+      console.warn('No fue posible leer el archivo como texto para un análisis alternativo.', readError);
+    }
+  }
+
+  if (!textContent) {
+    throw excelError ||
+      new Error(
+        'El archivo tiene un formato binario no compatible. Exporte la lista nuevamente en formato .xlsx antes de importarla.'
+      );
+  }
+
+  if (isLikelyBinaryContent(textContent)) {
     throw excelError ||
       new Error(
         'El archivo tiene un formato binario no compatible. Exporte la lista nuevamente en formato .xlsx antes de importarla.'
