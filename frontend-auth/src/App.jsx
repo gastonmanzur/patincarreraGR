@@ -16,7 +16,6 @@ import EditarPatinador from './pages/EditarPatinador';
 import AsociarPatinadores from './pages/AsociarPatinadores';
 import Notificaciones from './pages/Notificaciones';
 import CrearNotificacion from './pages/CrearNotificacion';
-import CrearPadron from './pages/CrearPadron';
 import Torneos from './pages/Torneos';
 import Competencias from './pages/Competencias';
 import ListaBuenaFe from './pages/ListaBuenaFe';
@@ -101,10 +100,6 @@ function AppRoutes() {
           <Route
             path="/crear-notificacion"
             element={<ProtectedRoute roles={['Delegado', 'Tecnico']}><CrearNotificacion /></ProtectedRoute>}
-          />
-          <Route
-            path="/crear-padron"
-            element={<ProtectedRoute roles={['Delegado']}><CrearPadron /></ProtectedRoute>}
           />
           <Route
             path="/entrenamientos"
