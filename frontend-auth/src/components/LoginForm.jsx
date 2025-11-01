@@ -15,8 +15,16 @@ export default function LoginForm() {
 
       const { token, usuario, needsClubSelection } = res.data;
 
+      const rawRole = typeof usuario.rol === 'string' ? usuario.rol.trim() : '';
+      const normalisedRole = rawRole.toLowerCase();
+
       sessionStorage.setItem('token', token);
-      sessionStorage.setItem('rol', usuario.rol);
+
+      if (rawRole) {
+        sessionStorage.setItem('rol', rawRole);
+      } else {
+        sessionStorage.removeItem('rol');
+      }
 
       if (usuario.club) {
         sessionStorage.setItem('clubId', usuario.club);
@@ -33,13 +41,13 @@ export default function LoginForm() {
         sessionStorage.removeItem('foto');
       }
 
-      if (usuario.rol?.toLowerCase() === 'admin') {
+      if (normalisedRole === 'admin') {
         sessionStorage.removeItem('clubLogo');
         sessionStorage.removeItem('clubNombre');
       }
 
       alert(`Bienvenido ${usuario.nombre}`);
-      if (needsClubSelection && usuario.rol.toLowerCase() !== 'admin') {
+      if (needsClubSelection && normalisedRole !== 'admin') {
         navigate('/seleccionar-club');
       } else {
         navigate('/home');
