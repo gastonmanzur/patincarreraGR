@@ -130,16 +130,16 @@ export default function Torneos() {
           {torneos.map((t) => (
             <li
               key={t._id}
-              className="list-group-item d-flex justify-content-between align-items-center"
+              className="list-group-item d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3 justify-content-between"
             >
-              <div>
+              <div className="w-100">
                 <strong>{t.nombre}</strong>
                 <div>
                   {new Date(t.fechaInicio).toLocaleDateString()} -
                   {new Date(t.fechaFin).toLocaleDateString()}
                 </div>
               </div>
-              <div className="d-flex gap-2">
+              <div className="d-flex flex-wrap gap-2 w-100 justify-content-start justify-content-md-end">
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={() => navigate(`/torneos/${t._id}`)}
