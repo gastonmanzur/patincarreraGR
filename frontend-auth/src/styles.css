@@ -834,6 +834,73 @@ body.dark-mode .btn-primary {
   border-radius: 0.25rem;
 }
 
+.competencias-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.competencia-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.competencia-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.competencia-info-text {
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
+.competencia-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.competencia-actions .btn {
+  min-width: 100px;
+}
+
+@media (max-width: 768px) {
+  .competencia-item {
+    align-items: flex-start;
+  }
+
+  .competencia-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .competencia-img {
+    width: 100%;
+    max-width: 220px;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  .competencia-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .competencia-actions .btn {
+    flex: 1 1 calc(50% - 0.5rem);
+    min-width: 120px;
+  }
+}
+
 @media (max-width: 768px) {
   .mini-news-container {
     flex-direction: column;

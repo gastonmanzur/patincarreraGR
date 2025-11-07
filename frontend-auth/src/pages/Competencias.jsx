@@ -140,18 +140,18 @@ export default function Competencias() {
       {competencias.length === 0 ? (
         <p>No hay competencias registradas.</p>
       ) : (
-        <ul className="list-group">
+        <ul className="list-group competencias-list">
           {competencias.map((c) => (
-            <li key={c._id} className="list-group-item d-flex justify-content-between align-items-center">
-              <div className="d-flex align-items-center gap-3">
+            <li key={c._id} className="list-group-item competencia-item">
+              <div className="competencia-info">
                 {c.imagen && (
                   <img src={c.imagen} alt="imagen competencia" className="competencia-img" />
                 )}
-                <div>
+                <div className="competencia-info-text">
                   <strong>{c.nombre}</strong> - {new Date(c.fecha).toLocaleDateString()}
                 </div>
               </div>
-              <div className="d-flex gap-2">
+              <div className="competencia-actions">
                 {rol === 'Delegado' && (
                   <>
                     <button
