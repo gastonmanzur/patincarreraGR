@@ -9,7 +9,8 @@ const initialState = {
   facebook: '',
   instagram: '',
   whatsapp: '',
-  x: ''
+  x: '',
+  history: ''
 };
 
 const normaliseValue = (value) => (typeof value === 'string' ? value : '');
@@ -38,7 +39,8 @@ export default function ContactoClub() {
           facebook: normaliseValue(info.facebook),
           instagram: normaliseValue(info.instagram),
           whatsapp: normaliseValue(info.whatsapp),
-          x: normaliseValue(info.x)
+          x: normaliseValue(info.x),
+          history: normaliseValue(info.history)
         });
         const club = res.data?.club || {};
         setClubName(normaliseValue(club.nombreAmigable) || normaliseValue(club.nombre));
@@ -85,7 +87,8 @@ export default function ContactoClub() {
         facebook: normaliseValue(info.facebook),
         instagram: normaliseValue(info.instagram),
         whatsapp: normaliseValue(info.whatsapp),
-        x: normaliseValue(info.x)
+        x: normaliseValue(info.x),
+        history: normaliseValue(info.history)
       });
       const updatedClub = res.data?.club || {};
       setClubName((prev) => normaliseValue(updatedClub.nombreAmigable) || normaliseValue(updatedClub.nombre) || prev);
@@ -274,6 +277,25 @@ export default function ContactoClub() {
                         onChange={handleChange}
                         disabled={saving}
                       />
+                    </div>
+
+                    <div className="col-12">
+                      <label htmlFor="history" className="form-label">
+                        Historia del club
+                      </label>
+                      <textarea
+                        id="history"
+                        name="history"
+                        className="form-control"
+                        placeholder="Contá cómo nació y creció el club"
+                        value={form.history}
+                        onChange={handleChange}
+                        rows="6"
+                        disabled={saving}
+                      ></textarea>
+                      <div className="form-text">
+                        Este texto se mostrará en el recuadro de historia del pie de página.
+                      </div>
                     </div>
                   </div>
 

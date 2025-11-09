@@ -105,7 +105,9 @@ const DEFAULT_LOCAL_CONTACT_INFO = Object.freeze({
   facebook: 'https://www.facebook.com/',
   instagram: 'https://www.instagram.com/stories/patincarrerag.r/',
   whatsapp: '5491173726166',
-  x: 'https://x.com/?lang=es'
+  x: 'https://x.com/?lang=es',
+  history:
+    'En 2021, el Municipio de General Rodríguez creó la Escuela de Patín Carrera como respuesta solidaria al fallecimiento del entrenador que formaba chicos en el Polideportivo Municipal y los llevaba a competir representando al club Social de Paso del Rey. Muchos de esos jóvenes quedaron sin club, y así nació un espacio propio para continuar su desarrollo. Desde entonces, la escuela no dejó de crecer: se afilió a la Asociación de Patinadores Metropolitanos (APM) y participó en torneos nacionales, logrando destacados resultados como el 2.º puesto en el Encuentro Nacional de Escuela y Transición (Moreno, octubre de 2024) y el 3.º puesto en el primer Encuentro Nacional de Escuela y Transición estilo INDOOR (CABA, abril de 2025). Hoy, la Escuela de Patín Carrera de General Rodríguez sigue formando deportistas y consolidando una comunidad en torno al esfuerzo y la velocidad.'
 });
 
 const parseDateOnly = (value) => {
@@ -1015,7 +1017,7 @@ const normaliseUrlOrNull = (value) => {
   return `https://${trimmed}`;
 };
 
-const CONTACT_INFO_KEYS = ['phone', 'email', 'address', 'mapUrl', 'facebook', 'instagram', 'whatsapp', 'x'];
+const CONTACT_INFO_KEYS = ['phone', 'email', 'address', 'mapUrl', 'facebook', 'instagram', 'whatsapp', 'x', 'history'];
 const CONTACT_INFO_URL_KEYS = new Set(['mapUrl', 'facebook', 'instagram', 'x']);
 
 const normaliseContactString = (value) => (typeof value === 'string' ? value.trim() : '');

@@ -21,7 +21,8 @@ const contactInfoSchema = new mongoose.Schema(
     facebook: { type: String, trim: true },
     instagram: { type: String, trim: true },
     whatsapp: { type: String, trim: true },
-    x: { type: String, trim: true }
+    x: { type: String, trim: true },
+    history: { type: String, trim: true }
   },
   { _id: false }
 );
