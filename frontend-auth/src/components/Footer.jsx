@@ -14,7 +14,9 @@ export default function Footer() {
     facebook: 'https://www.facebook.com/',
     instagram: 'https://www.instagram.com/stories/patincarrerag.r/',
     whatsapp: '5491173726166',
-    x: 'https://x.com/?lang=es'
+    x: 'https://x.com/?lang=es',
+    history:
+      'En 2021, el Municipio de General Rodríguez creó la Escuela de Patín Carrera como respuesta solidaria al fallecimiento del entrenador que formaba chicos en el Polideportivo Municipal y los llevaba a competir representando al club Social de Paso del Rey. Muchos de esos jóvenes quedaron sin club, y así nació un espacio propio para continuar su desarrollo. Desde entonces, la escuela no dejó de crecer: se afilió a la Asociación de Patinadores Metropolitanos (APM) y participó en torneos nacionales, logrando destacados resultados como el 2.º puesto en el Encuentro Nacional de Escuela y Transición (Moreno, octubre de 2024) y el 3.º puesto en el primer Encuentro Nacional de Escuela y Transición estilo INDOOR (CABA, abril de 2025). Hoy, la Escuela de Patín Carrera de General Rodríguez sigue formando deportistas y consolidando una comunidad en torno al esfuerzo y la velocidad.'
   });
 
   const applyContactInfo = useCallback((data = {}) => {
@@ -26,7 +28,8 @@ export default function Footer() {
       facebook: data.facebook || prev.facebook || '',
       instagram: data.instagram || prev.instagram || '',
       whatsapp: data.whatsapp || prev.whatsapp || '',
-      x: data.x || prev.x || ''
+      x: data.x || prev.x || '',
+      history: data.history || prev.history || ''
     }));
   }, []);
 
@@ -78,14 +81,18 @@ export default function Footer() {
     whatsappLink = contactInfo.whatsapp;
   }
 
+  const historyText = (contactInfo.history || '').trim();
+
   const togglePinned = () => {
     const newPinned = !pinned;
     setPinned(newPinned);
-    setHistoryVisible(newPinned);
+    if (historyText) {
+      setHistoryVisible(newPinned);
+    }
   };
 
   const handleMouseEnter = () => {
-    if (!pinned) setHistoryVisible(true);
+    if (!pinned && historyText) setHistoryVisible(true);
   };
 
   const handleMouseLeave = () => {
@@ -125,10 +132,10 @@ export default function Footer() {
                 height="400"
                 className={`robot-image mb-3 ${historyVisible ? 'shift-left' : ''}`}
               />
-              {historyVisible && (
+              {historyVisible && historyText && (
                 <div className="history-bubble">
-                  <p className="mb-0 small">
-                    En 2021, el Municipio de General Rodríguez creó la Escuela de Patín Carrera como respuesta solidaria al fallecimiento del entrenador que formaba chicos en el Polideportivo Municipal y los llevaba a competir representando al club Social de Paso del Rey. Muchos de esos jóvenes quedaron sin club, y así nació un espacio propio para continuar su desarrollo. Desde entonces, la escuela no dejó de crecer: se afilió a la Asociación de Patinadores Metropolitanos (APM) y participó en torneos nacionales, logrando destacados resultados como el 2.º puesto en el Encuentro Nacional de Escuela y Transición (Moreno, octubre de 2024) y el 3.º puesto en el primer Encuentro Nacional de Escuela y Transición estilo INDOOR (CABA, abril de 2025). Hoy, la Escuela de Patín Carrera de General Rodríguez sigue formando deportistas y consolidando una comunidad en torno al esfuerzo y la velocidad.
+                  <p className="mb-0 small" style={{ whiteSpace: 'pre-line' }}>
+                    {historyText}
                   </p>
                 </div>
               )}
