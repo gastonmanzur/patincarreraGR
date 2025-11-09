@@ -1,6 +1,7 @@
 import api, { login } from '../api';
 import { useNavigate } from 'react-router-dom';
 import getImageUrl from '../utils/getImageUrl';
+import { clearStoredClubId, setStoredClubId } from '../utils/clubContext';
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -27,9 +28,9 @@ export default function LoginForm() {
       }
 
       if (usuario.club) {
-        sessionStorage.setItem('clubId', usuario.club);
+        setStoredClubId(usuario.club);
       } else {
-        sessionStorage.removeItem('clubId');
+        clearStoredClubId();
         sessionStorage.removeItem('clubLogo');
         sessionStorage.removeItem('clubNombre');
       }
@@ -42,6 +43,7 @@ export default function LoginForm() {
       }
 
       if (normalisedRole === 'admin') {
+        clearStoredClubId();
         sessionStorage.removeItem('clubLogo');
         sessionStorage.removeItem('clubNombre');
       }

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import { CLUB_CONTEXT_EVENT, getStoredClubId } from '../utils/clubContext';
 
 export default function Footer() {
   const [historyVisible, setHistoryVisible] = useState(false);
@@ -33,27 +34,39 @@ export default function Footer() {
     }));
   }, []);
 
-  useEffect(() => {
-    let active = true;
+  const mountedRef = useRef(true);
 
-    const fetchContactInfo = async () => {
-      try {
-        const res = await api.get('/public/club-contact');
-        if (!active) return;
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
 
-        applyContactInfo(res.data?.contactInfo || {});
-      } catch (err) {
-        if (!active) return;
-        console.error('Error al obtener la información de contacto del club', err);
-      }
-    };
-
-    void fetchContactInfo();
-
-    return () => {
-      active = false;
-    };
+  const fetchContactInfo = useCallback(async () => {
+    try {
+      const clubId = getStoredClubId();
+      const config = clubId ? { params: { clubId } } : {};
+      const res = await api.get('/public/club-contact', config);
+      if (!mountedRef.current) return;
+      applyContactInfo(res.data?.contactInfo || {});
+    } catch (err) {
+      if (!mountedRef.current) return;
+      console.error('Error al obtener la información de contacto del club', err);
+    }
   }, [applyContactInfo]);
+
+  useEffect(() => {
+    void fetchContactInfo();
+  }, [fetchContactInfo]);
+
+  useEffect(() => {
+    const handleClubContextChange = () => {
+      void fetchContactInfo();
+    };
+
+    window.addEventListener(CLUB_CONTEXT_EVENT, handleClubContextChange);
+    return () => {
+      window.removeEventListener(CLUB_CONTEXT_EVENT, handleClubContextChange);
+    };
+  }, [fetchContactInfo]);
 
   useEffect(() => {
     const handleUpdate = (event) => {

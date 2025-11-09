@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import getImageUrl from '../utils/getImageUrl';
+import { clearStoredClubId, setStoredClubId } from '../utils/clubContext';
 
 
 export default function GoogleSuccess() {
@@ -16,9 +17,9 @@ export default function GoogleSuccess() {
       sessionStorage.setItem('token', token);
       sessionStorage.setItem('rol', datos.rol);
       if (datos.club) {
-        sessionStorage.setItem('clubId', datos.club);
+        setStoredClubId(datos.club);
       } else {
-        sessionStorage.removeItem('clubId');
+        clearStoredClubId();
         sessionStorage.removeItem('clubLogo');
         sessionStorage.removeItem('clubNombre');
       }
@@ -30,6 +31,7 @@ export default function GoogleSuccess() {
       }
 
       if (datos.rol?.toLowerCase() === 'admin') {
+        clearStoredClubId();
         sessionStorage.removeItem('clubLogo');
         sessionStorage.removeItem('clubNombre');
       }

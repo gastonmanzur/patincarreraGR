@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { clearStoredClubId } from '../utils/clubContext';
 
 export default function LogoutButton() {
   const navigate = useNavigate();
@@ -7,7 +8,7 @@ export default function LogoutButton() {
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('rol');
     sessionStorage.removeItem('foto');
-    sessionStorage.removeItem('clubId');
+    clearStoredClubId();
     sessionStorage.removeItem('clubLogo');
     sessionStorage.removeItem('clubNombre');
     navigate('/');

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { clearStoredClubId, getStoredClubId } from '../utils/clubContext';
 
 const ensureApiSuffix = (value) => {
   if (!value) return null;
@@ -98,13 +99,13 @@ api.defaults.baseURL = resolvedEnvBaseUrl || getBaseUrlForIndex(activeBaseUrlInd
 
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('token');
-  const clubId = sessionStorage.getItem('clubId');
+  const clubId = getStoredClubId();
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  if (clubId && clubId !== 'null') {
+  if (clubId) {
     config.headers['X-Club-Id'] = clubId;
   }
 
@@ -161,7 +162,7 @@ api.interceptors.response.use(
       sessionStorage.removeItem('token');
       sessionStorage.removeItem('rol');
       sessionStorage.removeItem('foto');
-      sessionStorage.removeItem('clubId');
+      clearStoredClubId();
       window.location.href = '/';
       return Promise.reject(error);
     }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import getImageUrl from '../utils/getImageUrl';
+import { setStoredClubId } from '../utils/clubContext';
 
 export default function SelectClub() {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ export default function SelectClub() {
 
       sessionStorage.setItem('token', token);
       sessionStorage.setItem('rol', usuario.rol);
-      sessionStorage.setItem('clubId', usuario.club);
+      setStoredClubId(usuario.club);
 
       const foto = getImageUrl(usuario.foto);
       if (foto) {
