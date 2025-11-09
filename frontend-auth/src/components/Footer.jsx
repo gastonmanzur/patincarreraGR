@@ -3,6 +3,20 @@ import { Link } from 'react-router-dom';
 import api from '../api';
 import { CLUB_CONTEXT_EVENT, getStoredClubId } from '../utils/clubContext';
 
+const CONTACT_INFO_KEYS = [
+  'phone',
+  'email',
+  'address',
+  'mapUrl',
+  'facebook',
+  'instagram',
+  'whatsapp',
+  'x',
+  'history'
+];
+
+const normaliseContactValue = (value) => (typeof value === 'string' ? value : '');
+
 export default function Footer() {
   const [historyVisible, setHistoryVisible] = useState(false);
   const [pinned, setPinned] = useState(false);
@@ -21,17 +35,18 @@ export default function Footer() {
   });
 
   const applyContactInfo = useCallback((data = {}) => {
-    setContactInfo((prev) => ({
-      phone: data.phone || prev.phone || '',
-      email: data.email || prev.email || '',
-      address: data.address || prev.address || '',
-      mapUrl: data.mapUrl || prev.mapUrl || '',
-      facebook: data.facebook || prev.facebook || '',
-      instagram: data.instagram || prev.instagram || '',
-      whatsapp: data.whatsapp || prev.whatsapp || '',
-      x: data.x || prev.x || '',
-      history: data.history || prev.history || ''
-    }));
+    setContactInfo((prev) =>
+      CONTACT_INFO_KEYS.reduce((acc, key) => {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+          acc[key] = normaliseContactValue(data[key]);
+        } else if (Object.prototype.hasOwnProperty.call(prev, key)) {
+          acc[key] = prev[key];
+        } else {
+          acc[key] = '';
+        }
+        return acc;
+      }, {})
+    );
   }, []);
 
   const mountedRef = useRef(true);
