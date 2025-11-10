@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { CLUB_CONTEXT_EVENT, getStoredClubId } from '../utils/clubContext';
+import {
+  CLUB_CONTEXT_EVENT,
+  getStoredClubContactInfo,
+  getStoredClubId,
+  setStoredClubContactInfo
+} from '../utils/clubContext';
 
 const CONTACT_INFO_KEYS = [
   'phone',
@@ -17,36 +22,55 @@ const CONTACT_INFO_KEYS = [
 
 const normaliseContactValue = (value) => (typeof value === 'string' ? value : '');
 
+const DEFAULT_CONTACT_INFO = Object.freeze({
+  phone: '+54 9 117372-6166',
+  email: 'patincarreragr25@gmail.com',
+  address: 'Leandro N. Alem, B1748 Gran Buenos Aires, Provincia de Buenos Aires',
+  mapUrl: 'https://maps.app.goo.gl/t7Wb4ci6P9zZrtGB8',
+  facebook: 'https://www.facebook.com/',
+  instagram: 'https://www.instagram.com/stories/patincarrerag.r/',
+  whatsapp: '5491173726166',
+  x: 'https://x.com/?lang=es',
+  history:
+    'En 2021, el Municipio de General Rodríguez creó la Escuela de Patín Carrera como respuesta solidaria al fallecimiento del entrenador que formaba chicos en el Polideportivo Municipal y los llevaba a competir representando al club Social de Paso del Rey. Muchos de esos jóvenes quedaron sin club, y así nació un espacio propio para continuar su desarrollo. Desde entonces, la escuela no dejó de crecer: se afilió a la Asociación de Patinadores Metropolitanos (APM) y participó en torneos nacionales, logrando destacados resultados como el 2.º puesto en el Encuentro Nacional de Escuela y Transición (Moreno, octubre de 2024) y el 3.º puesto en el primer Encuentro Nacional de Escuela y Transición estilo INDOOR (CABA, abril de 2025). Hoy, la Escuela de Patín Carrera de General Rodríguez sigue formando deportistas y consolidando una comunidad en torno al esfuerzo y la velocidad.'
+});
+
+const buildContactInfoState = (data = {}, fallback = DEFAULT_CONTACT_INFO) =>
+  CONTACT_INFO_KEYS.reduce((acc, key) => {
+    if (Object.prototype.hasOwnProperty.call(data, key)) {
+      acc[key] = normaliseContactValue(data[key]);
+    } else if (fallback && Object.prototype.hasOwnProperty.call(fallback, key)) {
+      acc[key] = normaliseContactValue(fallback[key]);
+    } else {
+      acc[key] = '';
+    }
+    return acc;
+  }, {});
+
+const createEmptyContactInfo = () =>
+  CONTACT_INFO_KEYS.reduce((acc, key) => {
+    acc[key] = '';
+    return acc;
+  }, {});
+
 export default function Footer() {
   const [historyVisible, setHistoryVisible] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [message, setMessage] = useState('');
-  const [contactInfo, setContactInfo] = useState({
-    phone: '+54 9 117372-6166',
-    email: 'patincarreragr25@gmail.com',
-    address: 'Leandro N. Alem, B1748 Gran Buenos Aires, Provincia de Buenos Aires',
-    mapUrl: 'https://maps.app.goo.gl/t7Wb4ci6P9zZrtGB8',
-    facebook: 'https://www.facebook.com/',
-    instagram: 'https://www.instagram.com/stories/patincarrerag.r/',
-    whatsapp: '5491173726166',
-    x: 'https://x.com/?lang=es',
-    history:
-      'En 2021, el Municipio de General Rodríguez creó la Escuela de Patín Carrera como respuesta solidaria al fallecimiento del entrenador que formaba chicos en el Polideportivo Municipal y los llevaba a competir representando al club Social de Paso del Rey. Muchos de esos jóvenes quedaron sin club, y así nació un espacio propio para continuar su desarrollo. Desde entonces, la escuela no dejó de crecer: se afilió a la Asociación de Patinadores Metropolitanos (APM) y participó en torneos nacionales, logrando destacados resultados como el 2.º puesto en el Encuentro Nacional de Escuela y Transición (Moreno, octubre de 2024) y el 3.º puesto en el primer Encuentro Nacional de Escuela y Transición estilo INDOOR (CABA, abril de 2025). Hoy, la Escuela de Patín Carrera de General Rodríguez sigue formando deportistas y consolidando una comunidad en torno al esfuerzo y la velocidad.'
+  const [contactInfo, setContactInfo] = useState(() => {
+    const stored = getStoredClubContactInfo();
+    if (stored) {
+      return buildContactInfoState(stored, DEFAULT_CONTACT_INFO);
+    }
+    return { ...DEFAULT_CONTACT_INFO };
   });
 
   const applyContactInfo = useCallback((data = {}) => {
-    setContactInfo((prev) =>
-      CONTACT_INFO_KEYS.reduce((acc, key) => {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-          acc[key] = normaliseContactValue(data[key]);
-        } else if (Object.prototype.hasOwnProperty.call(prev, key)) {
-          acc[key] = prev[key];
-        } else {
-          acc[key] = '';
-        }
-        return acc;
-      }, {})
-    );
+    setContactInfo((prev) => {
+      const next = buildContactInfoState(data, prev);
+      setStoredClubContactInfo(next);
+      return next;
+    });
   }, []);
 
   const mountedRef = useRef(true);
@@ -74,6 +98,9 @@ export default function Footer() {
 
   useEffect(() => {
     const handleClubContextChange = () => {
+      setContactInfo(createEmptyContactInfo());
+      setHistoryVisible(false);
+      setPinned(false);
       void fetchContactInfo();
     };
 
