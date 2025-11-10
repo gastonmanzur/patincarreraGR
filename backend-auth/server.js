@@ -32,6 +32,7 @@ import ExcelJS from 'exceljs';
 import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
 import { comparePasswordWithHash } from './utils/passwordUtils.js';
+import { loadClubSubscription } from './utils/subscriptionUtils.js';
 
 dotenv.config();
 
@@ -1518,6 +1519,12 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
     }
 
+    let clubSubscription = null;
+    if (usuario.club) {
+      const subscriptionResult = await loadClubSubscription(usuario.club, { persistDefaults: true });
+      clubSubscription = subscriptionResult?.subscriptionState ?? null;
+    }
+
     const sanitizedUser = (await ensureAdminHasNoAssociations(usuario)) || usuario;
 
     const tokenPayload = {
@@ -1535,7 +1542,8 @@ app.post('/api/auth/login', async (req, res) => {
         foto: sanitizedUser.foto || '',
         club: sanitizedUser.club ? sanitizedUser.club.toString() : null
       },
-      needsClubSelection
+      needsClubSelection,
+      clubSubscription
     });
   } catch (err) {
     console.error('Error en /api/auth/login', err);
@@ -1572,7 +1580,10 @@ app.get('/api/protegido/usuario', protegerRuta, async (req, res) => {
       .select('-password')
       .populate('patinadores')
       .populate({ path: 'club', populate: { path: 'federation' } });
-    res.json({ usuario });
+    res.json({
+      usuario,
+      clubSubscription: req.club?.subscription ?? null
+    });
   } catch {
     res.status(500).json({ mensaje: 'Error al obtener el usuario' });
   }

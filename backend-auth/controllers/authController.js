@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import enviarEmailConfirmacion from '../utils/enviarEmailConfirmacion.js';
 import jwt from 'jsonwebtoken';
 import { comparePasswordWithHash } from '../utils/passwordUtils.js';
+import { loadClubSubscription } from '../utils/subscriptionUtils.js';
 
 // Clave JWT unificada
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto';
@@ -109,6 +110,12 @@ export const loginUsuario = async (req, res) => {
       return res.status(401).json({ mensaje: 'Contraseña incorrecta' });
     }
 
+    let clubSubscription = null;
+    if (usuario.club) {
+      const subscriptionResult = await loadClubSubscription(usuario.club, { persistDefaults: true });
+      clubSubscription = subscriptionResult?.subscriptionState ?? null;
+    }
+
     const token = jwt.sign(
       { id: usuario._id, rol: usuario.rol },
       JWT_SECRET,
@@ -123,8 +130,10 @@ export const loginUsuario = async (req, res) => {
         apellido: usuario.apellido,
         email: usuario.email,
         rol: usuario.rol,
-        foto: usuario.foto
-      }
+        foto: usuario.foto,
+        club: usuario.club ? usuario.club.toString() : null
+      },
+      clubSubscription
     });
   } catch (error) {
     console.error('Error en loginUsuario', error);
