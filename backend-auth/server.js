@@ -783,21 +783,34 @@ const ensureRequestUser = async (req) => {
   return usuario;
 };
 
+const normalisePossibleObjectId = (value) => {
+  if (value === undefined || value === null) return null;
+  const stringified = `${value}`.trim();
+  if (!stringified) return null;
+  return isValidObjectId(stringified) ? stringified : null;
+};
+
 const getClubIdFromRequest = (req) => {
-  if (req.query?.clubId && isValidObjectId(req.query.clubId)) {
-    return req.query.clubId;
+  const queryClubId = normalisePossibleObjectId(req.query?.clubId);
+  if (queryClubId) {
+    return queryClubId;
   }
 
-  if (isAdminUser(req) && req.body?.clubId && isValidObjectId(req.body.clubId)) {
-    return req.body.clubId;
+  const headerClubId = normalisePossibleObjectId(req.headers?.['x-club-id']);
+  if (headerClubId) {
+    return headerClubId;
   }
 
-  if (req.usuario?.club && isValidObjectId(req.usuario.club)) {
-    return req.usuario.club;
+  if (isAdminUser(req)) {
+    const bodyClubId = normalisePossibleObjectId(req.body?.clubId);
+    if (bodyClubId) {
+      return bodyClubId;
+    }
   }
 
-  if (req.headers?.['x-club-id'] && isValidObjectId(req.headers['x-club-id'])) {
-    return req.headers['x-club-id'];
+  const userClubId = normalisePossibleObjectId(req.usuario?.club);
+  if (userClubId) {
+    return userClubId;
   }
 
   return null;
