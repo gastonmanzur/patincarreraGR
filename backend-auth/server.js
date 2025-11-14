@@ -33,7 +33,20 @@ import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
 import { comparePasswordWithHash } from './utils/passwordUtils.js';
 
-import { loadClubSubscription, buildSubscriptionPlansResponse } from './utils/subscriptionUtils.js';
+import {
+  loadClubSubscription,
+  buildSubscriptionPlansResponse,
+  getSubscriptionPlans
+} from './utils/subscriptionUtils.js';
+import PaymentMethod from './models/PaymentMethod.js';
+import { encryptSensitiveData } from './utils/paymentSecurity.js';
+import {
+  normaliseCardNumber,
+  luhnCheck,
+  detectCardBrand,
+  validateExpiryDate
+} from './utils/paymentValidation.js';
+import { convertUsdToArsAtBlueRate } from './utils/currencyUtils.js';
 
 
 dotenv.config();
@@ -847,6 +860,47 @@ const loadClubForRequest = async (req, res, { allowFallbackToLocal = false } = {
 
   res.status(404).json({ mensaje: 'Club no encontrado' });
   return null;
+};
+
+const findSubscriptionPlanById = (planId) => {
+  if (!planId) return null;
+  const normalised = `${planId}`.trim();
+  if (!normalised) return null;
+
+  const plans = getSubscriptionPlans();
+  const plan = plans.find((candidate) => candidate.id === normalised);
+  return plan || null;
+};
+
+const buildSubscriptionPlanResponse = (plan) => {
+  if (!plan) return null;
+  return {
+    id: plan.id,
+    name: plan.name,
+    description: plan.description,
+    monthlyPrice: plan.monthlyPrice,
+    currency: plan.currency,
+    minAthletes: plan.minAthletes,
+    maxAthletes: typeof plan.maxAthletes === 'number' ? plan.maxAthletes : null
+  };
+};
+
+const buildPaymentMethodResponse = (method) => {
+  if (!method) return null;
+  const raw = typeof method.toSafeObject === 'function' ? method.toSafeObject() : method;
+  const createdAt = raw.createdAt instanceof Date ? raw.createdAt.toISOString() : raw.createdAt;
+  const updatedAt = raw.updatedAt instanceof Date ? raw.updatedAt.toISOString() : raw.updatedAt;
+
+  return {
+    id: raw.id || (raw._id ? raw._id.toString() : undefined),
+    type: raw.type,
+    brand: raw.brand,
+    last4: raw.last4,
+    expiryMonth: raw.expiryMonth,
+    expiryYear: raw.expiryYear,
+    createdAt,
+    updatedAt
+  };
 };
 
 const scopeQueryByClub = async (req, res, query = {}, options = {}) => {
@@ -1771,6 +1825,172 @@ app.get('/api/public/subscription-plans', async (_req, res) => {
     res.status(500).json({ mensaje: 'No se pudieron cargar los planes de suscripción' });
   }
 });
+
+app.get('/api/payments/methods', protegerRuta, permitirRol('Delegado', 'Admin'), async (req, res) => {
+  try {
+    const clubId = await ensureClubForRequest(req, res);
+    if (!clubId) return;
+
+    const filter = { club: clubId };
+    if (!isAdminUser(req)) {
+      filter.user = req.usuario.id;
+    }
+
+    const methods = await PaymentMethod.find(filter).sort({ createdAt: -1 });
+    res.json({ methods: methods.map((method) => buildPaymentMethodResponse(method)) });
+  } catch (err) {
+    console.error('Error al obtener métodos de pago guardados', err);
+    res.status(500).json({ mensaje: 'No se pudieron obtener los métodos de pago guardados' });
+  }
+});
+
+app.post('/api/payments/methods', protegerRuta, permitirRol('Delegado', 'Admin'), async (req, res) => {
+  try {
+    const clubId = await ensureClubForRequest(req, res);
+    if (!clubId) return;
+
+    const rawNumber = normaliseCardNumber(req.body?.cardNumber);
+    const cardholderName = (req.body?.cardholderName || '').toString().trim();
+    const expiryResult = validateExpiryDate(req.body?.expiryMonth, req.body?.expiryYear);
+
+    if (!rawNumber || rawNumber.length < 12 || rawNumber.length > 19) {
+      return res.status(400).json({ mensaje: 'El número de tarjeta es inválido.' });
+    }
+
+    if (!luhnCheck(rawNumber)) {
+      return res.status(400).json({ mensaje: 'El número de tarjeta no superó la validación de seguridad.' });
+    }
+
+    if (!cardholderName) {
+      return res.status(400).json({ mensaje: 'El titular de la tarjeta es obligatorio.' });
+    }
+
+    if (!expiryResult) {
+      return res.status(400).json({ mensaje: 'La fecha de vencimiento es inválida o está vencida.' });
+    }
+
+    const { month: expiryMonth, year: expiryYear } = expiryResult;
+    const brand = detectCardBrand(rawNumber);
+    const last4 = rawNumber.slice(-4);
+
+    const encrypted = encryptSensitiveData({
+      cardholderName,
+      cardNumber: rawNumber,
+      expiryMonth,
+      expiryYear,
+      brand
+    });
+
+    const method = await PaymentMethod.create({
+      user: req.usuario.id,
+      club: clubId,
+      type: 'card',
+      brand,
+      last4,
+      expiryMonth,
+      expiryYear,
+      encryptedData: encrypted.ciphertext,
+      iv: encrypted.iv,
+      authTag: encrypted.authTag
+    });
+
+    const response = buildPaymentMethodResponse(method);
+
+    res.status(201).json({
+      mensaje: 'Método de pago guardado de forma segura.',
+      method: response
+    });
+  } catch (err) {
+    console.error('Error al guardar el método de pago', err);
+    const message =
+      err instanceof Error && /PAYMENT_ENCRYPTION_KEY/.test(err.message)
+        ? 'La plataforma no está configurada para almacenar métodos de pago de forma segura.'
+        : 'No se pudo guardar el método de pago. Intentalo nuevamente más tarde.';
+    res.status(500).json({ mensaje: message });
+  }
+});
+
+app.post(
+  '/api/subscriptions/checkout',
+  protegerRuta,
+  permitirRol('Delegado', 'Admin'),
+  async (req, res) => {
+    try {
+      const clubId = await ensureClubForRequest(req, res);
+      if (!clubId) return;
+
+      const planId = (req.body?.planId || '').toString().trim();
+      const paymentMethodType = (req.body?.paymentMethodType || '').toString().trim();
+
+      const plan = findSubscriptionPlanById(planId);
+      if (!plan) {
+        return res.status(400).json({ mensaje: 'El plan de suscripción seleccionado no es válido.' });
+      }
+
+      if (paymentMethodType === 'card') {
+        const methodId = (req.body?.paymentMethodId || '').toString().trim();
+        if (!methodId) {
+          return res
+            .status(400)
+            .json({ mensaje: 'Debes seleccionar una tarjeta guardada para completar el pago.' });
+        }
+
+        const method = await PaymentMethod.findOne({
+          _id: methodId,
+          club: clubId,
+          ...(isAdminUser(req) ? {} : { user: req.usuario.id })
+        });
+
+        if (!method) {
+          return res.status(404).json({ mensaje: 'El método de pago seleccionado no existe.' });
+        }
+
+        return res.json({
+          mensaje: 'La tarjeta fue validada correctamente para procesar la suscripción.',
+          plan: buildSubscriptionPlanResponse(plan),
+          payment: {
+            type: 'card',
+            method: buildPaymentMethodResponse(method),
+            amount: {
+              currency: plan.currency,
+              total: plan.monthlyPrice
+            }
+          }
+        });
+      }
+
+      if (paymentMethodType === 'mercadopago') {
+        const conversion = await convertUsdToArsAtBlueRate(plan.monthlyPrice);
+        const redirectUrl = new URL('https://www.mercadopago.com.ar/checkout/v1');
+        redirectUrl.searchParams.set('source_id', `club-${clubId}`);
+        redirectUrl.searchParams.set('plan_id', plan.id);
+        redirectUrl.searchParams.set('usd_amount', String(plan.monthlyPrice));
+        redirectUrl.searchParams.set('ars_amount', String(conversion.arsAmount));
+
+        return res.json({
+          mensaje: 'Redirigí a Mercado Pago para completar el pago en un entorno seguro.',
+          plan: buildSubscriptionPlanResponse(plan),
+          payment: {
+            type: 'mercadopago',
+            amountArs: conversion.arsAmount,
+            usdAmount: conversion.usdAmount,
+            blueDollarRate: conversion.rate,
+            fetchedAt: conversion.fetchedAt.toISOString(),
+            isFallback: conversion.isFallback
+          },
+          redirectUrl: redirectUrl.toString()
+        });
+      }
+
+      return res.status(400).json({ mensaje: 'Debes seleccionar un método de pago válido.' });
+    } catch (err) {
+      console.error('Error al preparar el checkout de la suscripción', err);
+      res
+        .status(500)
+        .json({ mensaje: 'No pudimos preparar el cobro de la suscripción. Intentalo nuevamente.' });
+    }
+  }
+);
 
 app.get('/api/public/club-contact', async (req, res) => {
   try {
