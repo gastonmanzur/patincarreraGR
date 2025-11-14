@@ -1,5 +1,18 @@
 import Club from '../models/Club.js';
 
+import {
+  buildSubscriptionQuoteForLimit,
+  getSubscriptionPlans,
+  normaliseAthleteLimit,
+  resolveSubscriptionPlanForLimit
+} from '../config/subscriptionPlans.js';
+import {
+  DEFAULT_ATHLETE_LIMIT,
+  DEFAULT_TRIAL_DAYS,
+  resolveTrialDays
+} from '../config/subscriptionConfig.js';
+                                                                                                                                                                          
+
 const shouldPersistDefaults = (options = {}) => {
   if (typeof options.persistDefaults === 'boolean') {
     return options.persistDefaults;
@@ -41,5 +54,29 @@ export const loadClubSubscription = async (clubId, options = {}) => {
     subscriptionState
   };
 };
+
+export const buildSubscriptionPlansResponse = () => {
+  const trialDays = resolveTrialDays();
+  const plans = getSubscriptionPlans({ trialDays }).map((plan) => ({
+    ...plan,
+    trialDays
+  }));
+
+  return {
+    trialDays,
+    plans
+  };
+};
+
+export {
+  buildSubscriptionQuoteForLimit,
+  getSubscriptionPlans,
+  normaliseAthleteLimit,
+  resolveSubscriptionPlanForLimit,
+  resolveTrialDays,
+  DEFAULT_TRIAL_DAYS,
+  DEFAULT_ATHLETE_LIMIT
+};
+
 
 export default loadClubSubscription;

@@ -1,4 +1,87 @@
 import mongoose from 'mongoose';
+import {
+  DEFAULT_ATHLETE_LIMIT,
+  resolveTrialDays
+} from '../config/subscriptionConfig.js';
+import {
+  buildSubscriptionQuoteForLimit,
+  normaliseAthleteLimit
+} from '../config/subscriptionPlans.js';
+
+const addDays = (date, days) => {
+  const base = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(base.getTime())) {
+    return new Date(Date.now() + days * 86400000);
+  }
+  return new Date(base.getTime() + days * 86400000);
+};
+
+const applySubscriptionQuote = (subscription, limit = DEFAULT_ATHLETE_LIMIT) => {
+  if (!subscription || typeof subscription !== 'object') {
+    return false;
+  }
+
+  const quote = buildSubscriptionQuoteForLimit(limit);
+  let mutated = false;
+
+  const assignIfChanged = (key, value) => {
+    const current = subscription[key];
+    const nextValue = value ?? null;
+    if (current === nextValue) {
+      return;
+    }
+    if (
+      current instanceof Date &&
+      nextValue instanceof Date &&
+      current.getTime() === nextValue.getTime()
+    ) {
+      return;
+    }
+    if (Number.isNaN(current) && Number.isNaN(nextValue)) {
+      return;
+    }
+    subscription[key] = nextValue;
+    mutated = true;
+  };
+
+  assignIfChanged('planId', quote.planId);
+  assignIfChanged('planName', quote.planName);
+  assignIfChanged('currency', quote.currency);
+  assignIfChanged('monthlyPrice', quote.monthlyPrice);
+  assignIfChanged('billingPeriod', quote.billingPeriod);
+  assignIfChanged('athleteLimit', quote.athleteLimit);
+  assignIfChanged('minAthletes', quote.minAthletes);
+  assignIfChanged('maxAthletes', quote.maxAthletes);
+
+  return mutated;
+};
+
+const ensureSubscriptionPricing = (subscription, limit) => {
+  const effectiveLimit =
+    typeof limit === 'number' && Number.isFinite(limit)
+      ? limit
+      : subscription?.athleteLimit ?? DEFAULT_ATHLETE_LIMIT;
+  return applySubscriptionQuote(subscription, effectiveLimit);
+};
+
+const buildDefaultSubscriptionSnapshot = (limit = DEFAULT_ATHLETE_LIMIT) => {
+  const now = new Date();
+  const trialDays = resolveTrialDays();
+  const trialEndsAt = trialDays > 0 ? addDays(now, trialDays) : null;
+  const snapshot = {
+    status: 'trial',
+    trialStartedAt: now,
+    trialEndsAt,
+    currentPeriodEndsAt: null,
+    graceEndsAt: null,
+    lastPaymentAt: null,
+    notes: '',
+    trialDays: trialDays > 0 ? trialDays : 0
+  };
+
+  applySubscriptionQuote(snapshot, limit);
+  return snapshot;
+};
 
 const DEFAULT_TRIAL_DAYS = 30;
 
@@ -72,7 +155,20 @@ const subscriptionSchema = new mongoose.Schema(
     currentPeriodEndsAt: { type: Date },
     graceEndsAt: { type: Date },
     lastPaymentAt: { type: Date },
+
+    notes: { type: String, trim: true },
+    planId: { type: String, trim: true },
+    planName: { type: String, trim: true },
+    currency: { type: String, trim: true, default: 'USD' },
+    monthlyPrice: { type: Number, min: 0 },
+    billingPeriod: { type: String, trim: true, default: 'monthly' },
+    athleteLimit: { type: Number, min: 1, default: DEFAULT_ATHLETE_LIMIT },
+    minAthletes: { type: Number, min: 0 },
+    maxAthletes: { type: Number, min: 0 },
+    trialDays: { type: Number, min: 0, default: () => resolveTrialDays() }
+
     notes: { type: String, trim: true }
+
   },
   { _id: false }
 );
@@ -121,6 +217,10 @@ clubSchema.methods.ensureSubscriptionDefaults = function ensureSubscriptionDefau
   }
 
   let mutated = false;
+
+  const resolvedTrialDays = resolveTrialDays();
+
+
   if (!this.subscription.status) {
     this.subscription.status = 'trial';
     mutated = true;
@@ -133,7 +233,40 @@ clubSchema.methods.ensureSubscriptionDefaults = function ensureSubscriptionDefau
 
   if (!this.subscription.trialEndsAt) {
     const base = normaliseDate(this.subscription.trialStartedAt) || new Date();
-    this.subscription.trialEndsAt = addDays(base, resolveTrialDays());
+
+    this.subscription.trialEndsAt =
+      resolvedTrialDays > 0 ? addDays(base, resolvedTrialDays) : null;
+    mutated = true;
+  }
+
+  if (
+    typeof this.subscription.trialDays !== 'number' ||
+    this.subscription.trialDays !== resolvedTrialDays
+  ) {
+    this.subscription.trialDays = resolvedTrialDays;
+    if (this.subscription.status === 'trial') {
+      const base = normaliseDate(this.subscription.trialStartedAt) || new Date();
+      this.subscription.trialEndsAt =
+        resolvedTrialDays > 0
+          ? addDays(base, resolvedTrialDays)
+          : this.subscription.trialEndsAt ?? null;
+    }
+    mutated = true;
+  }
+
+  const normalisedLimit = normaliseAthleteLimit(
+    this.subscription.athleteLimit ?? DEFAULT_ATHLETE_LIMIT,
+    DEFAULT_ATHLETE_LIMIT
+  );
+
+  if (this.subscription.athleteLimit !== normalisedLimit) {
+    this.subscription.athleteLimit = normalisedLimit;
+    mutated = true;
+  }
+
+  if (ensureSubscriptionPricing(this.subscription, normalisedLimit)) {
+
+    this.subscription.trialEndsAt>>>>>>> master
     mutated = true;
   }
 
@@ -146,6 +279,11 @@ clubSchema.methods.getSubscriptionSnapshot = function getSubscriptionSnapshot() 
       ? this.subscription.toObject()
       : this.subscription
     : {};
+
+  const resolvedTrialDays = resolveTrialDays();
+  const baseLimit = raw?.athleteLimit ?? DEFAULT_ATHLETE_LIMIT;
+  const snapshot = { ...buildDefaultSubscriptionSnapshot(baseLimit), ...raw };
+
   const snapshot = { ...buildDefaultSubscriptionSnapshot(), ...raw };
   snapshot.status = (raw.status || snapshot.status || 'trial').toLowerCase();
   snapshot.trialStartedAt = normaliseDate(snapshot.trialStartedAt);
@@ -153,6 +291,17 @@ clubSchema.methods.getSubscriptionSnapshot = function getSubscriptionSnapshot() 
   snapshot.currentPeriodEndsAt = normaliseDate(snapshot.currentPeriodEndsAt);
   snapshot.graceEndsAt = normaliseDate(snapshot.graceEndsAt);
   snapshot.lastPaymentAt = normaliseDate(snapshot.lastPaymentAt);
+
+  snapshot.trialDays =
+    typeof snapshot.trialDays === 'number' && snapshot.trialDays >= 0
+      ? snapshot.trialDays
+      : resolvedTrialDays;
+  snapshot.athleteLimit = normaliseAthleteLimit(
+    snapshot.athleteLimit ?? baseLimit,
+    DEFAULT_ATHLETE_LIMIT
+  );
+  applySubscriptionQuote(snapshot, snapshot.athleteLimit);
+
   return snapshot;
 };
 
@@ -212,6 +361,20 @@ clubSchema.methods.getSubscriptionState = function getSubscriptionState(referenc
     reason = 'inactive';
   }
 
+
+  const pricing = {
+    planId: snapshot.planId,
+    planName: snapshot.planName,
+    monthlyPrice: snapshot.monthlyPrice,
+    currency: snapshot.currency,
+    billingPeriod: snapshot.billingPeriod,
+    athleteLimit: snapshot.athleteLimit,
+    minAthletes: snapshot.minAthletes,
+    maxAthletes: snapshot.maxAthletes,
+    trialDays: snapshot.trialDays
+  };
+
+
   return {
     ...snapshot,
     status,
@@ -220,7 +383,12 @@ clubSchema.methods.getSubscriptionState = function getSubscriptionState(referenc
     trialExpired: Boolean(trialEndsAt && trialEndsAt < nowTime),
     currentPeriodExpired: Boolean(currentPeriodEndsAt && currentPeriodEndsAt < nowTime),
     graceExpired: Boolean(graceEndsAt && graceEndsAt < nowTime),
+
+    evaluatedAt: now,
+    pricing
+
     evaluatedAt: now
+
   };
 };
 
@@ -228,5 +396,28 @@ clubSchema.methods.isSubscriptionActive = function isSubscriptionActive(referenc
   const state = this.getSubscriptionState(referenceDate);
   return Boolean(state?.isActive);
 };
+
+
+clubSchema.methods.setSubscriptionAthleteLimit = function setSubscriptionAthleteLimit(limit) {
+  const effectiveLimit = normaliseAthleteLimit(limit, DEFAULT_ATHLETE_LIMIT);
+
+  if (!this.subscription || typeof this.subscription !== 'object') {
+    this.subscription = buildDefaultSubscriptionSnapshot(effectiveLimit);
+    return true;
+  }
+
+  let mutated = false;
+  if (this.subscription.athleteLimit !== effectiveLimit) {
+    this.subscription.athleteLimit = effectiveLimit;
+    mutated = true;
+  }
+
+  if (ensureSubscriptionPricing(this.subscription, effectiveLimit)) {
+    mutated = true;
+  }
+
+  return mutated;
+};
+
 
 export default mongoose.model('Club', clubSchema);

@@ -32,6 +32,7 @@ import TitulosClub from './pages/TitulosClub';
 import VerTituloClub from './pages/VerTituloClub';
 import SelectClub from './pages/SelectClub';
 import ContactoClub from './pages/ContactoClub';
+import Suscripciones from './pages/Suscripciones';
 
 function AdminRoute({ children }) {
   const token = sessionStorage.getItem('token');
@@ -48,6 +49,7 @@ function AppRoutes() {
         <Routes>
           <Route path="/" element={<Auth />} />
           <Route path="/home" element={<Home />} />
+          <Route path="/suscripciones" element={<Suscripciones />} />
           <Route path="/noticias/:id" element={<VerNoticia />} />
           <Route path="/torneos" element={<ProtectedRoute><Torneos /></ProtectedRoute>} />
           <Route path="/torneos/:id" element={<ProtectedRoute><Competencias /></ProtectedRoute>} />

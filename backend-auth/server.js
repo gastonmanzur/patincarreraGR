@@ -32,7 +32,11 @@ import ExcelJS from 'exceljs';
 import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
 import { comparePasswordWithHash } from './utils/passwordUtils.js';
+
+import { loadClubSubscription, buildSubscriptionPlansResponse } from './utils/subscriptionUtils.js';
+
 import { loadClubSubscription } from './utils/subscriptionUtils.js';
+
 
 dotenv.config();
 
@@ -1757,6 +1761,16 @@ app.get('/api/public/app-config', async (_req, res) => {
   } catch (err) {
     console.error('Error al obtener la configuración pública de la app', err);
     res.status(500).json({ mensaje: 'Error al obtener la configuración de la aplicación' });
+  }
+});
+
+app.get('/api/public/subscription-plans', async (_req, res) => {
+  try {
+    const payload = buildSubscriptionPlansResponse();
+    res.json(payload);
+  } catch (err) {
+    console.error('Error al obtener los planes de suscripción', err);
+    res.status(500).json({ mensaje: 'No se pudieron cargar los planes de suscripción' });
   }
 });
 
