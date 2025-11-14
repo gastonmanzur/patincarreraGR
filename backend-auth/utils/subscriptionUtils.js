@@ -1,4 +1,5 @@
 import Club from '../models/Club.js';
+
 import {
   buildSubscriptionQuoteForLimit,
   getSubscriptionPlans,
@@ -10,6 +11,7 @@ import {
   DEFAULT_TRIAL_DAYS,
   resolveTrialDays
 } from '../config/subscriptionConfig.js';
+                                                                                                                                                                          
 
 const shouldPersistDefaults = (options = {}) => {
   if (typeof options.persistDefaults === 'boolean') {
@@ -75,5 +77,6 @@ export {
   DEFAULT_TRIAL_DAYS,
   DEFAULT_ATHLETE_LIMIT
 };
+
 
 export default loadClubSubscription;

@@ -32,7 +32,11 @@ import ExcelJS from 'exceljs';
 import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
 import { comparePasswordWithHash } from './utils/passwordUtils.js';
+
 import { loadClubSubscription, buildSubscriptionPlansResponse } from './utils/subscriptionUtils.js';
+
+import { loadClubSubscription } from './utils/subscriptionUtils.js';
+
 
 dotenv.config();
 

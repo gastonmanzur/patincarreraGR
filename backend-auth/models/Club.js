@@ -83,6 +83,39 @@ const buildDefaultSubscriptionSnapshot = (limit = DEFAULT_ATHLETE_LIMIT) => {
   return snapshot;
 };
 
+const DEFAULT_TRIAL_DAYS = 30;
+
+const parsePositiveInteger = (value, fallback) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return parsed;
+};
+
+const resolveTrialDays = () => parsePositiveInteger(process.env.CLUB_TRIAL_DAYS, DEFAULT_TRIAL_DAYS);
+
+const addDays = (date, days) => {
+  const base = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(base.getTime())) {
+    return new Date(Date.now() + days * 86400000);
+  }
+  return new Date(base.getTime() + days * 86400000);
+};
+
+const buildDefaultSubscriptionSnapshot = () => {
+  const now = new Date();
+  return {
+    status: 'trial',
+    trialStartedAt: now,
+    trialEndsAt: addDays(now, resolveTrialDays()),
+    currentPeriodEndsAt: null,
+    graceEndsAt: null,
+    lastPaymentAt: null,
+    notes: ''
+  };
+};
+
 const tituloSchema = new mongoose.Schema(
   {
     titulo: { type: String, required: true, trim: true },
@@ -122,6 +155,7 @@ const subscriptionSchema = new mongoose.Schema(
     currentPeriodEndsAt: { type: Date },
     graceEndsAt: { type: Date },
     lastPaymentAt: { type: Date },
+
     notes: { type: String, trim: true },
     planId: { type: String, trim: true },
     planName: { type: String, trim: true },
@@ -132,6 +166,9 @@ const subscriptionSchema = new mongoose.Schema(
     minAthletes: { type: Number, min: 0 },
     maxAthletes: { type: Number, min: 0 },
     trialDays: { type: Number, min: 0, default: () => resolveTrialDays() }
+
+    notes: { type: String, trim: true }
+
   },
   { _id: false }
 );
@@ -180,7 +217,9 @@ clubSchema.methods.ensureSubscriptionDefaults = function ensureSubscriptionDefau
   }
 
   let mutated = false;
+
   const resolvedTrialDays = resolveTrialDays();
+
 
   if (!this.subscription.status) {
     this.subscription.status = 'trial';
@@ -194,6 +233,7 @@ clubSchema.methods.ensureSubscriptionDefaults = function ensureSubscriptionDefau
 
   if (!this.subscription.trialEndsAt) {
     const base = normaliseDate(this.subscription.trialStartedAt) || new Date();
+
     this.subscription.trialEndsAt =
       resolvedTrialDays > 0 ? addDays(base, resolvedTrialDays) : null;
     mutated = true;
@@ -225,6 +265,8 @@ clubSchema.methods.ensureSubscriptionDefaults = function ensureSubscriptionDefau
   }
 
   if (ensureSubscriptionPricing(this.subscription, normalisedLimit)) {
+
+    this.subscription.trialEndsAt>>>>>>> master
     mutated = true;
   }
 
@@ -237,15 +279,19 @@ clubSchema.methods.getSubscriptionSnapshot = function getSubscriptionSnapshot() 
       ? this.subscription.toObject()
       : this.subscription
     : {};
+
   const resolvedTrialDays = resolveTrialDays();
   const baseLimit = raw?.athleteLimit ?? DEFAULT_ATHLETE_LIMIT;
   const snapshot = { ...buildDefaultSubscriptionSnapshot(baseLimit), ...raw };
+
+  const snapshot = { ...buildDefaultSubscriptionSnapshot(), ...raw };
   snapshot.status = (raw.status || snapshot.status || 'trial').toLowerCase();
   snapshot.trialStartedAt = normaliseDate(snapshot.trialStartedAt);
   snapshot.trialEndsAt = normaliseDate(snapshot.trialEndsAt);
   snapshot.currentPeriodEndsAt = normaliseDate(snapshot.currentPeriodEndsAt);
   snapshot.graceEndsAt = normaliseDate(snapshot.graceEndsAt);
   snapshot.lastPaymentAt = normaliseDate(snapshot.lastPaymentAt);
+
   snapshot.trialDays =
     typeof snapshot.trialDays === 'number' && snapshot.trialDays >= 0
       ? snapshot.trialDays
@@ -255,6 +301,7 @@ clubSchema.methods.getSubscriptionSnapshot = function getSubscriptionSnapshot() 
     DEFAULT_ATHLETE_LIMIT
   );
   applySubscriptionQuote(snapshot, snapshot.athleteLimit);
+
   return snapshot;
 };
 
@@ -314,6 +361,7 @@ clubSchema.methods.getSubscriptionState = function getSubscriptionState(referenc
     reason = 'inactive';
   }
 
+
   const pricing = {
     planId: snapshot.planId,
     planName: snapshot.planName,
@@ -326,6 +374,7 @@ clubSchema.methods.getSubscriptionState = function getSubscriptionState(referenc
     trialDays: snapshot.trialDays
   };
 
+
   return {
     ...snapshot,
     status,
@@ -334,8 +383,12 @@ clubSchema.methods.getSubscriptionState = function getSubscriptionState(referenc
     trialExpired: Boolean(trialEndsAt && trialEndsAt < nowTime),
     currentPeriodExpired: Boolean(currentPeriodEndsAt && currentPeriodEndsAt < nowTime),
     graceExpired: Boolean(graceEndsAt && graceEndsAt < nowTime),
+
     evaluatedAt: now,
     pricing
+
+    evaluatedAt: now
+
   };
 };
 
@@ -343,6 +396,7 @@ clubSchema.methods.isSubscriptionActive = function isSubscriptionActive(referenc
   const state = this.getSubscriptionState(referenceDate);
   return Boolean(state?.isActive);
 };
+
 
 clubSchema.methods.setSubscriptionAthleteLimit = function setSubscriptionAthleteLimit(limit) {
   const effectiveLimit = normaliseAthleteLimit(limit, DEFAULT_ATHLETE_LIMIT);
@@ -364,5 +418,6 @@ clubSchema.methods.setSubscriptionAthleteLimit = function setSubscriptionAthlete
 
   return mutated;
 };
+
 
 export default mongoose.model('Club', clubSchema);
