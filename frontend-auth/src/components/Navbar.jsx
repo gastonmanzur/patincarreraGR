@@ -269,10 +269,12 @@ export default function Navbar() {
     ? isAdmin
       ? [
           { label: 'Inicio', path: '/home' },
+          { label: 'Planes', path: '/suscripciones' },
           { label: 'Administración', path: '/admin' }
         ]
       : [
           { label: 'Inicio', path: '/home' },
+          { label: 'Planes', path: '/suscripciones' },
           { label: 'Torneos', path: '/torneos' },
           { label: 'Títulos del Club', path: '/titulos-club' },
           ...(rol === 'Delegado' || rol === 'Tecnico'
@@ -318,7 +320,7 @@ export default function Navbar() {
             ]
           : [])
       ]
-    : [];
+    : [{ label: 'Planes', path: '/suscripciones' }];
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark">

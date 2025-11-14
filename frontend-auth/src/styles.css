@@ -1236,3 +1236,23 @@ body.dark-mode .btn-primary {
 .carousel-btn.next {
   right: 10px;
 }
+
+.subscription-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.subscription-card:hover,
+.subscription-card:focus-within {
+  transform: translateY(-6px);
+  box-shadow: 0 24px 55px rgba(20, 86, 150, 0.22);
+}
+
+.subscription-card .badge {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.subscription-help {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(20, 86, 150, 0.12);
+}
