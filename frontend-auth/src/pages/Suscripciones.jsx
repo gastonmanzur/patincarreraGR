@@ -56,14 +56,18 @@ const FALLBACK_PLANS = [
 
 const formatCurrency = (price, currency = 'USD') => {
   if (typeof price !== 'number') return '—';
+  const isArs = currency === 'ARS';
+
   try {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
       currency,
-      maximumFractionDigits: 0
+      maximumFractionDigits: isArs ? 2 : 0,
+      minimumFractionDigits: isArs ? 2 : 0
     }).format(price);
   } catch {
-    return `${currency} ${price}`;
+    const fallbackValue = isArs ? price.toFixed(2) : Math.round(price).toString();
+    return `${currency} ${fallbackValue}`;
   }
 };
 
@@ -103,11 +107,76 @@ const ensureFeatures = (planFeatures, trialDays) => {
   return features;
 };
 
+const normaliseDigits = (value) => (value || '').toString().replace(/\D+/g, '');
+
+const luhnCheck = (value) => {
+  const digits = normaliseDigits(value);
+  if (!digits) return false;
+
+  let sum = 0;
+  let shouldDouble = false;
+
+  for (let i = digits.length - 1; i >= 0; i -= 1) {
+    let digit = Number.parseInt(digits.charAt(i), 10);
+    if (!Number.isFinite(digit)) return false;
+
+    if (shouldDouble) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+
+    sum += digit;
+    shouldDouble = !shouldDouble;
+  }
+
+  return sum % 10 === 0;
+};
+
+const buildSavedMethodLabel = (method) => {
+  if (!method) return '';
+  const brand = method.brand || 'Tarjeta';
+  const last4 = method.last4 || '****';
+  const month = method.expiryMonth ? String(method.expiryMonth).padStart(2, '0') : '--';
+  const year = method.expiryYear ? String(method.expiryYear).slice(-2) : '--';
+  return `${brand} terminada en ${last4} (venc. ${month}/${year})`;
+};
+
+const formatBlueRateTimestamp = (value) => {
+  if (!value) return '';
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('es-AR', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(date);
+  } catch {
+    return '';
+  }
+};
+
 export default function Suscripciones() {
   const [plans, setPlans] = useState(FALLBACK_PLANS);
   const [trialDays, setTrialDays] = useState(FALLBACK_TRIAL_DAYS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [paymentMethodType, setPaymentMethodType] = useState('card');
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [methodsLoading, setMethodsLoading] = useState(false);
+  const [selectedMethodId, setSelectedMethodId] = useState('');
+  const [cardForm, setCardForm] = useState({
+    cardholderName: '',
+    cardNumber: '',
+    expiryMonth: '',
+    expiryYear: ''
+  });
+  const [cardErrors, setCardErrors] = useState({});
+  const [savingMethod, setSavingMethod] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [infoMessage, setInfoMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [checkoutResult, setCheckoutResult] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -160,13 +229,266 @@ export default function Suscripciones() {
     [plans, trialDays]
   );
 
+  useEffect(() => {
+    if (paymentMethodType !== 'card') return;
+    if (!paymentMethods.length) {
+      setSelectedMethodId('');
+      return;
+    }
+
+    setSelectedMethodId((current) => {
+      if (current && paymentMethods.some((method) => method.id === current)) {
+        return current;
+      }
+      return paymentMethods[0]?.id ?? '';
+    });
+  }, [paymentMethods, paymentMethodType]);
+
+  const resetMessages = () => {
+    setInfoMessage('');
+    setErrorMessage('');
+  };
+
+  const loadPaymentMethods = async () => {
+    setMethodsLoading(true);
+    try {
+      const res = await api.get('/payments/methods');
+      const list = Array.isArray(res.data?.methods) ? res.data.methods : [];
+      setPaymentMethods(list);
+      setErrorMessage('');
+    } catch (err) {
+      console.error('Error al obtener métodos de pago guardados', err);
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) {
+        setErrorMessage('Debes iniciar sesión con tu cuenta de delegado para gestionar los pagos.');
+      } else {
+        setErrorMessage('No pudimos cargar tus métodos de pago guardados. Podés registrar uno nuevo.');
+      }
+      setPaymentMethods([]);
+    } finally {
+      setMethodsLoading(false);
+    }
+  };
+
+  const handleSelectPlan = (plan) => {
+    setSelectedPlan({ ...plan });
+    setPaymentMethodType('card');
+    setCheckoutResult(null);
+    setSelectedMethodId('');
+    setCardForm({ cardholderName: '', cardNumber: '', expiryMonth: '', expiryYear: '' });
+    setCardErrors({});
+    resetMessages();
+    loadPaymentMethods();
+  };
+
+  const handlePaymentMethodTypeChange = (event) => {
+    const value = event.target.value;
+    setPaymentMethodType(value);
+    setCheckoutResult(null);
+    resetMessages();
+    if (value !== 'card') {
+      setSelectedMethodId('');
+    }
+  };
+
+  const handleCardInputChange = (event) => {
+    const { name, value } = event.target;
+    let nextValue = value;
+
+    if (name === 'cardNumber') {
+      nextValue = value.replace(/[^0-9\s]/g, '');
+    }
+
+    if (name === 'expiryMonth' || name === 'expiryYear') {
+      const limit = name === 'expiryMonth' ? 2 : 4;
+      nextValue = value.replace(/\D/g, '').slice(0, limit);
+    }
+
+    setCardForm((prev) => ({ ...prev, [name]: nextValue }));
+  };
+
+  const validateCardForm = () => {
+    const errors = {};
+    const digits = normaliseDigits(cardForm.cardNumber);
+    const month = Number.parseInt(cardForm.expiryMonth, 10);
+    const rawYear = Number.parseInt(cardForm.expiryYear, 10);
+    const holder = cardForm.cardholderName.trim();
+
+    if (!holder) {
+      errors.cardholderName = 'Ingresá el titular tal como figura en la tarjeta.';
+    }
+
+    if (!digits || digits.length < 12 || digits.length > 19) {
+      errors.cardNumber = 'Ingresá un número de tarjeta válido.';
+    } else if (!luhnCheck(digits)) {
+      errors.cardNumber = 'El número de tarjeta no supera la validación de seguridad.';
+    }
+
+    if (!Number.isFinite(month) || month < 1 || month > 12) {
+      errors.expiryMonth = 'Ingresá un mes válido (01 a 12).';
+    }
+
+    if (!Number.isFinite(rawYear)) {
+      errors.expiryYear = 'Ingresá un año válido.';
+    }
+
+    const current = new Date();
+    const currentYear = current.getFullYear();
+    const currentMonth = current.getMonth() + 1;
+    const fullYear = Number.isFinite(rawYear) ? (rawYear < 100 ? 2000 + rawYear : rawYear) : null;
+
+    if (!errors.expiryMonth && !errors.expiryYear) {
+      if (fullYear < currentYear || (fullYear === currentYear && month < currentMonth)) {
+        errors.expiryMonth = 'La tarjeta ingresada se encuentra vencida.';
+      }
+    }
+
+    setCardErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      return null;
+    }
+
+    return {
+      cardholderName: holder,
+      cardNumber: digits,
+      expiryMonth: month,
+      expiryYear: fullYear
+    };
+  };
+
+  const handleCardSubmit = async (event) => {
+    if (event) {
+      event.preventDefault();
+    }
+    resetMessages();
+    const validated = validateCardForm();
+    if (!validated) return;
+
+    setSavingMethod(true);
+    try {
+      const res = await api.post('/payments/methods', {
+        cardholderName: validated.cardholderName,
+        cardNumber: validated.cardNumber,
+        expiryMonth: validated.expiryMonth,
+        expiryYear: validated.expiryYear
+      });
+
+      const savedMethod = res.data?.method;
+      if (savedMethod) {
+        setPaymentMethods((prev) => {
+          const filtered = prev.filter((method) => method.id !== savedMethod.id);
+          return [savedMethod, ...filtered];
+        });
+        setSelectedMethodId(savedMethod.id);
+      }
+
+      setCardForm({ cardholderName: '', cardNumber: '', expiryMonth: '', expiryYear: '' });
+      setCardErrors({});
+      setInfoMessage(res.data?.mensaje || 'Método de pago guardado correctamente.');
+    } catch (err) {
+      console.error('Error al guardar método de pago', err);
+      const message = err?.response?.data?.mensaje || 'No se pudo guardar el método de pago. Intentá nuevamente.';
+      setErrorMessage(message);
+    } finally {
+      setSavingMethod(false);
+    }
+  };
+
+  const handleCheckout = async (event) => {
+    event.preventDefault();
+    if (!selectedPlan) return;
+
+    resetMessages();
+    setCheckoutResult(null);
+
+    if (paymentMethodType === 'card' && !selectedMethodId) {
+      setCardErrors((prev) => ({ ...prev, general: 'Seleccioná una tarjeta guardada.' }));
+      setErrorMessage('Seleccioná una tarjeta guardada para continuar.');
+      return;
+    }
+
+    setCheckoutLoading(true);
+    try {
+      const payload = {
+        planId: selectedPlan.id,
+        paymentMethodType
+      };
+
+      if (paymentMethodType === 'card') {
+        payload.paymentMethodId = selectedMethodId;
+      }
+
+      const res = await api.post('/subscriptions/checkout', payload);
+      setCheckoutResult(res.data || null);
+      if (res.data?.mensaje) {
+        setInfoMessage(res.data.mensaje);
+      }
+    } catch (err) {
+      console.error('Error al preparar el cobro de la suscripción', err);
+      const message =
+        err?.response?.data?.mensaje || 'No pudimos preparar el cobro. Verificá los datos e intentá nuevamente.';
+      setErrorMessage(message);
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const handleOpenMercadoPago = () => {
+    if (!checkoutResult?.redirectUrl) return;
+    if (typeof window !== 'undefined') {
+      window.open(checkoutResult.redirectUrl, '_blank', 'noopener');
+    }
+  };
+
+  const renderCheckoutSummary = () => {
+    if (!checkoutResult?.payment) return null;
+
+    if (checkoutResult.payment.type === 'card') {
+      return (
+        <div className="alert alert-success mt-4" role="alert">
+          <h4 className="h6 text-uppercase mb-2">Tarjeta validada</h4>
+          <p className="mb-1">
+            Se utilizará {buildSavedMethodLabel(checkoutResult.payment.method)} para abonar{' '}
+            {formatCurrency(checkoutResult.payment.amount?.total, checkoutResult.payment.amount?.currency)} cada mes.
+          </p>
+          <p className="mb-0 text-muted">Los datos sensibles están cifrados con estándares de grado bancario.</p>
+        </div>
+      );
+    }
+
+    if (checkoutResult.payment.type === 'mercadopago') {
+      const amountArs = formatCurrency(checkoutResult.payment.amountArs, 'ARS');
+      const rate = checkoutResult.payment.blueDollarRate;
+      const rateTimestamp = formatBlueRateTimestamp(checkoutResult.payment.fetchedAt);
+
+      return (
+        <div className="alert alert-info mt-4" role="alert">
+          <h4 className="h6 text-uppercase mb-2">Pago vía Mercado Pago</h4>
+          <p className="mb-1">
+            Serás redirigido a Mercado Pago para abonar {amountArs} (USD {selectedPlan.monthlyPrice}{' '}
+            al dólar blue compra ${rate?.toFixed?.(2) ?? Number(rate).toFixed(2)}).
+          </p>
+          {rateTimestamp && (
+            <p className="mb-1 text-muted">Cotización tomada el {rateTimestamp}.</p>
+          )}
+          <button type="button" className="btn btn-primary mt-2" onClick={handleOpenMercadoPago}>
+            Ir a Mercado Pago
+          </button>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="container py-5">
       <div className="text-center mb-5">
         <h1 className="display-6 fw-bold text-uppercase">Planes de suscripción para clubes</h1>
         <p className="lead text-muted">
-          Elegí la capacidad de patinadores que mejor se adapte a tu institución y activá todas las
-          funciones de la plataforma.
+          Elegí la capacidad de patinadores que mejor se adapte a tu institución y activá todas las funciones de la
+          plataforma.
         </p>
         {trialDays > 0 && (
           <div className="alert alert-success d-inline-flex align-items-center gap-2 shadow-sm">
@@ -214,17 +536,270 @@ export default function Suscripciones() {
                     </li>
                   ))}
                 </ul>
-                <a
+                <button
+                  type="button"
                   className="btn btn-primary w-100 mt-auto"
+                  onClick={() => handleSelectPlan(plan)}
+                >
+                  Elegir este plan
+                </button>
+                <a
+                  className="btn btn-link w-100 mt-2 text-decoration-none"
                   href="mailto:patincarreragr25@gmail.com?subject=Consulta%20planes%20Pat%C3%ADn%20Carrera"
                 >
-                  Consultar este plan
+                  Consultar con un asesor
                 </a>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {selectedPlan && (
+        <div className="mt-5">
+          <div className="card border-0 shadow-sm">
+            <div className="card-body p-4 p-md-5">
+              <h2 className="h4 text-uppercase text-primary mb-3">Activá tu suscripción de forma segura</h2>
+              <p className="text-muted mb-4">
+                Estás a un paso de habilitar todas las funciones del plan {selectedPlan.name}. Elegí el método de pago que
+                prefieras. Los datos sensibles se cifran con AES-256 y nunca almacenamos el código de seguridad de tu
+                tarjeta.
+              </p>
+
+              <div className="bg-light rounded-4 p-3 p-md-4 mb-4">
+                <div className="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+                  <div>
+                    <span className="text-muted text-uppercase small">Plan seleccionado</span>
+                    <h3 className="h5 mb-1">{selectedPlan.name}</h3>
+                    <p className="mb-0 text-muted">{buildAthleteRangeLabel(selectedPlan)}</p>
+                  </div>
+                  <div className="text-md-end">
+                    <span className="text-muted text-uppercase small">Cuota mensual</span>
+                    <div className="display-6 fw-bold text-primary">
+                      {formatCurrency(selectedPlan.monthlyPrice, selectedPlan.currency)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <form onSubmit={handleCheckout}>
+                <fieldset>
+                  <legend className="h6 text-uppercase text-primary">Elegí cómo querés pagar</legend>
+                  <div className="form-check mb-2">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="paymentMethodType"
+                      id="payment-method-card"
+                      value="card"
+                      checked={paymentMethodType === 'card'}
+                      onChange={handlePaymentMethodTypeChange}
+                    />
+                    <label className="form-check-label" htmlFor="payment-method-card">
+                      Tarjeta de crédito o débito (procesamiento cifrado)
+                    </label>
+                  </div>
+                  <div className="form-check mb-4">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="paymentMethodType"
+                      id="payment-method-mercado-pago"
+                      value="mercadopago"
+                      checked={paymentMethodType === 'mercadopago'}
+                      onChange={handlePaymentMethodTypeChange}
+                    />
+                    <label className="form-check-label" htmlFor="payment-method-mercado-pago">
+                      Mercado Pago (convertimos a ARS al dólar blue compra al momento del pago)
+                    </label>
+                  </div>
+                </fieldset>
+
+                {paymentMethodType === 'card' && (
+                  <div className="border rounded-4 p-3 p-md-4 bg-white">
+                    <h3 className="h6 text-uppercase mb-3">Tarjetas guardadas</h3>
+                    {methodsLoading && (
+                      <div className="d-flex align-items-center gap-2 text-primary mb-3">
+                        <div className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+                        <span>Cargando métodos guardados...</span>
+                      </div>
+                    )}
+                    {!methodsLoading && paymentMethods.length === 0 && (
+                      <p className="text-muted mb-3">Todavía no guardaste tarjetas. Podés sumar una nueva a continuación.</p>
+                    )}
+                    {paymentMethods.map((method) => (
+                      <div className="form-check mb-2" key={method.id}>
+                        <input
+                          className="form-check-input"
+                          type="radio"
+                          name="savedPaymentMethod"
+                          id={`payment-${method.id}`}
+                          value={method.id}
+                          checked={selectedMethodId === method.id}
+                          onChange={() => setSelectedMethodId(method.id)}
+                        />
+                        <label className="form-check-label" htmlFor={`payment-${method.id}`}>
+                          {buildSavedMethodLabel(method)}
+                        </label>
+                      </div>
+                    ))}
+                    {cardErrors.general && (
+                      <div className="text-danger small mb-3">{cardErrors.general}</div>
+                    )}
+
+                    <div className="mt-4 pt-4 border-top">
+                      <h4 className="h6 text-uppercase mb-3">Agregar una nueva tarjeta</h4>
+                      <div className="alert alert-secondary" role="alert">
+                        <i className="bi bi-shield-lock-fill me-2" aria-hidden="true"></i>
+                        Los números se cifran con AES-256, se almacenan separados del resto de la base de datos y nunca
+                        guardamos tu código de seguridad (CVV).
+                      </div>
+                      <div className="row g-3">
+                        <div className="col-12">
+                          <label htmlFor="cardholderName" className="form-label">
+                            Titular de la tarjeta
+                          </label>
+                          <input
+                            id="cardholderName"
+                            name="cardholderName"
+                            type="text"
+                            autoComplete="cc-name"
+                            className={`form-control ${cardErrors.cardholderName ? 'is-invalid' : ''}`}
+                            value={cardForm.cardholderName}
+                            onChange={handleCardInputChange}
+                            placeholder="Nombre y apellido"
+                          />
+                          {cardErrors.cardholderName && (
+                            <div className="invalid-feedback">{cardErrors.cardholderName}</div>
+                          )}
+                        </div>
+                        <div className="col-12">
+                          <label htmlFor="cardNumber" className="form-label">
+                            Número de tarjeta
+                          </label>
+                          <input
+                            id="cardNumber"
+                            name="cardNumber"
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="cc-number"
+                            className={`form-control ${cardErrors.cardNumber ? 'is-invalid' : ''}`}
+                            value={cardForm.cardNumber}
+                            onChange={handleCardInputChange}
+                            placeholder="0000 0000 0000 0000"
+                          />
+                          {cardErrors.cardNumber && <div className="invalid-feedback">{cardErrors.cardNumber}</div>}
+                        </div>
+                        <div className="col-6 col-md-3">
+                          <label htmlFor="expiryMonth" className="form-label">
+                            Mes (MM)
+                          </label>
+                          <input
+                            id="expiryMonth"
+                            name="expiryMonth"
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="cc-exp-month"
+                            className={`form-control ${cardErrors.expiryMonth ? 'is-invalid' : ''}`}
+                            value={cardForm.expiryMonth}
+                            onChange={handleCardInputChange}
+                            placeholder="MM"
+                          />
+                          {cardErrors.expiryMonth && <div className="invalid-feedback">{cardErrors.expiryMonth}</div>}
+                        </div>
+                        <div className="col-6 col-md-3">
+                          <label htmlFor="expiryYear" className="form-label">
+                            Año (AAAA)
+                          </label>
+                          <input
+                            id="expiryYear"
+                            name="expiryYear"
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="cc-exp-year"
+                            className={`form-control ${cardErrors.expiryYear ? 'is-invalid' : ''}`}
+                            value={cardForm.expiryYear}
+                            onChange={handleCardInputChange}
+                            placeholder="2028"
+                          />
+                          {cardErrors.expiryYear && <div className="invalid-feedback">{cardErrors.expiryYear}</div>}
+                        </div>
+                        <div className="col-12">
+                          <button
+                            type="button"
+                            className="btn btn-outline-primary"
+                            disabled={savingMethod}
+                            onClick={handleCardSubmit}
+                          >
+                            {savingMethod ? (
+                              <span className="d-inline-flex align-items-center gap-2">
+                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                Guardando...
+                              </span>
+                            ) : (
+                              'Guardar tarjeta segura'
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {paymentMethodType === 'mercadopago' && (
+                  <div className="alert alert-primary" role="alert">
+                    <i className="bi bi-currency-exchange me-2" aria-hidden="true"></i>
+                    Convertiremos el valor mensual ({formatCurrency(selectedPlan.monthlyPrice, selectedPlan.currency)}) a
+                    pesos argentinos utilizando la cotización de compra del dólar blue al momento de confirmar el pago en
+                    Mercado Pago.
+                  </div>
+                )}
+
+                {infoMessage && (
+                  <div className="alert alert-success mt-4" role="alert">
+                    {infoMessage}
+                  </div>
+                )}
+
+                {errorMessage && (
+                  <div className="alert alert-danger mt-4" role="alert">
+                    {errorMessage}
+                  </div>
+                )}
+
+                {renderCheckoutSummary()}
+
+                <div className="d-flex flex-column flex-md-row gap-3 mt-4">
+                  <button type="submit" className="btn btn-primary" disabled={checkoutLoading}>
+                    {checkoutLoading ? (
+                      <span className="d-inline-flex align-items-center gap-2">
+                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        Preparando cobro seguro...
+                      </span>
+                    ) : (
+                      'Confirmar suscripción segura'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={() => {
+                      setSelectedPlan(null);
+                      setPaymentMethods([]);
+                      setSelectedMethodId('');
+                      setCheckoutResult(null);
+                      setCardErrors({});
+                      resetMessages();
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-5 p-4 bg-light rounded-4 shadow-sm subscription-help">
         <h2 className="h5 text-uppercase text-primary mb-3">¿Cómo funciona la suscripción?</h2>
@@ -235,8 +810,7 @@ export default function Suscripciones() {
               <div>
                 <h3 className="h6 text-uppercase mb-1">Activá tu prueba</h3>
                 <p className="mb-0 text-muted">
-                  El delegado del club inicia el período de prueba sin costo y puede cargar patinadores
-                  inmediatamente.
+                  El delegado del club inicia el período de prueba sin costo y puede cargar patinadores inmediatamente.
                 </p>
               </div>
             </div>
@@ -258,8 +832,8 @@ export default function Suscripciones() {
               <div>
                 <h3 className="h6 text-uppercase mb-1">Acceso completo</h3>
                 <p className="mb-0 text-muted">
-                  Con la suscripción activa, todos los roles del club mantienen acceso a torneos, reportes y
-                  seguimiento deportivo.
+                  Con la suscripción activa, todos los roles del club mantienen acceso a torneos, reportes y seguimiento
+                  deportivo.
                 </p>
               </div>
             </div>
