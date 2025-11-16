@@ -145,6 +145,7 @@ const clubSchema = new mongoose.Schema(
     titulos: { type: [tituloSchema], default: [] },
     contactInfo: { type: contactInfoSchema, default: () => ({}) },
     subscription: { type: subscriptionSchema, default: buildDefaultSubscriptionSnapshot },
+    subscriptionBonified: { type: Boolean, default: false },
     creadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
   },
   { timestamps: true }
@@ -262,6 +263,7 @@ clubSchema.methods.getSubscriptionState = function getSubscriptionState(referenc
   const now = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
   const nowTime = now.getTime();
   const snapshot = this.getSubscriptionSnapshot();
+  const isBonified = Boolean(this.subscriptionBonified);
 
   const trialEndsAt = snapshot.trialEndsAt ? snapshot.trialEndsAt.getTime() : null;
   const currentPeriodEndsAt = snapshot.currentPeriodEndsAt ? snapshot.currentPeriodEndsAt.getTime() : null;
@@ -271,7 +273,11 @@ clubSchema.methods.getSubscriptionState = function getSubscriptionState(referenc
   let isActive = false;
   let reason = 'inactive';
 
-  if (status === 'inactive') {
+  if (isBonified) {
+    status = 'active';
+    isActive = true;
+    reason = 'bonified';
+  } else if (status === 'inactive') {
     reason = 'inactive';
   } else if (status === 'trial') {
     if (!trialEndsAt || trialEndsAt >= nowTime) {
@@ -326,11 +332,19 @@ clubSchema.methods.getSubscriptionState = function getSubscriptionState(referenc
     trialDays: snapshot.trialDays
   };
 
+  if (isBonified) {
+    pricing.planId = 'bonificado';
+    pricing.planName = pricing.planName || 'Bonificado';
+    pricing.monthlyPrice = 0;
+    pricing.currency = 'ARS';
+  }
+
   return {
     ...snapshot,
     status,
     isActive,
     reason,
+    bonified: isBonified,
     trialExpired: Boolean(trialEndsAt && trialEndsAt < nowTime),
     currentPeriodExpired: Boolean(currentPeriodEndsAt && currentPeriodEndsAt < nowTime),
     graceExpired: Boolean(graceEndsAt && graceEndsAt < nowTime),
