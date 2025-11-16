@@ -988,7 +988,8 @@ const ensureLocalClub = async () => {
     club = await Club.create({
       nombre: LOCAL_CLUB_CANONICAL_NAME,
       nombreAmigable: LOCAL_CLUB_DISPLAY_NAME,
-      contactInfo: { ...DEFAULT_LOCAL_CONTACT_INFO }
+      contactInfo: { ...DEFAULT_LOCAL_CONTACT_INFO },
+      subscriptionBonified: true
     });
     return club;
   }
@@ -997,6 +998,11 @@ const ensureLocalClub = async () => {
 
   if (!club.nombreAmigable) {
     club.nombreAmigable = LOCAL_CLUB_DISPLAY_NAME;
+    shouldSave = true;
+  }
+
+  if (!club.subscriptionBonified) {
+    club.subscriptionBonified = true;
     shouldSave = true;
   }
 
