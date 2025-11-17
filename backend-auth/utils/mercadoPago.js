@@ -26,6 +26,14 @@ const normaliseAmount = (value) => {
   return Math.round(parsed * 100) / 100;
 };
 
+const parseBoolean = (value, defaultValue = false) => {
+  if (typeof value !== 'string') return defaultValue;
+  const normalised = value.trim().toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(normalised)) return true;
+  if (['false', '0', 'no', 'off'].includes(normalised)) return false;
+  return defaultValue;
+};
+
 class MercadoPagoConfigurationError extends Error {
   constructor(message) {
     super(message);
@@ -90,13 +98,33 @@ const resolveNotificationUrl = () =>
 const resolveApiBaseUrl = () =>
   trimOrNull(process.env.MERCADOPAGO_API_BASE_URL) || DEFAULT_API_BASE_URL;
 
-const createMercadoPagoPreference = async ({ plan, clubId, conversion, user }) => {
+const resolveUseSandbox = () => parseBoolean(process.env.MERCADOPAGO_USE_SANDBOX, false);
+
+const resolveAccessToken = () => {
+  const useSandbox = resolveUseSandbox();
   const accessToken = trimOrNull(process.env.MERCADOPAGO_ACCESS_TOKEN);
+  const sandboxToken = trimOrNull(process.env.MERCADOPAGO_ACCESS_TOKEN_SANDBOX);
+
+  if (useSandbox) {
+    if (!sandboxToken) {
+      throw new MercadoPagoConfigurationError(
+        'Mercado Pago en modo sandbox no está configurado. Configurá MERCADOPAGO_ACCESS_TOKEN_SANDBOX o desactivá MERCADOPAGO_USE_SANDBOX.'
+      );
+    }
+    return { accessToken: sandboxToken, useSandbox: true };
+  }
+
   if (!accessToken) {
     throw new MercadoPagoConfigurationError(
-      'Mercado Pago no está configurado. Configurá MERCADOPAGO_ACCESS_TOKEN para habilitar los cobros.'
+      'Mercado Pago no está configurado. Configurá MERCADOPAGO_ACCESS_TOKEN o habilitá MERCADOPAGO_USE_SANDBOX con MERCADOPAGO_ACCESS_TOKEN_SANDBOX.'
     );
   }
+
+  return { accessToken, useSandbox: false };
+};
+
+const createMercadoPagoPreference = async ({ plan, clubId, conversion, user }) => {
+  const { accessToken, useSandbox } = resolveAccessToken();
 
   if (!plan?.name || !plan?.id) {
     throw new Error('El plan de suscripción no es válido para crear el pago en Mercado Pago.');
@@ -158,7 +186,9 @@ const createMercadoPagoPreference = async ({ plan, clubId, conversion, user }) =
     );
   }
 
-  const initPoint = parsedBody?.init_point || parsedBody?.sandbox_init_point;
+  const initPoint = useSandbox
+    ? parsedBody?.sandbox_init_point || parsedBody?.init_point
+    : parsedBody?.init_point || parsedBody?.sandbox_init_point;
   if (!initPoint) {
     throw new MercadoPagoApiError(
       'Mercado Pago no devolvió una URL de pago válida.',
