@@ -114,13 +114,20 @@ const resolveAccessToken = () => {
     return { accessToken: sandboxToken, useSandbox: true };
   }
 
-  if (!accessToken) {
-    throw new MercadoPagoConfigurationError(
-      'Mercado Pago no está configurado. Configurá MERCADOPAGO_ACCESS_TOKEN o habilitá MERCADOPAGO_USE_SANDBOX con MERCADOPAGO_ACCESS_TOKEN_SANDBOX.'
-    );
+  if (accessToken) {
+    return { accessToken, useSandbox: false };
   }
 
-  return { accessToken, useSandbox: false };
+  if (sandboxToken) {
+    console.warn(
+      'MERCADOPAGO_USE_SANDBOX no está activado, pero se encontró MERCADOPAGO_ACCESS_TOKEN_SANDBOX. Se usará modo sandbox por defecto.'
+    );
+    return { accessToken: sandboxToken, useSandbox: true };
+  }
+
+  throw new MercadoPagoConfigurationError(
+    'Mercado Pago no está configurado. Configurá MERCADOPAGO_ACCESS_TOKEN o habilitá MERCADOPAGO_USE_SANDBOX con MERCADOPAGO_ACCESS_TOKEN_SANDBOX.'
+  );
 };
 
 const createMercadoPagoPreference = async ({ plan, clubId, conversion, user }) => {
