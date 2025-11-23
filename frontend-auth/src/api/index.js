@@ -167,6 +167,23 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    if (error.response?.status === 402) {
+      const message =
+        error.response?.data?.mensaje ||
+        'La suscripción del club está vencida. Regularizá el pago para continuar usando la plataforma.';
+      try {
+        sessionStorage.setItem('subscriptionBlockedMessage', message);
+      } catch (storageErr) {
+        console.warn('No se pudo guardar el aviso de suscripción inactiva', storageErr);
+      }
+
+      if (typeof window !== 'undefined') {
+        window.location.href = '/suscripciones';
+      }
+
+      return Promise.reject(error);
+    }
+
     if (baseUrlCandidates.length > 1 && shouldRetryWithFallback(error)) {
       const currentIndex = typeof error.config.__candidateIndex === 'number'
         ? error.config.__candidateIndex
