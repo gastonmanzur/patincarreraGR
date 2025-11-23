@@ -157,6 +157,19 @@ const formatBlueRateTimestamp = (value) => {
 
 const normaliseStatus = (value) => (value || '').toString().toLowerCase();
 
+const resolveSubscriptionUiStatus = (state) => {
+  if (!state) return 'unknown';
+  if (state.bonified) return 'bonified';
+
+  const status = normaliseStatus(state.status);
+
+  if (status === 'trial' && state.trialExpired) {
+    return 'trial_expired';
+  }
+
+  return status || 'unknown';
+};
+
 const formatDateForHumans = (value) => {
   if (!value) return '';
   try {
@@ -170,30 +183,28 @@ const formatDateForHumans = (value) => {
 
 const SUBSCRIPTION_STATUS_LABELS = {
   active: 'Activa',
+  bonified: 'Bonificada',
   trial: 'Período de prueba',
+  trial_expired: 'Prueba vencida',
   grace: 'En período de gracia',
   past_due: 'Pago pendiente',
   inactive: 'Inactiva'
 };
 
 const getSubscriptionStatusLabel = (state) => {
-  const status = normaliseStatus(state?.status);
-  if (state?.bonified) {
-    return 'Bonificada';
-  }
+  const status = resolveSubscriptionUiStatus(state);
   return SUBSCRIPTION_STATUS_LABELS[status] || 'Estado desconocido';
 };
 
 const getSubscriptionStatusBadgeClass = (state) => {
-  if (state?.bonified) {
-    return 'text-bg-success';
-  }
-  const status = normaliseStatus(state?.status);
+  const status = resolveSubscriptionUiStatus(state);
   switch (status) {
     case 'active':
+    case 'bonified':
       return 'text-bg-success';
     case 'trial':
       return 'text-bg-info';
+    case 'trial_expired':
     case 'grace':
       return 'text-bg-warning';
     case 'past_due':
@@ -213,7 +224,7 @@ const buildSubscriptionStatusDescription = (state) => {
     return 'Tu club cuenta con un plan bonificado provisto por la organización.';
   }
 
-  const status = normaliseStatus(state.status);
+  const status = resolveSubscriptionUiStatus(state);
   const trialEnds = formatDateForHumans(state.trialEndsAt);
   const periodEnds = formatDateForHumans(state.currentPeriodEndsAt);
   const graceEnds = formatDateForHumans(state.graceEndsAt);
@@ -223,6 +234,11 @@ const buildSubscriptionStatusDescription = (state) => {
       return trialEnds
         ? `El período de prueba está activo hasta el ${trialEnds}.`
         : 'El período de prueba del club está activo.';
+    case 'trial_expired': {
+      const baseMessage =
+        'El período de prueba finalizó. Activá la suscripción para volver a usar todas las funciones de la plataforma.';
+      return trialEnds ? `${baseMessage} La prueba terminó el ${trialEnds}.` : baseMessage;
+    }
     case 'active':
       return periodEnds
         ? `La suscripción está pagada hasta el ${periodEnds}.`
@@ -276,10 +292,20 @@ export default function Suscripciones() {
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState('');
   const [userRole, setUserRole] = useState('');
+  const [blockingNotice, setBlockingNotice] = useState('');
 
   useEffect(() => {
     if (typeof sessionStorage === 'undefined') return;
     setUserRole(sessionStorage.getItem('rol') || '');
+  }, []);
+
+  useEffect(() => {
+    if (typeof sessionStorage === 'undefined') return;
+    const notice = sessionStorage.getItem('subscriptionBlockedMessage');
+    if (notice) {
+      setBlockingNotice(notice);
+      sessionStorage.removeItem('subscriptionBlockedMessage');
+    }
   }, []);
 
   const isDelegate = useMemo(() => userRole?.toLowerCase() === 'delegado', [userRole]);
@@ -651,6 +677,11 @@ export default function Suscripciones() {
         {error && !loading && (
           <div className="alert alert-warning mt-3" role="alert">
             {error}
+          </div>
+        )}
+        {blockingNotice && (
+          <div className="alert alert-danger mt-3" role="alert">
+            {blockingNotice}
           </div>
         )}
       </div>
