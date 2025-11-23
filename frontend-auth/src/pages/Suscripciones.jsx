@@ -662,10 +662,15 @@ export default function Suscripciones() {
             Solo vos como delegado podés ver el estado actual de la suscripción de tu club.
           </p>
         )}
-        {trialDays > 0 && (
+        {trialDays > 0 ? (
           <div className="alert alert-success d-inline-flex align-items-center gap-2 shadow-sm">
             <i className="bi bi-gift-fill" aria-hidden="true"></i>
             <span>Período de prueba gratis de {trialDays} días para cada club.</span>
+          </div>
+        ) : (
+          <div className="alert alert-warning d-inline-flex align-items-center gap-2 shadow-sm">
+            <i className="bi bi-info-circle-fill" aria-hidden="true"></i>
+            <span>El periodo de prueba a terminado elige un plan para seguir disfrutando de todas las funciones.</span>
           </div>
         )}
         {loading && (
