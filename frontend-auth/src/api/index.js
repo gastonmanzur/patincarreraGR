@@ -22,38 +22,54 @@ const resolveConfiguredBase = (rawUrl, origin) => {
   }
 };
 
+const splitEnvBaseList = (raw) =>
+  (raw || '')
+    .split(/[,;\s]+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+const getRuntimeLocation = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.location;
+  } catch {
+    return null;
+  }
+};
+
+const normaliseEnvBaseUrls = (raw) => {
+  const location = getRuntimeLocation();
+  const origin = location?.origin;
+  const isBrowser = Boolean(location);
+
+  return splitEnvBaseList(raw).map((value) => {
+    const normalised = ensureApiSuffix(value);
+    if (!isBrowser) return normalised;
+    return ensureApiSuffix(resolveConfiguredBase(value, origin) || normalised);
+  });
+};
+
+const envBaseUrls = normaliseEnvBaseUrls(
+  import.meta.env.VITE_API_BASE?.trim() || import.meta.env.VITE_API_URL?.trim()
+).filter(Boolean);
+
 // Build a list of candidate base URLs used by the Axios instance. The helper
 // normalises values received from the environment so every deployment ends up
 // calling the backend under the expected `/api` prefix while still allowing a
 // graceful fallback when the primary endpoint is temporarily unavailable or
 // misconfigured during deploys.
 const buildApiBaseUrlCandidates = () => {
-  const rawEnvUrl =
-    import.meta.env.VITE_API_BASE?.trim() || import.meta.env.VITE_API_URL?.trim();
-
-  const isBrowser = typeof window !== 'undefined';
-  const candidates = [];
-
-  if (rawEnvUrl) {
-    const normalised = ensureApiSuffix(rawEnvUrl);
-
-    if (!isBrowser) {
-      if (normalised) candidates.push(normalised);
-    } else {
-      const configured = ensureApiSuffix(
-        resolveConfiguredBase(rawEnvUrl, window.location.origin) || normalised
-      );
-      if (configured) candidates.push(configured);
-    }
-  }
+  const location = getRuntimeLocation();
+  const isBrowser = Boolean(location);
+  const candidates = [...envBaseUrls];
 
   if (!isBrowser) {
     candidates.push(ensureApiSuffix('/'));
     return unique(candidates);
   }
 
+  const { protocol, hostname, origin } = location;
   const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim();
-  const { protocol, hostname, origin } = window.location;
   const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(hostname);
 
   if (backendPort) {
@@ -74,6 +90,8 @@ const buildApiBaseUrlCandidates = () => {
     candidates.push(ensureApiSuffix(`${protocol}//${apexHost}`));
   }
 
+  candidates.push(ensureApiSuffix('/'));
+
   return unique(candidates);
 };
 
@@ -83,7 +101,7 @@ let activeBaseUrlIndex = 0;
 const getBaseUrlForIndex = (index) =>
   baseUrlCandidates[index] || baseUrlCandidates[0] || ensureApiSuffix('/');
 
-const resolvedEnvBaseUrl = ensureApiSuffix(import.meta.env.VITE_API_URL?.trim());
+const resolvedEnvBaseUrl = envBaseUrls[0] || ensureApiSuffix(import.meta.env.VITE_API_URL?.trim());
 
 const api = axios.create({
   baseURL: resolvedEnvBaseUrl || getBaseUrlForIndex(activeBaseUrlIndex),
