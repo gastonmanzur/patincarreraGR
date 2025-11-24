@@ -62,6 +62,9 @@ export const confirmarCuenta = async (req, res) => {
 // Login de usuario
 export const loginUsuario = async (req, res) => {
   try {
+
+    const { email, password } = req.body;
+
     const body = req.body ?? {};
     const email = typeof body.email === 'string' ? body.email.trim() : '';
     const password = typeof body.password === 'string' ? body.password : '';
@@ -69,6 +72,7 @@ export const loginUsuario = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ mensaje: 'Email y contraseña son obligatorios' });
     }
+
 
     const usuario = await User.findOne({ email });
 
@@ -79,6 +83,13 @@ export const loginUsuario = async (req, res) => {
     if (!usuario.confirmado) {
       return res.status(403).json({ mensaje: 'Tenés que confirmar tu cuenta primero' });
     }
+
+
+    const passwordValido = await bcrypt.compare(password, usuario.password);
+    if (!passwordValido) {
+      return res.status(401).json({ mensaje: 'Contraseña incorrecta' });
+    }
+
 
     if (!usuario.password) {
       return res
@@ -115,6 +126,7 @@ export const loginUsuario = async (req, res) => {
       const subscriptionResult = await loadClubSubscription(usuario.club, { persistDefaults: true });
       clubSubscription = subscriptionResult?.subscriptionState ?? null;
     }
+
 
     const token = jwt.sign(
       { id: usuario._id, rol: usuario.rol },
