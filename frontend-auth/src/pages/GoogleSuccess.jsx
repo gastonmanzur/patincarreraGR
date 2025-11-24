@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
+import getImageUrl from '../utils/getImageUrl';
+import { clearStoredClubId, setStoredClubId } from '../utils/clubContext';
 
 
 export default function GoogleSuccess() {
@@ -12,13 +14,33 @@ export default function GoogleSuccess() {
   useEffect(() => {
     if (token) {
       const datos = jwtDecode(token);
-      localStorage.setItem('token', token);
-      localStorage.setItem('rol', datos.rol);
-      if (datos.foto) {
-        localStorage.setItem('foto', datos.foto);
+      sessionStorage.setItem('token', token);
+      sessionStorage.setItem('rol', datos.rol);
+      if (datos.club) {
+        setStoredClubId(datos.club);
+      } else {
+        clearStoredClubId();
+        sessionStorage.removeItem('clubLogo');
+        sessionStorage.removeItem('clubNombre');
       }
-  
-      navigate('/home');
+      const foto = getImageUrl(datos.foto);
+      if (foto) {
+        sessionStorage.setItem('foto', foto);
+      } else {
+        sessionStorage.removeItem('foto');
+      }
+
+      if (datos.rol?.toLowerCase() === 'admin') {
+        clearStoredClubId();
+        sessionStorage.removeItem('clubLogo');
+        sessionStorage.removeItem('clubNombre');
+      }
+
+      if (datos.needsClubSelection && datos.rol?.toLowerCase() !== 'admin') {
+        navigate('/seleccionar-club');
+      } else {
+        navigate('/home');
+      }
     }
   }, [token, navigate]);
   

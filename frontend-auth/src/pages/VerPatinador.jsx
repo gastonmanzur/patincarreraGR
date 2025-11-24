@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import api from '../api.js';
+import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function VerPatinador() {
   const { id } = useParams();
@@ -10,7 +11,11 @@ export default function VerPatinador() {
     const fetchPatinador = async () => {
       try {
         const res = await api.get(`/patinadores/${id}`);
-        setPatinador(res.data);
+        setPatinador({
+          ...res.data,
+          foto: getImageUrl(res.data?.foto),
+          fotoRostro: getImageUrl(res.data?.fotoRostro)
+        });
       } catch (err) {
         console.error(err);
       }
@@ -22,9 +27,14 @@ export default function VerPatinador() {
     return <div className="container mt-4">Cargando...</div>;
   }
 
+  const fechaNacimiento = new Date(patinador.fechaNacimiento).toLocaleDateString(
+    'es-AR',
+    { day: '2-digit', month: '2-digit', year: 'numeric' }
+  );
+
   return (
     <div className="container mt-4">
-      <h1>
+      <h1 className="text-center">
         {patinador.primerNombre} {patinador.segundoNombre ? `${patinador.segundoNombre} ` : ''}
         {patinador.apellido}
       </h1>
@@ -39,7 +49,7 @@ export default function VerPatinador() {
       <ul className="list-group mb-3">
         <li className="list-group-item">Edad: {patinador.edad}</li>
         <li className="list-group-item">
-          Fecha de Nacimiento: {new Date(patinador.fechaNacimiento).toLocaleDateString()}
+          <strong>Fecha de Nacimiento: {fechaNacimiento}</strong>
         </li>
         <li className="list-group-item">DNI: {patinador.dni}</li>
         <li className="list-group-item">CUIL: {patinador.cuil}</li>
@@ -49,6 +59,7 @@ export default function VerPatinador() {
         <li className="list-group-item">Teléfono: {patinador.telefono}</li>
         <li className="list-group-item">Sexo: {patinador.sexo}</li>
         <li className="list-group-item">Nivel: {patinador.nivel}</li>
+        <li className="list-group-item">Seguro: {patinador.seguro}</li>
         <li className="list-group-item">
           Número de Corredor: {patinador.numeroCorredor}
         </li>

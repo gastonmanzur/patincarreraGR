@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '../api.js';
+import api from '../api';
 
 export default function EditarPatinador() {
   const { id } = useParams();
@@ -38,6 +38,7 @@ export default function EditarPatinador() {
     formData.append('telefono', form.telefono.value);
     formData.append('sexo', form.sexo.value);
     formData.append('nivel', form.nivel.value);
+    formData.append('seguro', form.seguro.value);
     formData.append('numeroCorredor', form.numeroCorredor.value);
     formData.append('categoria', form.categoria.value);
     if (fotoRostro) formData.append('fotoRostro', fotoRostro);
@@ -64,7 +65,7 @@ export default function EditarPatinador() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-4">Editar Patinador</h1>
+      <h1 className="mb-4 text-center">Editar Patinador</h1>
       <form onSubmit={handleSubmit}>
         <div className="row g-3">
           <div className="col-md-6">
@@ -202,6 +203,18 @@ export default function EditarPatinador() {
               <option value="Transicion">Transición</option>
               <option value="Intermedia">Intermedia</option>
               <option value="Federados">Federados</option>
+            </select>
+          </div>
+          <div className="col-md-4">
+            <label className="form-label">Seguro</label>
+            <select
+              className="form-select"
+              name="seguro"
+              defaultValue={patinador.seguro || 'S/S'}
+            >
+              <option value="S/S">S/S</option>
+              <option value="SA">SA</option>
+              <option value="SD">SD</option>
             </select>
           </div>
           <div className="col-md-4">

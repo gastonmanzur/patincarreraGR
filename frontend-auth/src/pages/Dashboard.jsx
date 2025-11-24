@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import LogoutButton from '../components/LogoutButton';
-import api from '../api.js';
+import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
+import defaultAvatar from '../assets/image-placeholder.svg';
 
 export default function Dashboard() {
   const [rol, setRol] = useState('');
@@ -8,14 +10,29 @@ export default function Dashboard() {
   const [usuario, setUsuario] = useState({});
 
   useEffect(() => {
-    setRol(localStorage.getItem('rol'));
-    setFoto(localStorage.getItem('foto'));
+    setRol(sessionStorage.getItem('rol'));
+    const storedFoto = getImageUrl(sessionStorage.getItem('foto'));
+    if (storedFoto) {
+      sessionStorage.setItem('foto', storedFoto);
+      setFoto(storedFoto);
+    } else {
+      sessionStorage.removeItem('foto');
+      setFoto('');
+    }
 
     // Podés cargar más info si querés desde el backend
     const cargarDatos = async () => {
       try {
         const res = await api.get('/protegido/usuario');
-        setUsuario(res.data.usuario);
+        const usuarioData = {
+          ...res.data.usuario,
+          foto: getImageUrl(res.data.usuario?.foto)
+        };
+        setUsuario(usuarioData);
+        if (usuarioData.foto) {
+          sessionStorage.setItem('foto', usuarioData.foto);
+          setFoto(usuarioData.foto);
+        }
       } catch (err) {
         console.log(err);
       }
@@ -40,8 +57,11 @@ export default function Dashboard() {
       });
 
       alert('Foto actualizada');
-      localStorage.setItem('foto', res.data.foto);
-      setFoto(res.data.foto);
+      const nuevaFoto = getImageUrl(res.data.foto);
+      if (nuevaFoto) {
+        sessionStorage.setItem('foto', nuevaFoto);
+        setFoto(nuevaFoto);
+      }
       setNuevaFoto(null);
     } catch (err) {
       console.error(err);
@@ -49,16 +69,20 @@ export default function Dashboard() {
     }
   };
 
+  const esAdmin = typeof rol === 'string' && rol.toLowerCase() === 'admin';
+
   return (
     <div className="container mt-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="m-0">Bienvenido al Dashboard</h1>
-        <LogoutButton />
+      <div className="d-flex flex-column flex-md-row align-items-center mb-4">
+        <h1 className="m-0 text-center flex-grow-1 w-100">Bienvenido al Dashboard</h1>
+        <div className="mt-3 mt-md-0 ms-md-3">
+          <LogoutButton />
+        </div>
       </div>
 
       <div className="card p-3 mb-4 d-flex flex-row align-items-center gap-3">
         <img
-          src={foto || '/default-user.png'}
+          src={foto || defaultAvatar}
           alt="Perfil"
           className="rounded-circle"
           width="80"
@@ -89,8 +113,8 @@ export default function Dashboard() {
         </form>
       )}
 
-      {rol === 'admin' ? (
-        <p>Contenido exclusivo para administradores.</p>
+      {esAdmin ? (
+        <p>Gestioná federaciones y clubes desde el Panel de Administración.</p>
       ) : (
         <p>Contenido exclusivo para usuarios comunes.</p>
       )}

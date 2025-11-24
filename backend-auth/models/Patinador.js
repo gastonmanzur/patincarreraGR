@@ -19,13 +19,27 @@ const patinadorSchema = new mongoose.Schema(
       enum: ['Escuela', 'Transicion', 'Intermedia', 'Federados'],
       required: true
     },
-    numeroCorredor: { type: Number, required: true, unique: true },
+    seguro: {
+      type: String,
+      enum: ['S/S', 'SA', 'SD'],
+      default: 'S/S'
+    },
+    historialSeguros: [
+      {
+        tipo: { type: String, enum: ['SD', 'SA'], required: true },
+        fecha: { type: Date, default: Date.now }
+      }
+    ],
+    numeroCorredor: { type: Number, required: true },
     categoria: { type: String, required: true },
     fotoRostro: { type: String },
-    foto: { type: String }
+    foto: { type: String },
+    club: { type: mongoose.Schema.Types.ObjectId, ref: 'Club', required: true }
   },
   { timestamps: true }
 );
+
+patinadorSchema.index({ categoria: 1, numeroCorredor: 1 }, { unique: true });
 
 const Patinador = mongoose.model('Patinador', patinadorSchema, 'patinadors');
 export default Patinador;

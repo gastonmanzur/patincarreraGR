@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-labelledby="title desc">
+  <title id="title">Imagen no disponible</title>
+  <desc id="desc">Ilustración genérica utilizada como marcador de posición cuando no hay imagen disponible.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#dfe3e8" />
+      <stop offset="100%" stop-color="#c2c9d1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)" rx="24" ry="24" />
+  <path
+    d="M120 220h160a12 12 0 0012-12v-56l-48-48-64 72-28-28-44 60a12 12 0 0010 12z"
+    fill="#b0b8c1"
+    opacity="0.8"
+  />
+  <circle cx="156" cy="124" r="28" fill="#b0b8c1" opacity="0.9" />
+  <text x="200" y="260" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif" font-size="32" fill="#6b7785">
+    Sin imagen
+  </text>
+</svg>

@@ -4,16 +4,16 @@ import react from '@vitejs/plugin-react';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // Proxy API requests during development so the frontend can use a relative
-  // `/api` path regardless of where the backend runs. This also proxies
-  // requests for uploaded files.
+  // Proxy only uploaded files during development. API requests now use an
+  // absolute backend URL defined in `src/api.js`, which avoids development
+  // proxy connection issues.
   server: {
     proxy: {
-      '/api': {
+      '/uploads': {
         target: 'http://localhost:5000',
         changeOrigin: true
       },
-      '/uploads': {
+      '/api/uploads': {
         target: 'http://localhost:5000',
         changeOrigin: true
       }

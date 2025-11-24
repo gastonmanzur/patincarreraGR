@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import api from '../api.js';
+import api from '../api';
 
 export default function CargarPatinador() {
   const [mensaje, setMensaje] = useState('');
@@ -23,6 +23,7 @@ export default function CargarPatinador() {
     formData.append('telefono', form.telefono.value);
     formData.append('sexo', form.sexo.value);
     formData.append('nivel', form.nivel.value);
+    formData.append('seguro', form.seguro.value);
     formData.append('numeroCorredor', form.numeroCorredor.value);
     formData.append('categoria', form.categoria.value);
     if (fotoRostro) formData.append('fotoRostro', fotoRostro);
@@ -46,7 +47,7 @@ export default function CargarPatinador() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-4">Cargar Patinador</h1>
+      <h1 className="mb-4 text-center">Cargar Patinador</h1>
       <form onSubmit={handleSubmit}>
         <div className="row g-3">
           <div className="col-md-6">
@@ -109,6 +110,14 @@ export default function CargarPatinador() {
               <option value="Transicion">Transición</option>
               <option value="Intermedia">Intermedia</option>
               <option value="Federados">Federados</option>
+            </select>
+          </div>
+          <div className="col-md-4">
+            <label className="form-label">Seguro</label>
+            <select className="form-select" name="seguro" defaultValue="S/S">
+              <option value="S/S">S/S</option>
+              <option value="SA">SA</option>
+              <option value="SD">SD</option>
             </select>
           </div>
           <div className="col-md-4">

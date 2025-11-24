@@ -5,7 +5,27 @@ const User = require('../models/User');
 const upload = require('../utils/multer');
 
 // Base URL of the backend, used when returning file paths.
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+const DEFAULT_BACKEND_URL =
+  process.env.NODE_ENV === 'production'
+    ? 'http://patincarrera.net'
+    : 'http://localhost:5000';
+
+const BACKEND_URL = (process.env.BACKEND_URL || DEFAULT_BACKEND_URL).replace(/\/+$/, '');
+
+const resolvePublicUploadsPath = () => {
+  const raw = process.env.PUBLIC_UPLOADS_PATH || process.env.UPLOADS_PUBLIC_PATH;
+  const trimmed = raw && raw.trim();
+  if (!trimmed) return '/uploads';
+  return `/${trimmed.replace(/^\/+/, '').replace(/\/+$/, '')}`;
+};
+
+const PUBLIC_UPLOADS_PATH = resolvePublicUploadsPath();
+const uploadsBase = `${BACKEND_URL}${PUBLIC_UPLOADS_PATH}`.replace(/\/+$/, '');
+
+const buildUploadUrl = (filename) => {
+  if (!filename) return '';
+  return `${uploadsBase}/${String(filename).replace(/^\/+/, '')}`;
+};
 
 
 router.get('/usuario', protegerRuta, async (req, res) => {
@@ -14,12 +34,12 @@ router.get('/usuario', protegerRuta, async (req, res) => {
 });
 
 
-router.get('/admin', protegerRuta, permitirRol('admin'), (req, res) => {
+router.get('/admin', protegerRuta, permitirRol('Admin'), (req, res) => {
   res.json({ mensaje: 'Acceso solo para administradores' });
 });
 
 
-router.get('/usuarios', protegerRuta, permitirRol('admin'), async (req, res) => {
+router.get('/usuarios', protegerRuta, permitirRol('Admin'), async (req, res) => {
   const usuarios = await User.find().select('-password');
   res.json(usuarios);
 });
@@ -27,7 +47,7 @@ router.get('/usuarios', protegerRuta, permitirRol('admin'), async (req, res) => 
 router.post('/foto-perfil', protegerRuta, upload.single('foto'), async (req, res) => {
   try {
     const user = await User.findById(req.usuario.id);
-    user.foto = `${BACKEND_URL}/uploads/${req.file.filename}`;
+    user.foto = buildUploadUrl(req.file.filename);
     await user.save();
     res.json({ mensaje: 'Foto actualizada', foto: user.foto });
   } catch (err) {
