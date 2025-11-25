@@ -63,8 +63,6 @@ export const confirmarCuenta = async (req, res) => {
 export const loginUsuario = async (req, res) => {
   try {
 
-    const { email, password } = req.body;
-
     const body = req.body ?? {};
     const email = typeof body.email === 'string' ? body.email.trim() : '';
     const password = typeof body.password === 'string' ? body.password : '';
