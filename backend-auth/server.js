@@ -47,23 +47,13 @@ import {
   validateExpiryDate
 } from './utils/paymentValidation.js';
 import { convertUsdToArsAtBlueRate } from './utils/currencyUtils.js';
-import {
-  createMercadoPagoPreference,
-  MercadoPagoApiError,
-  MercadoPagoConfigurationError
-} from './utils/mercadoPago.js';
 
-// --------- Paths / ENV ---------
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 dotenv.config();
-const additionalEnv = path.resolve(__dirname, '..', '.env');
-if (fs.existsSync(additionalEnv)) {
-  dotenv.config({ path: additionalEnv, override: false });
-}
 
 // --------- Paths / TZ ---------
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 process.env.TZ = 'America/Argentina/Buenos_Aires';
 
 // --------- Uploads dir ---------
@@ -993,8 +983,7 @@ const ensureLocalClub = async () => {
     club = await Club.create({
       nombre: LOCAL_CLUB_CANONICAL_NAME,
       nombreAmigable: LOCAL_CLUB_DISPLAY_NAME,
-      contactInfo: { ...DEFAULT_LOCAL_CONTACT_INFO },
-      subscriptionBonified: true
+      contactInfo: { ...DEFAULT_LOCAL_CONTACT_INFO }
     });
     return club;
   }
@@ -1003,11 +992,6 @@ const ensureLocalClub = async () => {
 
   if (!club.nombreAmigable) {
     club.nombreAmigable = LOCAL_CLUB_DISPLAY_NAME;
-    shouldSave = true;
-  }
-
-  if (!club.subscriptionBonified) {
-    club.subscriptionBonified = true;
     shouldSave = true;
   }
 
@@ -1977,63 +1961,25 @@ app.post(
 
       if (paymentMethodType === 'mercadopago') {
         const conversion = await convertUsdToArsAtBlueRate(plan.monthlyPrice);
-        let payer = null;
+        const redirectUrl = new URL('https://www.mercadopago.com.ar/checkout/v1');
+        redirectUrl.searchParams.set('source_id', `club-${clubId}`);
+        redirectUrl.searchParams.set('plan_id', plan.id);
+        redirectUrl.searchParams.set('usd_amount', String(plan.monthlyPrice));
+        redirectUrl.searchParams.set('ars_amount', String(conversion.arsAmount));
 
-        if (req.usuario?.id) {
-          const payerDoc = await User.findById(req.usuario.id).select('nombre apellido email');
-          if (payerDoc) {
-            payer = {
-              id: payerDoc._id.toString(),
-              name: payerDoc.nombre || null,
-              surname: payerDoc.apellido || null,
-              email: payerDoc.email || null
-            };
-          }
-        }
-
-        try {
-          const preference = await createMercadoPagoPreference({
-            plan,
-            clubId,
-            conversion,
-            user: payer
-          });
-
-          return res.json({
-            mensaje: 'Redirigí a Mercado Pago para completar el pago en un entorno seguro.',
-            plan: buildSubscriptionPlanResponse(plan),
-            payment: {
-              type: 'mercadopago',
-              amountArs: conversion.arsAmount,
-              usdAmount: conversion.usdAmount,
-              blueDollarRate: conversion.rate,
-              fetchedAt: conversion.fetchedAt.toISOString(),
-              isFallback: conversion.isFallback,
-              preferenceId: preference.preferenceId
-            },
-            redirectUrl: preference.initPoint
-          });
-        } catch (error) {
-          if (error instanceof MercadoPagoConfigurationError) {
-            return res.status(503).json({
-              mensaje:
-                'Mercado Pago no está configurado para procesar el pago. Contactá al administrador del sistema.'
-            });
-          }
-
-          if (error instanceof MercadoPagoApiError) {
-            console.error('Mercado Pago API error al generar el checkout de suscripción', {
-              status: error.status,
-              details: error.details
-            });
-            return res.status(502).json({
-              mensaje:
-                'Mercado Pago no pudo iniciar el cobro en este momento. Intentá nuevamente en unos minutos.'
-            });
-          }
-
-          throw error;
-        }
+        return res.json({
+          mensaje: 'Redirigí a Mercado Pago para completar el pago en un entorno seguro.',
+          plan: buildSubscriptionPlanResponse(plan),
+          payment: {
+            type: 'mercadopago',
+            amountArs: conversion.arsAmount,
+            usdAmount: conversion.usdAmount,
+            blueDollarRate: conversion.rate,
+            fetchedAt: conversion.fetchedAt.toISOString(),
+            isFallback: conversion.isFallback
+          },
+          redirectUrl: redirectUrl.toString()
+        });
       }
 
       return res.status(400).json({ mensaje: 'Debes seleccionar un método de pago válido.' });
