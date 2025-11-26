@@ -34,54 +34,44 @@ const buildApiBaseUrlCandidates = () => {
   const isBrowser = typeof window !== 'undefined';
   const candidates = [];
 
-  const pushCandidate = (value) => {
-    const normalised = ensureApiSuffix(value);
-    if (normalised) candidates.push(normalised);
-  };
-
-  if (isBrowser) {
-    const { protocol, hostname, origin } = window.location;
-    const alternativeHost = hostname.startsWith('www.')
-      ? hostname.replace(/^www\./, '')
-      : `www.${hostname}`;
-
-    // Prefer the current origin first so deployments routed through CDNs or
-    // DNS-level failover keep using the working edge hostname even when the
-    // environment variable still points to an older URL.
-    pushCandidate(origin);
-    pushCandidate(`${protocol}//${alternativeHost}`);
-
-    const swappedProtocol = protocol === 'https:' ? 'http:' : 'https:';
-    pushCandidate(`${swappedProtocol}//${hostname}`);
-    pushCandidate(`${swappedProtocol}//${alternativeHost}`);
-  }
-
   if (rawEnvUrl) {
-    const normalised = ensureApiSuffix(
-      isBrowser
-        ? resolveConfiguredBase(rawEnvUrl, window.location.origin) || rawEnvUrl
-        : rawEnvUrl
-    );
+    const normalised = ensureApiSuffix(rawEnvUrl);
 
-    if (normalised) pushCandidate(normalised);
+    if (!isBrowser) {
+      if (normalised) candidates.push(normalised);
+    } else {
+      const configured = ensureApiSuffix(
+        resolveConfiguredBase(rawEnvUrl, window.location.origin) || normalised
+      );
+      if (configured) candidates.push(configured);
+    }
   }
 
   if (!isBrowser) {
-    pushCandidate('/');
+    candidates.push(ensureApiSuffix('/'));
     return unique(candidates);
   }
 
   const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim();
-  const { protocol, hostname } = window.location;
+  const { protocol, hostname, origin } = window.location;
   const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(hostname);
 
   if (backendPort) {
-    pushCandidate(`${protocol}//${hostname}:${backendPort}`);
+    candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${backendPort}`));
   }
 
   if (isLocalHost || import.meta.env.DEV) {
     const port = backendPort || '5000';
-    pushCandidate(`${protocol}//${hostname}:${port}`);
+    candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${port}`));
+  }
+
+  candidates.push(ensureApiSuffix(origin));
+
+  if (!hostname.startsWith('www.')) {
+    candidates.push(ensureApiSuffix(`${protocol}//www.${hostname}`));
+  } else {
+    const apexHost = hostname.replace(/^www\./, '');
+    candidates.push(ensureApiSuffix(`${protocol}//${apexHost}`));
   }
 
   return unique(candidates);
@@ -93,13 +83,18 @@ let activeBaseUrlIndex = 0;
 const getBaseUrlForIndex = (index) =>
   baseUrlCandidates[index] || baseUrlCandidates[0] || ensureApiSuffix('/');
 
+const resolvedEnvBaseUrl = ensureApiSuffix(import.meta.env.VITE_API_URL?.trim());
+
 const api = axios.create({
-  baseURL: getBaseUrlForIndex(activeBaseUrlIndex),
+  baseURL: resolvedEnvBaseUrl || getBaseUrlForIndex(activeBaseUrlIndex),
   withCredentials: true
 });
 
-// Ensure the Axios instance ends up using the fully normalised base URL.
-api.defaults.baseURL = getBaseUrlForIndex(activeBaseUrlIndex);
+// Ensure the Axios instance ends up using the fully normalised base URL while
+// keeping the snippet required by downstream consumers that rely on the raw
+// `VITE_API_URL` configuration. When the environment variable isn't present we
+// fall back to the dynamically resolved backend base.
+api.defaults.baseURL = resolvedEnvBaseUrl || getBaseUrlForIndex(activeBaseUrlIndex);
 
 
 api.interceptors.request.use((config) => {
@@ -122,7 +117,7 @@ api.interceptors.request.use((config) => {
     config.__fallbackAttempt = 0;
   }
 
-  config.baseURL = getBaseUrlForIndex(config.__candidateIndex);
+  config.baseURL = resolvedEnvBaseUrl || getBaseUrlForIndex(config.__candidateIndex);
 
   // Ensure request URLs remain relative so the Axios base URL is respected.
   if (config.baseURL && config.url?.startsWith('/')) {
@@ -157,7 +152,7 @@ api.interceptors.response.use(
       const currentIndex = response.config.__candidateIndex;
       if (currentIndex !== activeBaseUrlIndex) {
         activeBaseUrlIndex = currentIndex;
-        api.defaults.baseURL = getBaseUrlForIndex(activeBaseUrlIndex);
+        api.defaults.baseURL = resolvedEnvBaseUrl || getBaseUrlForIndex(activeBaseUrlIndex);
       }
     }
     return response;
@@ -185,10 +180,10 @@ api.interceptors.response.use(
           (typeof error.config.__fallbackAttempt === 'number'
             ? error.config.__fallbackAttempt
             : 0) + 1;
-        error.config.baseURL = nextBaseUrl;
+        error.config.baseURL = resolvedEnvBaseUrl || nextBaseUrl;
 
         activeBaseUrlIndex = nextIndex;
-        api.defaults.baseURL = nextBaseUrl;
+        api.defaults.baseURL = resolvedEnvBaseUrl || nextBaseUrl;
 
         return api(error.config);
       }
