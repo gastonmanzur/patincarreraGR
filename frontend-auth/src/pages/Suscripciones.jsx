@@ -155,117 +155,6 @@ const formatBlueRateTimestamp = (value) => {
   }
 };
 
-const normaliseStatus = (value) => (value || '').toString().toLowerCase();
-
-const resolveSubscriptionUiStatus = (state) => {
-  if (!state) return 'unknown';
-  if (state.bonified) return 'bonified';
-
-  const status = normaliseStatus(state.status);
-
-  if (status === 'trial' && state.trialExpired) {
-    return 'trial_expired';
-  }
-
-  return status || 'unknown';
-};
-
-const formatDateForHumans = (value) => {
-  if (!value) return '';
-  try {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat('es-AR', { dateStyle: 'long' }).format(date);
-  } catch {
-    return '';
-  }
-};
-
-const SUBSCRIPTION_STATUS_LABELS = {
-  active: 'Activa',
-  bonified: 'Bonificada',
-  trial: 'Período de prueba',
-  trial_expired: 'Prueba vencida',
-  grace: 'En período de gracia',
-  past_due: 'Pago pendiente',
-  inactive: 'Inactiva'
-};
-
-const getSubscriptionStatusLabel = (state) => {
-  const status = resolveSubscriptionUiStatus(state);
-  return SUBSCRIPTION_STATUS_LABELS[status] || 'Estado desconocido';
-};
-
-const getSubscriptionStatusBadgeClass = (state) => {
-  const status = resolveSubscriptionUiStatus(state);
-  switch (status) {
-    case 'active':
-    case 'bonified':
-      return 'text-bg-success';
-    case 'trial':
-      return 'text-bg-info';
-    case 'trial_expired':
-    case 'grace':
-      return 'text-bg-warning';
-    case 'past_due':
-      return 'text-bg-danger';
-    case 'inactive':
-    default:
-      return 'text-bg-secondary';
-  }
-};
-
-const buildSubscriptionStatusDescription = (state) => {
-  if (!state) {
-    return '';
-  }
-
-  if (state.bonified) {
-    return 'Tu club cuenta con un plan bonificado provisto por la organización.';
-  }
-
-  const status = resolveSubscriptionUiStatus(state);
-  const trialEnds = formatDateForHumans(state.trialEndsAt);
-  const periodEnds = formatDateForHumans(state.currentPeriodEndsAt);
-  const graceEnds = formatDateForHumans(state.graceEndsAt);
-
-  switch (status) {
-    case 'trial':
-      return trialEnds
-        ? `El período de prueba está activo hasta el ${trialEnds}.`
-        : 'El período de prueba del club está activo.';
-    case 'trial_expired': {
-      const baseMessage =
-        'El período de prueba finalizó. Activá la suscripción para volver a usar todas las funciones de la plataforma.';
-      return trialEnds ? `${baseMessage} La prueba terminó el ${trialEnds}.` : baseMessage;
-    }
-    case 'active':
-      return periodEnds
-        ? `La suscripción está pagada hasta el ${periodEnds}.`
-        : 'La suscripción está pagada y activa.';
-    case 'grace':
-      return graceEnds
-        ? `Están en período de gracia hasta el ${graceEnds}. Regularicen el pago para evitar la suspensión.`
-        : 'Están en período de gracia. Regularicen el pago para evitar la suspensión.';
-    case 'past_due':
-      return graceEnds
-        ? `Hay un pago pendiente. Tienen tiempo hasta el ${graceEnds} antes de la suspensión.`
-        : 'Hay un pago pendiente. Regularicen la suscripción para continuar usando todas las funciones.';
-    case 'inactive':
-      return 'La suscripción está inactiva. Contacten a soporte para reactivarla.';
-    default:
-      return '';
-  }
-};
-
-const resolveBillingPeriodLabel = (value) => {
-  if (!value) return 'mes';
-  if (value === 'yearly' || value === 'year') {
-    return 'año';
-  }
-  return 'mes';
-};
-
 export default function Suscripciones() {
   const [plans, setPlans] = useState(FALLBACK_PLANS);
   const [trialDays, setTrialDays] = useState(FALLBACK_TRIAL_DAYS);
@@ -288,27 +177,6 @@ export default function Suscripciones() {
   const [infoMessage, setInfoMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [checkoutResult, setCheckoutResult] = useState(null);
-  const [clubSubscription, setClubSubscription] = useState(null);
-  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
-  const [subscriptionError, setSubscriptionError] = useState('');
-  const [userRole, setUserRole] = useState('');
-  const [blockingNotice, setBlockingNotice] = useState('');
-
-  useEffect(() => {
-    if (typeof sessionStorage === 'undefined') return;
-    setUserRole(sessionStorage.getItem('rol') || '');
-  }, []);
-
-  useEffect(() => {
-    if (typeof sessionStorage === 'undefined') return;
-    const notice = sessionStorage.getItem('subscriptionBlockedMessage');
-    if (notice) {
-      setBlockingNotice(notice);
-      sessionStorage.removeItem('subscriptionBlockedMessage');
-    }
-  }, []);
-
-  const isDelegate = useMemo(() => userRole?.toLowerCase() === 'delegado', [userRole]);
 
   useEffect(() => {
     let active = true;
@@ -360,41 +228,6 @@ export default function Suscripciones() {
       })),
     [plans, trialDays]
   );
-
-  useEffect(() => {
-    if (!isDelegate) return;
-    let active = true;
-
-    const fetchSubscriptionStatus = async () => {
-      try {
-        setSubscriptionLoading(true);
-        const res = await api.get('/protegido/usuario');
-        if (!active) return;
-        setClubSubscription(res.data?.clubSubscription || null);
-        setSubscriptionError('');
-      } catch (err) {
-        if (!active) return;
-        console.error('Error al obtener la suscripción del club', err);
-        const status = err?.response?.status;
-        if (status === 401 || status === 403) {
-          setSubscriptionError('Iniciá sesión como delegado para ver el estado de la suscripción del club.');
-        } else {
-          setSubscriptionError('No pudimos obtener el estado actual de la suscripción del club.');
-        }
-        setClubSubscription(null);
-      } finally {
-        if (active) {
-          setSubscriptionLoading(false);
-        }
-      }
-    };
-
-    fetchSubscriptionStatus();
-
-    return () => {
-      active = false;
-    };
-  }, [isDelegate]);
 
   useEffect(() => {
     if (paymentMethodType !== 'card') return;
@@ -657,20 +490,10 @@ export default function Suscripciones() {
           Elegí la capacidad de patinadores que mejor se adapte a tu institución y activá todas las funciones de la
           plataforma.
         </p>
-        {isDelegate && (
-          <p className="text-muted small mb-4">
-            Solo vos como delegado podés ver el estado actual de la suscripción de tu club.
-          </p>
-        )}
-        {trialDays > 0 ? (
+        {trialDays > 0 && (
           <div className="alert alert-success d-inline-flex align-items-center gap-2 shadow-sm">
             <i className="bi bi-gift-fill" aria-hidden="true"></i>
             <span>Período de prueba gratis de {trialDays} días para cada club.</span>
-          </div>
-        ) : (
-          <div className="alert alert-warning d-inline-flex align-items-center gap-2 shadow-sm">
-            <i className="bi bi-info-circle-fill" aria-hidden="true"></i>
-            <span>El periodo de prueba a terminado elige un plan para seguir disfrutando de todas las funciones.</span>
           </div>
         )}
         {loading && (
@@ -684,75 +507,7 @@ export default function Suscripciones() {
             {error}
           </div>
         )}
-        {blockingNotice && (
-          <div className="alert alert-danger mt-3" role="alert">
-            {blockingNotice}
-          </div>
-        )}
       </div>
-
-      {isDelegate && (
-        <div className="mb-5">
-          <div className="bg-white border rounded-4 shadow-sm p-3 p-md-4">
-            <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-4">
-              <div className="flex-grow-1 w-100">
-                <span className="text-muted text-uppercase small">Plan del club</span>
-                {subscriptionLoading && (
-                  <div className="d-flex align-items-center gap-2 text-primary mt-2">
-                    <div className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
-                    <span>Actualizando el plan...</span>
-                  </div>
-                )}
-                {!subscriptionLoading && subscriptionError && (
-                  <p className="text-danger mb-0 mt-2">{subscriptionError}</p>
-                )}
-                {!subscriptionLoading && !subscriptionError && clubSubscription && (
-                  <div className="mt-2">
-                    <h3 className="h5 mb-1">{clubSubscription.pricing?.planName || 'Plan sin definir'}</h3>
-                    <p className="mb-1 text-muted">{buildAthleteRangeLabel(clubSubscription.pricing)}</p>
-                    <div className="d-flex align-items-baseline gap-2">
-                      <div className="display-6 fw-bold text-primary">
-                        {formatCurrency(
-                          clubSubscription.pricing?.monthlyPrice,
-                          clubSubscription.pricing?.currency || 'USD'
-                        )}
-                      </div>
-                      <span className="text-muted">
-                        / {resolveBillingPeriodLabel(clubSubscription.pricing?.billingPeriod)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {!subscriptionLoading && !subscriptionError && !clubSubscription && (
-                  <p className="text-muted mb-0 mt-2">No pudimos determinar el plan actual del club.</p>
-                )}
-              </div>
-              <div className="text-lg-end w-100">
-                <span className="text-muted text-uppercase small">Estado</span>
-                {subscriptionLoading && (
-                  <div className="d-flex align-items-center gap-2 text-primary mt-2 justify-content-lg-end">
-                    <div className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
-                    <span>Verificando estado...</span>
-                  </div>
-                )}
-                {!subscriptionLoading && subscriptionError && (
-                  <p className="text-danger mb-0 mt-2">{subscriptionError}</p>
-                )}
-                {!subscriptionLoading && !subscriptionError && clubSubscription && (
-                  <div className="mt-2">
-                    <span className={`badge rounded-pill ${getSubscriptionStatusBadgeClass(clubSubscription)}`}>
-                      {getSubscriptionStatusLabel(clubSubscription)}
-                    </span>
-                    <p className="text-muted small mb-0 mt-2">
-                      {buildSubscriptionStatusDescription(clubSubscription) || 'Estado actualizado.'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="row g-4">
         {plansWithFeatures.map((plan) => (
