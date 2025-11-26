@@ -83,18 +83,13 @@ let activeBaseUrlIndex = 0;
 const getBaseUrlForIndex = (index) =>
   baseUrlCandidates[index] || baseUrlCandidates[0] || ensureApiSuffix('/');
 
-const resolvedEnvBaseUrl = ensureApiSuffix(import.meta.env.VITE_API_URL?.trim());
-
 const api = axios.create({
-  baseURL: resolvedEnvBaseUrl || getBaseUrlForIndex(activeBaseUrlIndex),
+  baseURL: getBaseUrlForIndex(activeBaseUrlIndex),
   withCredentials: true
 });
 
-// Ensure the Axios instance ends up using the fully normalised base URL while
-// keeping the snippet required by downstream consumers that rely on the raw
-// `VITE_API_URL` configuration. When the environment variable isn't present we
-// fall back to the dynamically resolved backend base.
-api.defaults.baseURL = resolvedEnvBaseUrl || getBaseUrlForIndex(activeBaseUrlIndex);
+// Ensure the Axios instance ends up using the fully normalised base URL.
+api.defaults.baseURL = getBaseUrlForIndex(activeBaseUrlIndex);
 
 
 api.interceptors.request.use((config) => {
@@ -117,7 +112,7 @@ api.interceptors.request.use((config) => {
     config.__fallbackAttempt = 0;
   }
 
-  config.baseURL = resolvedEnvBaseUrl || getBaseUrlForIndex(config.__candidateIndex);
+  config.baseURL = getBaseUrlForIndex(config.__candidateIndex);
 
   // Ensure request URLs remain relative so the Axios base URL is respected.
   if (config.baseURL && config.url?.startsWith('/')) {
@@ -152,7 +147,7 @@ api.interceptors.response.use(
       const currentIndex = response.config.__candidateIndex;
       if (currentIndex !== activeBaseUrlIndex) {
         activeBaseUrlIndex = currentIndex;
-        api.defaults.baseURL = resolvedEnvBaseUrl || getBaseUrlForIndex(activeBaseUrlIndex);
+        api.defaults.baseURL = getBaseUrlForIndex(activeBaseUrlIndex);
       }
     }
     return response;
@@ -180,10 +175,10 @@ api.interceptors.response.use(
           (typeof error.config.__fallbackAttempt === 'number'
             ? error.config.__fallbackAttempt
             : 0) + 1;
-        error.config.baseURL = resolvedEnvBaseUrl || nextBaseUrl;
+        error.config.baseURL = nextBaseUrl;
 
         activeBaseUrlIndex = nextIndex;
-        api.defaults.baseURL = resolvedEnvBaseUrl || nextBaseUrl;
+        api.defaults.baseURL = nextBaseUrl;
 
         return api(error.config);
       }
