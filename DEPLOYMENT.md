@@ -9,10 +9,11 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    sudo apt install -y nginx nodejs npm
    sudo npm install -g pm2
    ```
-2. Clone the repository on the server:
+2. Clone the repository on the server and switch to the active branch:
    ```bash
    git clone https://github.com/USER/patincarreraGR.git
    cd patincarreraGR
+   git checkout work
    ```
 
 ## 2. Backend Configuration
