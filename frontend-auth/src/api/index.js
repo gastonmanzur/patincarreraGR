@@ -34,44 +34,54 @@ const buildApiBaseUrlCandidates = () => {
   const isBrowser = typeof window !== 'undefined';
   const candidates = [];
 
-  if (rawEnvUrl) {
-    const normalised = ensureApiSuffix(rawEnvUrl);
+  const pushCandidate = (value) => {
+    const normalised = ensureApiSuffix(value);
+    if (normalised) candidates.push(normalised);
+  };
 
-    if (!isBrowser) {
-      if (normalised) candidates.push(normalised);
-    } else {
-      const configured = ensureApiSuffix(
-        resolveConfiguredBase(rawEnvUrl, window.location.origin) || normalised
-      );
-      if (configured) candidates.push(configured);
-    }
+  if (isBrowser) {
+    const { protocol, hostname, origin } = window.location;
+    const alternativeHost = hostname.startsWith('www.')
+      ? hostname.replace(/^www\./, '')
+      : `www.${hostname}`;
+
+    // Prefer the current origin first so deployments routed through CDNs or
+    // DNS-level failover keep using the working edge hostname even when the
+    // environment variable still points to an older URL.
+    pushCandidate(origin);
+    pushCandidate(`${protocol}//${alternativeHost}`);
+
+    const swappedProtocol = protocol === 'https:' ? 'http:' : 'https:';
+    pushCandidate(`${swappedProtocol}//${hostname}`);
+    pushCandidate(`${swappedProtocol}//${alternativeHost}`);
+  }
+
+  if (rawEnvUrl) {
+    const normalised = ensureApiSuffix(
+      isBrowser
+        ? resolveConfiguredBase(rawEnvUrl, window.location.origin) || rawEnvUrl
+        : rawEnvUrl
+    );
+
+    if (normalised) pushCandidate(normalised);
   }
 
   if (!isBrowser) {
-    candidates.push(ensureApiSuffix('/'));
+    pushCandidate('/');
     return unique(candidates);
   }
 
   const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim();
-  const { protocol, hostname, origin } = window.location;
+  const { protocol, hostname } = window.location;
   const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(hostname);
 
   if (backendPort) {
-    candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${backendPort}`));
+    pushCandidate(`${protocol}//${hostname}:${backendPort}`);
   }
 
   if (isLocalHost || import.meta.env.DEV) {
     const port = backendPort || '5000';
-    candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${port}`));
-  }
-
-  candidates.push(ensureApiSuffix(origin));
-
-  if (!hostname.startsWith('www.')) {
-    candidates.push(ensureApiSuffix(`${protocol}//www.${hostname}`));
-  } else {
-    const apexHost = hostname.replace(/^www\./, '');
-    candidates.push(ensureApiSuffix(`${protocol}//${apexHost}`));
+    pushCandidate(`${protocol}//${hostname}:${port}`);
   }
 
   return unique(candidates);
