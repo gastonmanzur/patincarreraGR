@@ -53,12 +53,17 @@ import {
   MercadoPagoConfigurationError
 } from './utils/mercadoPago.js';
 
-
-dotenv.config();
-
-// --------- Paths / TZ ---------
+// --------- Paths / ENV ---------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config();
+const additionalEnv = path.resolve(__dirname, '..', '.env');
+if (fs.existsSync(additionalEnv)) {
+  dotenv.config({ path: additionalEnv, override: false });
+}
+
+// --------- Paths / TZ ---------
 process.env.TZ = 'America/Argentina/Buenos_Aires';
 
 // --------- Uploads dir ---------
