@@ -2,13 +2,6 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { loadClubSubscription } from '../utils/subscriptionUtils.js';
 
-const formatDateForLocale = (value) => {
-  if (!value) return '';
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
-};
-
 export const protegerRuta = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -70,18 +63,9 @@ export const protegerRuta = async (req, res, next) => {
           allowedInactivePaths.has(normalisePath(req.path));
 
         if (!isAllowed) {
-          const trialExpiredMessage = subscriptionState.trialExpired
-            ? `El período de prueba venció el ${formatDateForLocale(
-                subscriptionState.trialEndsAt
-              )}. Activá la suscripción para seguir usando la plataforma.`
-            : '';
-
-          const inactiveMessage =
-            trialExpiredMessage ||
-            'La suscripción del club está inactiva. Contactá a tu delegado para regularizar el pago.';
-
           return res.status(402).json({
-            mensaje: inactiveMessage,
+            mensaje:
+              'La suscripción del club está inactiva. Contactá a tu delegado para regularizar el pago.',
             subscription: subscriptionState
           });
         }

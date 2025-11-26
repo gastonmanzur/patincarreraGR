@@ -22,54 +22,38 @@ const resolveConfiguredBase = (rawUrl, origin) => {
   }
 };
 
-const splitEnvBaseList = (raw) =>
-  (raw || '')
-    .split(/[,;\s]+/)
-    .map((value) => value.trim())
-    .filter(Boolean);
-
-const getRuntimeLocation = () => {
-  if (typeof window === 'undefined') return null;
-  try {
-    return window.location;
-  } catch {
-    return null;
-  }
-};
-
-const normaliseEnvBaseUrls = (raw) => {
-  const location = getRuntimeLocation();
-  const origin = location?.origin;
-  const isBrowser = Boolean(location);
-
-  return splitEnvBaseList(raw).map((value) => {
-    const normalised = ensureApiSuffix(value);
-    if (!isBrowser) return normalised;
-    return ensureApiSuffix(resolveConfiguredBase(value, origin) || normalised);
-  });
-};
-
-const envBaseUrls = normaliseEnvBaseUrls(
-  import.meta.env.VITE_API_BASE?.trim() || import.meta.env.VITE_API_URL?.trim()
-).filter(Boolean);
-
 // Build a list of candidate base URLs used by the Axios instance. The helper
 // normalises values received from the environment so every deployment ends up
 // calling the backend under the expected `/api` prefix while still allowing a
 // graceful fallback when the primary endpoint is temporarily unavailable or
 // misconfigured during deploys.
 const buildApiBaseUrlCandidates = () => {
-  const location = getRuntimeLocation();
-  const isBrowser = Boolean(location);
-  const candidates = [...envBaseUrls];
+  const rawEnvUrl =
+    import.meta.env.VITE_API_BASE?.trim() || import.meta.env.VITE_API_URL?.trim();
+
+  const isBrowser = typeof window !== 'undefined';
+  const candidates = [];
+
+  if (rawEnvUrl) {
+    const normalised = ensureApiSuffix(rawEnvUrl);
+
+    if (!isBrowser) {
+      if (normalised) candidates.push(normalised);
+    } else {
+      const configured = ensureApiSuffix(
+        resolveConfiguredBase(rawEnvUrl, window.location.origin) || normalised
+      );
+      if (configured) candidates.push(configured);
+    }
+  }
 
   if (!isBrowser) {
     candidates.push(ensureApiSuffix('/'));
     return unique(candidates);
   }
 
-  const { protocol, hostname, origin } = location;
   const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim();
+  const { protocol, hostname, origin } = window.location;
   const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(hostname);
 
   if (backendPort) {
@@ -90,8 +74,6 @@ const buildApiBaseUrlCandidates = () => {
     candidates.push(ensureApiSuffix(`${protocol}//${apexHost}`));
   }
 
-  candidates.push(ensureApiSuffix('/'));
-
   return unique(candidates);
 };
 
@@ -101,8 +83,10 @@ let activeBaseUrlIndex = 0;
 const getBaseUrlForIndex = (index) =>
   baseUrlCandidates[index] || baseUrlCandidates[0] || ensureApiSuffix('/');
 
+const resolvedEnvBaseUrl = ensureApiSuffix(import.meta.env.VITE_API_URL?.trim());
+
 const api = axios.create({
-  baseURL: getBaseUrlForIndex(activeBaseUrlIndex),
+  baseURL: resolvedEnvBaseUrl || getBaseUrlForIndex(activeBaseUrlIndex),
   withCredentials: true
 });
 
@@ -110,7 +94,7 @@ const api = axios.create({
 // keeping the snippet required by downstream consumers that rely on the raw
 // `VITE_API_URL` configuration. When the environment variable isn't present we
 // fall back to the dynamically resolved backend base.
-api.defaults.baseURL = getBaseUrlForIndex(activeBaseUrlIndex);
+api.defaults.baseURL = resolvedEnvBaseUrl || getBaseUrlForIndex(activeBaseUrlIndex);
 
 
 api.interceptors.request.use((config) => {
@@ -133,7 +117,7 @@ api.interceptors.request.use((config) => {
     config.__fallbackAttempt = 0;
   }
 
-  config.baseURL = getBaseUrlForIndex(config.__candidateIndex);
+  config.baseURL = resolvedEnvBaseUrl || getBaseUrlForIndex(config.__candidateIndex);
 
   // Ensure request URLs remain relative so the Axios base URL is respected.
   if (config.baseURL && config.url?.startsWith('/')) {
@@ -168,7 +152,7 @@ api.interceptors.response.use(
       const currentIndex = response.config.__candidateIndex;
       if (currentIndex !== activeBaseUrlIndex) {
         activeBaseUrlIndex = currentIndex;
-        api.defaults.baseURL = getBaseUrlForIndex(activeBaseUrlIndex);
+        api.defaults.baseURL = resolvedEnvBaseUrl || getBaseUrlForIndex(activeBaseUrlIndex);
       }
     }
     return response;
@@ -180,23 +164,6 @@ api.interceptors.response.use(
       sessionStorage.removeItem('foto');
       clearStoredClubId();
       window.location.href = '/';
-      return Promise.reject(error);
-    }
-
-    if (error.response?.status === 402) {
-      const message =
-        error.response?.data?.mensaje ||
-        'La suscripción del club está vencida. Regularizá el pago para continuar usando la plataforma.';
-      try {
-        sessionStorage.setItem('subscriptionBlockedMessage', message);
-      } catch (storageErr) {
-        console.warn('No se pudo guardar el aviso de suscripción inactiva', storageErr);
-      }
-
-      if (typeof window !== 'undefined') {
-        window.location.href = '/suscripciones';
-      }
-
       return Promise.reject(error);
     }
 
@@ -213,10 +180,10 @@ api.interceptors.response.use(
           (typeof error.config.__fallbackAttempt === 'number'
             ? error.config.__fallbackAttempt
             : 0) + 1;
-        error.config.baseURL = nextBaseUrl;
+        error.config.baseURL = resolvedEnvBaseUrl || nextBaseUrl;
 
         activeBaseUrlIndex = nextIndex;
-        api.defaults.baseURL = nextBaseUrl;
+        api.defaults.baseURL = resolvedEnvBaseUrl || nextBaseUrl;
 
         return api(error.config);
       }
