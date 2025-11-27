@@ -55,7 +55,11 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    cd ..
    ```
 
-## 4. Nginx
+   The `.env.example` file now points `VITE_API_BASE` to `/api` so the frontend
+   always talks to the backend through the same origin handled by Nginx,
+   avoiding CORS issues between `patincarrera.net` and `www.patincarrera.net`.
+
+ ## 4. Nginx
 1. Copy the provided configuration:
    ```bash
    sudo cp deployment/nginx.conf /etc/nginx/sites-available/patincarrera
@@ -70,8 +74,10 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    sudo systemctl restart nginx
    ```
 2. Point the domain DNS records for `patincarrera.net` and `www.patincarrera.net` to the server IP `72.60.62.242`.
-3. Once HTTPS certificates are issued you can uncomment the redirect in the
-   provided config so every visitor is forced to use `https://`.
+3. The provided configuration now redirects `www.patincarrera.net` to the apex
+   domain to avoid cross-origin calls between both hosts. Once HTTPS
+   certificates are issued you can uncomment the redirect in the main server
+   block so every visitor is forced to use `https://`.
 
 ## 5. Optional HTTPS
 Use [Certbot](https://certbot.eff.org/) to obtain a Let's Encrypt certificate:

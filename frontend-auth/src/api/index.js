@@ -65,14 +65,11 @@ const buildApiBaseUrlCandidates = () => {
     candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${port}`));
   }
 
+  // Prefer staying on the current origin to avoid accidental cross-origin
+  // fallbacks (e.g. patincarrera.net -> www.patincarrera.net) that would
+  // trigger CORS errors in production. Additional hosts can be injected via
+  // `VITE_API_BASE`/`VITE_API_URL` when explicitly required.
   candidates.push(ensureApiSuffix(origin));
-
-  if (!hostname.startsWith('www.')) {
-    candidates.push(ensureApiSuffix(`${protocol}//www.${hostname}`));
-  } else {
-    const apexHost = hostname.replace(/^www\./, '');
-    candidates.push(ensureApiSuffix(`${protocol}//${apexHost}`));
-  }
 
   return unique(candidates);
 };
