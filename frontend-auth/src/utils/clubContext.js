@@ -13,7 +13,19 @@ const CONTACT_INFO_KEYS = Object.freeze([
   'history'
 ]);
 
+const extractIdFromObject = (value) => {
+  if (!value || typeof value !== 'object') return null;
+  if (typeof value._id === 'string') return value._id;
+  if (typeof value.id === 'string') return value.id;
+  return null;
+};
+
 const normaliseClubId = (clubId) => {
+  if (clubId && typeof clubId === 'object') {
+    const extracted = extractIdFromObject(clubId);
+    if (extracted) return extracted.trim();
+  }
+
   if (typeof clubId !== 'string') return null;
   const trimmed = clubId.trim();
   return trimmed ? trimmed : null;
