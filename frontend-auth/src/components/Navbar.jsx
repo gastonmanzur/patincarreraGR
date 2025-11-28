@@ -51,6 +51,7 @@ export default function Navbar() {
   const [clubLogo, setClubLogo] = useState(normalisedClubLogo || '');
   const [appDefaultLogo, setAppDefaultLogo] = useState(normalisedAppDefaultLogo || '');
   const [clubName, setClubName] = useState(storedClubName);
+  const [clubSubscriptionInfo, setClubSubscriptionInfo] = useState(null);
   const brandAlt = clubName ? `Logo de ${clubName}` : 'Logo Patín Carrera';
 
   useEffect(() => {
@@ -170,6 +171,7 @@ export default function Navbar() {
     if (!isLoggedIn) {
       setClubLogo('');
       setClubName('');
+      setClubSubscriptionInfo(null);
       sessionStorage.removeItem('clubLogo');
       sessionStorage.removeItem('clubNombre');
       return undefined;
@@ -178,6 +180,7 @@ export default function Navbar() {
     if (isAdmin) {
       setClubLogo('');
       setClubName('');
+      setClubSubscriptionInfo(null);
       sessionStorage.removeItem('clubLogo');
       sessionStorage.removeItem('clubNombre');
       return undefined;
@@ -194,6 +197,7 @@ export default function Navbar() {
         if (clubs.length === 0) {
           setClubLogo('');
           setClubName('');
+          setClubSubscriptionInfo(null);
           sessionStorage.removeItem('clubLogo');
           sessionStorage.removeItem('clubNombre');
           return;
@@ -204,6 +208,7 @@ export default function Navbar() {
           (storedClubId && clubs.find((club) => club._id === storedClubId)) || clubs[0];
         const normalisedLogo = getImageUrl(currentClub?.logo);
         const resolvedName = currentClub?.nombre || '';
+        const subscription = currentClub?.subscription || null;
 
         if (normalisedLogo) {
           setClubLogo(normalisedLogo);
@@ -218,6 +223,25 @@ export default function Navbar() {
           sessionStorage.setItem('clubNombre', resolvedName);
         } else {
           sessionStorage.removeItem('clubNombre');
+        }
+
+        if (subscription && typeof subscription === 'object') {
+          const planLabel = subscription.planName || subscription.planId || 'Plan no asignado';
+          const statusLabel =
+            {
+              trial: 'Prueba',
+              active: 'Activa',
+              grace: 'Período de gracia',
+              past_due: 'Pago vencido',
+              inactive: 'Inactiva'
+            }[subscription.status] || 'Estado desconocido';
+
+          setClubSubscriptionInfo({
+            plan: planLabel,
+            status: statusLabel
+          });
+        } else {
+          setClubSubscriptionInfo(null);
         }
       } catch (err) {
         if (!active) return;
@@ -351,6 +375,13 @@ export default function Navbar() {
           <span className="navbar-toggler-icon"></span>
         </button>
         <div className="collapse navbar-collapse" id="navbarNav">
+          {isDelegado && clubSubscriptionInfo && (
+            <div className="text-white small me-lg-4 mb-3 mb-lg-0">
+              <div className="fw-semibold text-uppercase">Suscripción del club</div>
+              <div>{clubSubscriptionInfo.plan}</div>
+              <div className="text-warning">Estado: {clubSubscriptionInfo.status}</div>
+            </div>
+          )}
           <ul className="navbar-nav mx-auto mb-2 mb-lg-0">
             {navItems.map((item) => (
               item.children ? (
