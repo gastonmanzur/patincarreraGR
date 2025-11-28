@@ -49,7 +49,10 @@ function AppRoutes() {
         <Routes>
           <Route path="/" element={<Auth />} />
           <Route path="/home" element={<Home />} />
-          <Route path="/suscripciones" element={<Suscripciones />} />
+          <Route
+            path="/suscripciones"
+            element={<ProtectedRoute roles={['Delegado']}><Suscripciones /></ProtectedRoute>}
+          />
           <Route path="/noticias/:id" element={<VerNoticia />} />
           <Route path="/torneos" element={<ProtectedRoute><Torneos /></ProtectedRoute>} />
           <Route path="/torneos/:id" element={<ProtectedRoute><Competencias /></ProtectedRoute>} />
