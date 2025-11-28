@@ -13,6 +13,7 @@ export default function Navbar() {
   const rol = sessionStorage.getItem('rol');
   const rolLower = typeof rol === 'string' ? rol.toLowerCase() : '';
   const isAdmin = rolLower === 'admin';
+  const isDelegado = rolLower === 'delegado';
   const storedFoto = sessionStorage.getItem('foto');
   const normalisedFoto = getImageUrl(storedFoto);
   if (storedFoto && normalisedFoto !== storedFoto) {
@@ -269,12 +270,11 @@ export default function Navbar() {
     ? isAdmin
       ? [
           { label: 'Inicio', path: '/home' },
-          { label: 'Planes', path: '/suscripciones' },
           { label: 'Administración', path: '/admin' }
         ]
       : [
           { label: 'Inicio', path: '/home' },
-          { label: 'Planes', path: '/suscripciones' },
+          ...(isDelegado ? [{ label: 'Planes', path: '/suscripciones' }] : []),
           { label: 'Torneos', path: '/torneos' },
           { label: 'Títulos del Club', path: '/titulos-club' },
           ...(rol === 'Delegado' || rol === 'Tecnico'
@@ -282,45 +282,45 @@ export default function Navbar() {
             : []),
           ...(rolLower === 'admin' ? [{ label: 'Administración', path: '/admin' }] : []),
           ...(rol === 'Tecnico'
-          ? [
-              { label: 'Entrenamientos', path: '/entrenamientos' },
-              { label: 'Progresos', path: '/progresos' }
-            ]
-          : []),
-        ...(rol === 'Delegado' || rol === 'Deportista'
-          ? [{ label: 'Reportes', path: '/reportes' }]
-          : []),
-        ...(rol === 'Delegado'
-          ? [{ label: 'Seguros', path: '/seguros' }]
-          : []),
-        ...(rol === 'Delegado' || rol === 'Tecnico'
-          ? [
-              {
-                label: 'Patinadores',
-                children: [
-                  { label: 'Patinadores', path: '/patinadores' },
-                  ...(rol === 'Delegado'
-                    ? [{ label: 'Cargar Patinador', path: '/cargar-patinador' }]
-                    : [])
-                ]
-              }
-            ]
-          : rol === 'Deportista'
-            ? [{ label: 'Patinadores', path: '/patinadores' }]
+            ? [
+                { label: 'Entrenamientos', path: '/entrenamientos' },
+                { label: 'Progresos', path: '/progresos' }
+              ]
             : []),
-        ...(rol === 'Delegado' || rol === 'Tecnico'
-          ? [
-              {
-                label: 'Crear',
-                children: [
-                  { label: 'Crear Noticia', path: '/crear-noticia' },
-                  { label: 'Crear Notificacion', path: '/crear-notificacion' }
-                ]
-              }
-            ]
-          : [])
-      ]
-    : [{ label: 'Planes', path: '/suscripciones' }];
+          ...(rol === 'Delegado' || rol === 'Deportista'
+            ? [{ label: 'Reportes', path: '/reportes' }]
+            : []),
+          ...(rol === 'Delegado'
+            ? [{ label: 'Seguros', path: '/seguros' }]
+            : []),
+          ...(rol === 'Delegado' || rol === 'Tecnico'
+            ? [
+                {
+                  label: 'Patinadores',
+                  children: [
+                    { label: 'Patinadores', path: '/patinadores' },
+                    ...(rol === 'Delegado'
+                      ? [{ label: 'Cargar Patinador', path: '/cargar-patinador' }]
+                      : [])
+                  ]
+                }
+              ]
+            : rol === 'Deportista'
+              ? [{ label: 'Patinadores', path: '/patinadores' }]
+              : []),
+          ...(rol === 'Delegado' || rol === 'Tecnico'
+            ? [
+                {
+                  label: 'Crear',
+                  children: [
+                    { label: 'Crear Noticia', path: '/crear-noticia' },
+                    { label: 'Crear Notificacion', path: '/crear-notificacion' }
+                  ]
+                }
+              ]
+            : [])
+        ]
+    : [];
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark">
