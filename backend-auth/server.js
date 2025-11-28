@@ -47,6 +47,11 @@ import {
   validateExpiryDate
 } from './utils/paymentValidation.js';
 import { convertUsdToArsAtBlueRate } from './utils/currencyUtils.js';
+import {
+  createMercadoPagoPreapproval,
+  fetchPreapprovalDetails,
+  parseExternalReference
+} from './utils/mercadoPagoUtils.js';
 
 
 dotenv.config();
@@ -268,6 +273,18 @@ const FRONTEND_URL_WWW = (process.env.FRONTEND_URL_WWW || FALLBACK_FRONTEND_URL_
 );
 const BACKEND_URL = (process.env.BACKEND_URL || FALLBACK_BACKEND_URL).replace(/\/+$/, '');
 process.env.BACKEND_URL = BACKEND_URL;
+
+const resolveMercadoPagoSuccessUrl = () => {
+  const configured =
+    process.env.MERCADOPAGO_SUCCESS_URL || process.env.MP_SUCCESS_URL || `${FRONTEND_URL}/suscripciones`;
+  return configured.replace(/\s+/g, '').replace(/\/+$/, '');
+};
+
+const resolveMercadoPagoWebhookUrl = () => {
+  const configured =
+    process.env.MERCADOPAGO_WEBHOOK_URL || process.env.MP_WEBHOOK_URL || `${BACKEND_URL}/api/mercadopago/webhook`;
+  return configured.replace(/\s+/g, '');
+};
 
 const allowedOrigins = Array.from(new Set([...DEFAULT_ALLOWED_ORIGINS, FRONTEND_URL, FRONTEND_URL_WWW]))
   .filter(Boolean);
@@ -901,6 +918,68 @@ const buildPaymentMethodResponse = (method) => {
     createdAt,
     updatedAt
   };
+};
+
+const parseDateValue = (value) => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const applyPlanToSubscription = (clubDoc, plan) => {
+  if (!clubDoc || !plan) return false;
+  if (!clubDoc.subscription || typeof clubDoc.subscription !== 'object') {
+    clubDoc.subscription = {};
+  }
+
+  const assign = (key, value) => {
+    if (clubDoc.subscription[key] !== value) {
+      clubDoc.subscription[key] = value;
+      return true;
+    }
+    return false;
+  };
+
+  let mutated = false;
+  mutated = assign('planId', plan.id) || mutated;
+  mutated = assign('planName', plan.name) || mutated;
+  mutated = assign('currency', plan.currency) || mutated;
+  mutated = assign('monthlyPrice', plan.monthlyPrice) || mutated;
+  mutated = assign('billingPeriod', plan.billingPeriod || 'monthly') || mutated;
+  mutated = assign('minAthletes', plan.minAthletes) || mutated;
+  mutated = assign('maxAthletes', typeof plan.maxAthletes === 'number' ? plan.maxAthletes : null) || mutated;
+  return mutated;
+};
+
+const ONE_MONTH_IN_MS = 30 * 24 * 60 * 60 * 1000;
+
+const updateClubSubscriptionAfterPayment = async (
+  clubDoc,
+  plan,
+  { paidAt, nextPaymentDate, provider, providerSubscriptionId, providerStatus } = {}
+) => {
+  if (!clubDoc) return null;
+
+  const paidDate = parseDateValue(paidAt) || new Date();
+  const nextPeriodEndsAt = parseDateValue(nextPaymentDate) || new Date(paidDate.getTime() + ONE_MONTH_IN_MS);
+
+  if (!clubDoc.subscription || typeof clubDoc.subscription !== 'object') {
+    clubDoc.subscription = {};
+  }
+
+  clubDoc.subscription.status = 'active';
+  clubDoc.subscription.lastPaymentAt = paidDate;
+  clubDoc.subscription.currentPeriodEndsAt = nextPeriodEndsAt;
+  clubDoc.subscription.graceEndsAt = null;
+  clubDoc.subscription.provider = provider || clubDoc.subscription.provider || null;
+  clubDoc.subscription.providerSubscriptionId =
+    providerSubscriptionId || clubDoc.subscription.providerSubscriptionId || null;
+  clubDoc.subscription.lastProviderStatus = providerStatus || clubDoc.subscription.lastProviderStatus || null;
+
+  applyPlanToSubscription(clubDoc, plan || clubDoc.subscription);
+
+  await clubDoc.save();
+  return clubDoc;
 };
 
 const scopeQueryByClub = async (req, res, query = {}, options = {}) => {
@@ -1960,12 +2039,40 @@ app.post(
       }
 
       if (paymentMethodType === 'mercadopago') {
+        const user = await User.findById(req.usuario.id).select('email nombre apellido');
+
+        if (!user?.email) {
+          return res.status(400).json({ mensaje: 'Tu usuario necesita un email válido para pagar con Mercado Pago.' });
+        }
+
+        const club = await Club.findById(clubId).select('nombre nombreAmigable subscription');
         const conversion = await convertUsdToArsAtBlueRate(plan.monthlyPrice);
-        const redirectUrl = new URL('https://www.mercadopago.com.ar/checkout/v1');
-        redirectUrl.searchParams.set('source_id', `club-${clubId}`);
-        redirectUrl.searchParams.set('plan_id', plan.id);
-        redirectUrl.searchParams.set('usd_amount', String(plan.monthlyPrice));
-        redirectUrl.searchParams.set('ars_amount', String(conversion.arsAmount));
+        const backUrl = resolveMercadoPagoSuccessUrl();
+        const webhookUrl = resolveMercadoPagoWebhookUrl();
+
+        const reason = `Suscripción ${plan.name} - ${club?.nombreAmigable || club?.nombre || 'Club'}`;
+        const externalReference = `club:${clubId}|plan:${plan.id}|user:${req.usuario.id}`;
+
+        const preapproval = await createMercadoPagoPreapproval({
+          reason,
+          externalReference,
+          payerEmail: user.email,
+          transactionAmount: conversion.arsAmount,
+          currency: 'ARS',
+          backUrl,
+          notificationUrl: webhookUrl
+        });
+
+        if (club) {
+          if (!club.subscription || typeof club.subscription !== 'object') {
+            club.subscription = {};
+          }
+          club.subscription.provider = 'mercadopago';
+          club.subscription.providerSubscriptionId = preapproval?.id ?? club.subscription.providerSubscriptionId;
+          club.subscription.lastProviderStatus = preapproval?.status || 'pending';
+          applyPlanToSubscription(club, plan);
+          await club.save();
+        }
 
         return res.json({
           mensaje: 'Redirigí a Mercado Pago para completar el pago en un entorno seguro.',
@@ -1976,9 +2083,12 @@ app.post(
             usdAmount: conversion.usdAmount,
             blueDollarRate: conversion.rate,
             fetchedAt: conversion.fetchedAt.toISOString(),
-            isFallback: conversion.isFallback
+            isFallback: conversion.isFallback,
+            preapprovalId: preapproval?.id ?? null,
+            providerStatus: preapproval?.status ?? null
           },
-          redirectUrl: redirectUrl.toString()
+          redirectUrl: preapproval?.initPoint || null,
+          webhookUrl
         });
       }
 
@@ -1991,6 +2101,42 @@ app.post(
     }
   }
 );
+
+app.post('/api/mercadopago/webhook', async (req, res) => {
+  try {
+    const eventType = req.query?.type || req.body?.type || req.body?.action;
+    const preapprovalId = req.query?.id || req.body?.data?.id || req.body?.data?.preapproval_id;
+
+    if (eventType === 'preapproval' && preapprovalId) {
+      const details = await fetchPreapprovalDetails(preapprovalId);
+
+      if (details?.external_reference) {
+        const meta = parseExternalReference(details.external_reference);
+        const clubId = meta?.clubId || null;
+        const plan = meta?.planId ? findSubscriptionPlanById(meta.planId) : null;
+
+        if (clubId) {
+          const club = await Club.findById(clubId).select('+subscription');
+
+          if (club) {
+            await updateClubSubscriptionAfterPayment(club, plan, {
+              paidAt: details?.date_created || details?.last_modified,
+              nextPaymentDate: details?.auto_recurring?.next_payment_date,
+              provider: 'mercadopago',
+              providerSubscriptionId: details?.id,
+              providerStatus: details?.status
+            });
+          }
+        }
+      }
+    }
+
+    res.status(200).json({ received: true });
+  } catch (err) {
+    console.error('Error al procesar webhook de Mercado Pago', err);
+    res.status(500).json({ mensaje: 'Error al procesar el webhook de Mercado Pago' });
+  }
+});
 
 app.get('/api/public/club-contact', async (req, res) => {
   try {
