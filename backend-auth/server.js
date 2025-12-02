@@ -286,6 +286,8 @@ const resolveMercadoPagoWebhookUrl = () => {
   return configured.replace(/\s+/g, '');
 };
 
+const isMercadoPagoConfigured = () => Boolean(process.env.MERCADOPAGO_ACCESS_TOKEN?.trim());
+
 const allowedOrigins = Array.from(new Set([...DEFAULT_ALLOWED_ORIGINS, FRONTEND_URL, FRONTEND_URL_WWW]))
   .filter(Boolean);
 
@@ -2039,6 +2041,12 @@ app.post(
       }
 
       if (paymentMethodType === 'mercadopago') {
+        if (!isMercadoPagoConfigured()) {
+          return res.status(503).json({
+            mensaje: 'Los pagos con Mercado Pago no están disponibles en este momento. Contactanos para habilitarlos.'
+          });
+        }
+
         const user = await User.findById(req.usuario.id).select('email nombre apellido');
 
         if (!user?.email) {
@@ -2053,15 +2061,24 @@ app.post(
         const reason = `Suscripción ${plan.name} - ${club?.nombreAmigable || club?.nombre || 'Club'}`;
         const externalReference = `club:${clubId}|plan:${plan.id}|user:${req.usuario.id}`;
 
-        const preapproval = await createMercadoPagoPreapproval({
-          reason,
-          externalReference,
-          payerEmail: user.email,
-          transactionAmount: conversion.arsAmount,
-          currency: 'ARS',
-          backUrl,
-          notificationUrl: webhookUrl
-        });
+        let preapproval;
+        try {
+          preapproval = await createMercadoPagoPreapproval({
+            reason,
+            externalReference,
+            payerEmail: user.email,
+            transactionAmount: conversion.arsAmount,
+            currency: 'ARS',
+            backUrl,
+            notificationUrl: webhookUrl
+          });
+        } catch (error) {
+          console.error('No se pudo crear la preaprobación en Mercado Pago', error);
+          return res.status(502).json({
+            mensaje:
+              'Mercado Pago no respondió correctamente. Verificá la configuración e intentá nuevamente en unos momentos.'
+          });
+        }
 
         if (club) {
           if (!club.subscription || typeof club.subscription !== 'object') {
