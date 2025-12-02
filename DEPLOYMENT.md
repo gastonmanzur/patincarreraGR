@@ -21,6 +21,10 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    cd backend-auth
    cp .env.example .env
    # edit .env with real values (Mongo URI, JWT secret, email creds, etc.)
+   # Si vas a habilitar cobros con Mercado Pago asegurate de definir
+   # MERCADOPAGO_ACCESS_TOKEN. El backend también acepta los alias
+   # MERCADO_PAGO_ACCESS_TOKEN o MP_ACCESS_TOKEN para mayor compatibilidad
+   # con distintos paneles de hosting.
    # UPLOADS_DIR defaults to backend-auth/uploads. If you have legacy
    # assets in another directory you can list them in
    # UPLOADS_FALLBACK_DIRS=/ruta/vieja/uploads

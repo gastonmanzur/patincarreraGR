@@ -50,6 +50,7 @@ import { convertUsdToArsAtBlueRate } from './utils/currencyUtils.js';
 import {
   createMercadoPagoPreapproval,
   fetchPreapprovalDetails,
+  isMercadoPagoConfigured,
   parseExternalReference
 } from './utils/mercadoPagoUtils.js';
 
@@ -285,8 +286,6 @@ const resolveMercadoPagoWebhookUrl = () => {
     process.env.MERCADOPAGO_WEBHOOK_URL || process.env.MP_WEBHOOK_URL || `${BACKEND_URL}/api/mercadopago/webhook`;
   return configured.replace(/\s+/g, '');
 };
-
-const isMercadoPagoConfigured = () => Boolean(process.env.MERCADOPAGO_ACCESS_TOKEN?.trim());
 
 const allowedOrigins = Array.from(new Set([...DEFAULT_ALLOWED_ORIGINS, FRONTEND_URL, FRONTEND_URL_WWW]))
   .filter(Boolean);
