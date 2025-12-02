@@ -1,11 +1,27 @@
 import { MercadoPagoConfig, Preapproval } from 'mercadopago';
 
 const resolveAccessToken = () => {
-  const token = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
+  const candidates = [
+    process.env.MERCADOPAGO_ACCESS_TOKEN,
+    process.env.MERCADO_PAGO_ACCESS_TOKEN,
+    process.env.MP_ACCESS_TOKEN
+  ];
+
+  const token = candidates.find((value) => typeof value === 'string' && value.trim());
   if (!token) {
-    throw new Error('Configurar MERCADOPAGO_ACCESS_TOKEN para habilitar los cobros con Mercado Pago.');
+    throw new Error(
+      'Configurar MERCADOPAGO_ACCESS_TOKEN (o MERCADO_PAGO_ACCESS_TOKEN / MP_ACCESS_TOKEN) para habilitar los cobros con Mercado Pago.'
+    );
   }
-  return token;
+  return token.trim();
+};
+
+const isMercadoPagoConfigured = () => {
+  try {
+    return Boolean(resolveAccessToken());
+  } catch (err) {
+    return false;
+  }
 };
 
 const buildMercadoPagoClient = () => {
@@ -79,4 +95,9 @@ const parseExternalReference = (value) => {
   };
 };
 
-export { createMercadoPagoPreapproval, fetchPreapprovalDetails, parseExternalReference };
+export {
+  createMercadoPagoPreapproval,
+  fetchPreapprovalDetails,
+  isMercadoPagoConfigured,
+  parseExternalReference
+};
