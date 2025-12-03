@@ -1,4 +1,6 @@
-import { MercadoPagoConfig, Preapproval } from 'mercadopago';
+import mercadopago from 'mercadopago';
+
+const { MercadoPagoConfig, PreApproval } = mercadopago;
 
 const resolveAccessToken = () => {
   const candidates = [
@@ -28,11 +30,14 @@ const buildMercadoPagoClient = () => {
   const integratorId = process.env.MERCADOPAGO_INTEGRATOR_ID?.trim();
   return new MercadoPagoConfig({
     accessToken: resolveAccessToken(),
-    options: integratorId ? { integratorId } : undefined
+    options: {
+      ...(integratorId ? { integratorId } : {}),
+      timeout: 5000
+    }
   });
 };
 
-const preapprovalClient = () => new Preapproval(buildMercadoPagoClient());
+const preapprovalClient = () => new PreApproval(buildMercadoPagoClient());
 
 const createMercadoPagoPreapproval = async ({
   reason,
@@ -59,7 +64,7 @@ const createMercadoPagoPreapproval = async ({
     status: 'pending'
   };
 
-  const response = await client.create(payload);
+  const response = await client.create({ body: payload });
   return {
     id: response?.id ?? null,
     initPoint: response?.init_point || response?.sandbox_init_point || null,
