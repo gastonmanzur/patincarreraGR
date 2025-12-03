@@ -89,6 +89,7 @@ export default function Footer() {
     } catch (err) {
       if (!mountedRef.current) return;
       console.error('Error al obtener la información de contacto del club', err);
+      applyContactInfo(DEFAULT_CONTACT_INFO);
     }
   }, [applyContactInfo]);
 
