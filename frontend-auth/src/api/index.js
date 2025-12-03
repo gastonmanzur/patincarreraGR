@@ -71,6 +71,16 @@ const buildApiBaseUrlCandidates = () => {
   // `VITE_API_BASE`/`VITE_API_URL` when explicitly required.
   candidates.push(ensureApiSuffix(origin));
 
+  // If the primary origin is temporarily unavailable (e.g. DNS propagation,
+  // upstream 502) try the alternate host with/without the `www.` prefix before
+  // giving up. This keeps the app usable during brief outages handled by the
+  // CDN or while the apex domain is being updated.
+  const hasWwwPrefix = hostname.startsWith('www.');
+  const alternateHost = hasWwwPrefix ? hostname.replace(/^www\./i, '') : `www.${hostname}`;
+  if (alternateHost && alternateHost !== hostname) {
+    candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}`));
+  }
+
   return unique(candidates);
 };
 
