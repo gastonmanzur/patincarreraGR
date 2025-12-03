@@ -49,7 +49,9 @@ export default function Navbar() {
   const [unread, setUnread] = useState(0);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [clubLogo, setClubLogo] = useState(normalisedClubLogo || '');
-  const [appDefaultLogo, setAppDefaultLogo] = useState(normalisedAppDefaultLogo || '');
+  const [appDefaultLogo, setAppDefaultLogo] = useState(
+    normalisedAppDefaultLogo || defaultBrandLogo
+  );
   const [clubName, setClubName] = useState(storedClubName);
   const [clubSubscriptionInfo, setClubSubscriptionInfo] = useState(null);
   const brandAlt = clubName ? `Logo de ${clubName}` : 'Logo Patín Carrera';
@@ -132,16 +134,17 @@ export default function Navbar() {
         const res = await api.get('/public/app-config');
         if (!active) return;
         const resolvedLogo = getImageUrl(res.data?.defaultBrandLogo);
-        if (resolvedLogo) {
-          setAppDefaultLogo(resolvedLogo);
-          sessionStorage.setItem('appDefaultLogo', resolvedLogo);
-        } else {
-          setAppDefaultLogo('');
-          sessionStorage.removeItem('appDefaultLogo');
-        }
+        const nextLogo = resolvedLogo || defaultBrandLogo;
+        setAppDefaultLogo(nextLogo);
+        sessionStorage.setItem('appDefaultLogo', nextLogo);
       } catch (err) {
         if (!active) return;
         console.error('Error al obtener la configuración de la aplicación', err);
+        setAppDefaultLogo((prev) => {
+          if (prev) return prev;
+          sessionStorage.setItem('appDefaultLogo', defaultBrandLogo);
+          return defaultBrandLogo;
+        });
       }
     };
 
@@ -150,13 +153,9 @@ export default function Navbar() {
     const handleAppConfigUpdate = (event) => {
       if (!event || typeof event !== 'object') return;
       const updatedLogo = getImageUrl(event.detail?.defaultBrandLogo);
-      if (updatedLogo) {
-        setAppDefaultLogo(updatedLogo);
-        sessionStorage.setItem('appDefaultLogo', updatedLogo);
-      } else {
-        setAppDefaultLogo('');
-        sessionStorage.removeItem('appDefaultLogo');
-      }
+      const nextLogo = updatedLogo || defaultBrandLogo;
+      setAppDefaultLogo(nextLogo);
+      sessionStorage.setItem('appDefaultLogo', nextLogo);
     };
 
     window.addEventListener('appConfigUpdated', handleAppConfigUpdate);
