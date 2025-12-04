@@ -1,6 +1,25 @@
 import { MercadoPagoConfig, PreApproval } from 'mercadopago';
 
-const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || null;
+const resolveAccessToken = () => {
+  const candidates = [
+    process.env.MERCADOPAGO_ACCESS_TOKEN,
+    process.env.MERCADO_PAGO_ACCESS_TOKEN,
+    process.env.MP_ACCESS_TOKEN
+  ];
+
+  for (const candidate of candidates) {
+    const token = candidate?.trim();
+    if (token) {
+      // Normalizamos en MERCADOPAGO_ACCESS_TOKEN para que el SDK siempre lo lea
+      process.env.MERCADOPAGO_ACCESS_TOKEN = token;
+      return token;
+    }
+  }
+
+  return null;
+};
+
+const accessToken = resolveAccessToken();
 
 /**
  * Devuelve true si Mercado Pago está correctamente configurado
@@ -40,8 +59,12 @@ const preApprovalClient = mpClient ? new PreApproval(mpClient) : null;
 const createMercadoPagoPreapproval = async ({
   payerEmail,
   backUrl,
+  notificationUrl,
   reason,
-  autoRecurring,
+  transactionAmount,
+  currency,
+  frequency = 1,
+  frequencyType = 'months',
   externalReference
 }) => {
   if (!preApprovalClient) {
@@ -50,6 +73,21 @@ const createMercadoPagoPreapproval = async ({
     );
   }
 
+  const amount = Number.parseFloat(transactionAmount);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error('El monto de la suscripción debe ser un número mayor a 0.');
+  }
+
+  const normalisedCurrency = (currency || 'ARS').toString().trim().toUpperCase();
+
+  const autoRecurring = {
+    frequency,
+    frequency_type: frequencyType,
+    transaction_amount: amount,
+    currency_id: normalisedCurrency
+  };
+
   const body = {
     payer_email: payerEmail,
     back_url: backUrl,
@@ -57,6 +95,10 @@ const createMercadoPagoPreapproval = async ({
     external_reference: externalReference,
     auto_recurring: autoRecurring
   };
+
+  if (notificationUrl) {
+    body.notification_url = notificationUrl;
+  }
 
   const response = await preApprovalClient.create({ body });
   return response;
