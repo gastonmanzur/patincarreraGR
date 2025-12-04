@@ -2068,6 +2068,8 @@ app.post(
             payerEmail: user.email,
             transactionAmount: conversion.arsAmount,
             currency: 'ARS',
+            frequency: 1,
+            frequencyType: 'months',
             backUrl,
             notificationUrl: webhookUrl
           });
