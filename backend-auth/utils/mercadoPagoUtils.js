@@ -32,7 +32,9 @@ const mpClient = accessToken
   ? new MercadoPagoConfig({
       accessToken,
       options: {
-        timeout: 5000
+        // MP suele tardar varios segundos en responder, especialmente en horarios pico.
+        // Con 5s se producían timeouts que devolvían 502 al frontend.
+        timeout: 15000
       }
     })
   : null;
@@ -100,8 +102,19 @@ const createMercadoPagoPreapproval = async ({
     body.notification_url = notificationUrl;
   }
 
-  const response = await preApprovalClient.create({ body });
-  return response;
+  try {
+    const response = await preApprovalClient.create({ body });
+    return response;
+  } catch (error) {
+    // El SDK envía los detalles en error.cause como array; los incluimos para facilitar el log.
+    const sdkDetails = Array.isArray(error?.cause)
+      ? error.cause.map((item) => item?.description || item?.message).filter(Boolean)
+      : [];
+    const details = sdkDetails.length ? ` | Detalles MP: ${sdkDetails.join(' | ')}` : '';
+    throw new Error(`No se pudo crear la preaprobación en Mercado Pago${details}`, {
+      cause: error
+    });
+  }
 };
 
 /**
