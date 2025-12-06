@@ -116,15 +116,19 @@ api.interceptors.request.use((config) => {
     config.headers['X-Club-Id'] = clubId;
   }
 
-  if (typeof config.__candidateIndex !== 'number') {
-    config.__candidateIndex = activeBaseUrlIndex;
-  }
+  const fallbackAttempt = typeof config.__fallbackAttempt === 'number' ? config.__fallbackAttempt : 0;
+  const candidateIndex =
+    typeof config.__candidateIndex === 'number' ? config.__candidateIndex : activeBaseUrlIndex;
 
-  if (typeof config.__fallbackAttempt !== 'number') {
-    config.__fallbackAttempt = 0;
-  }
+  config.__candidateIndex = candidateIndex;
+  config.__fallbackAttempt = fallbackAttempt;
 
-  config.baseURL = resolvedEnvBaseUrl || getBaseUrlForIndex(config.__candidateIndex);
+  const shouldForceCandidate = fallbackAttempt > 0;
+  const baseUrl = shouldForceCandidate
+    ? getBaseUrlForIndex(candidateIndex)
+    : resolvedEnvBaseUrl || getBaseUrlForIndex(candidateIndex);
+
+  config.baseURL = baseUrl;
 
   // Ensure request URLs remain relative so the Axios base URL is respected.
   if (config.baseURL && config.url?.startsWith('/')) {
@@ -187,10 +191,10 @@ api.interceptors.response.use(
           (typeof error.config.__fallbackAttempt === 'number'
             ? error.config.__fallbackAttempt
             : 0) + 1;
-        error.config.baseURL = resolvedEnvBaseUrl || nextBaseUrl;
+        error.config.baseURL = nextBaseUrl;
 
         activeBaseUrlIndex = nextIndex;
-        api.defaults.baseURL = resolvedEnvBaseUrl || nextBaseUrl;
+        api.defaults.baseURL = nextBaseUrl;
 
         return api(error.config);
       }
