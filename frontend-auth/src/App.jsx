@@ -50,6 +50,11 @@ function AppRoutes() {
           <Route path="/" element={<Auth />} />
           <Route path="/home" element={<Home />} />
           <Route
+            path="/checkout"
+            element={<ProtectedRoute roles={['Delegado']}><Suscripciones /></ProtectedRoute>}
+          />
+          <Route path="/checkuot" element={<Navigate to="/checkout" replace />} />
+          <Route
             path="/suscripciones"
             element={<ProtectedRoute roles={['Delegado']}><Suscripciones /></ProtectedRoute>}
           />
