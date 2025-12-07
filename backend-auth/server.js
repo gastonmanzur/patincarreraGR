@@ -2075,9 +2075,9 @@ app.post(
           });
         } catch (error) {
           console.error('No se pudo crear la preaprobación en Mercado Pago', error);
-          return res.status(502).json({
+          return res.status(503).json({
             mensaje:
-              'Mercado Pago no respondió correctamente. Verificá la configuración e intentá nuevamente en unos momentos.'
+              'No pudimos contactar a Mercado Pago para generar el cobro. Revisá las credenciales configuradas o intentá nuevamente en unos minutos.'
           });
         }
 
