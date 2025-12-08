@@ -50,6 +50,7 @@ import { convertUsdToArsAtBlueRate } from './utils/currencyUtils.js';
 import {
   createMercadoPagoPreapproval,
   fetchPreapprovalDetails,
+  getMercadoPagoConfigStatus,
   isMercadoPagoConfigured,
   parseExternalReference
 } from './utils/mercadoPagoUtils.js';
@@ -2074,7 +2075,12 @@ app.post(
             notificationUrl: webhookUrl
           });
         } catch (error) {
-          console.error('No se pudo crear la preaprobación en Mercado Pago', error);
+          const mpStatus = getMercadoPagoConfigStatus();
+          console.error('No se pudo crear la preaprobación en Mercado Pago', {
+            message: error?.message,
+            cause: error?.cause,
+            mpStatus
+          });
           return res.status(503).json({
             mensaje:
               'No pudimos contactar a Mercado Pago para generar el cobro. Revisá las credenciales configuradas o intentá nuevamente en unos minutos.'
@@ -2119,6 +2125,15 @@ app.post(
     }
   }
 );
+
+app.get('/api/mercadopago/status', protegerRuta, permitirRol(['Admin']), (req, res) => {
+  const status = getMercadoPagoConfigStatus();
+  res.json({
+    ...status,
+    successUrl: resolveMercadoPagoSuccessUrl(),
+    webhookUrl: resolveMercadoPagoWebhookUrl()
+  });
+});
 
 app.post('/api/mercadopago/webhook', async (req, res) => {
   try {
