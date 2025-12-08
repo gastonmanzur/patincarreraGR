@@ -2,24 +2,24 @@ import { MercadoPagoConfig, PreApproval } from 'mercadopago';
 
 const resolveAccessToken = () => {
   const candidates = [
-    process.env.MERCADOPAGO_ACCESS_TOKEN,
-    process.env.MERCADO_PAGO_ACCESS_TOKEN,
-    process.env.MP_ACCESS_TOKEN
+    { value: process.env.MERCADOPAGO_ACCESS_TOKEN, name: 'MERCADOPAGO_ACCESS_TOKEN' },
+    { value: process.env.MERCADO_PAGO_ACCESS_TOKEN, name: 'MERCADO_PAGO_ACCESS_TOKEN' },
+    { value: process.env.MP_ACCESS_TOKEN, name: 'MP_ACCESS_TOKEN' }
   ];
 
   for (const candidate of candidates) {
-    const token = candidate?.trim();
+    const token = candidate.value?.trim();
     if (token) {
       // Normalizamos en MERCADOPAGO_ACCESS_TOKEN para que el SDK siempre lo lea
       process.env.MERCADOPAGO_ACCESS_TOKEN = token;
-      return token;
+      return { token, source: candidate.name };
     }
   }
 
-  return null;
+  return { token: null, source: null };
 };
 
-const accessToken = resolveAccessToken();
+const { token: accessToken, source: accessTokenSource } = resolveAccessToken();
 
 /**
  * Devuelve true si Mercado Pago está correctamente configurado
@@ -40,6 +40,13 @@ const mpClient = accessToken
   : null;
 
 const preApprovalClient = mpClient ? new PreApproval(mpClient) : null;
+
+const getMercadoPagoConfigStatus = () => ({
+  isConfigured: Boolean(accessToken),
+  accessTokenSource,
+  accessTokenLast4: accessToken ? accessToken.slice(-4) : null,
+  sdkTimeoutMs: mpClient?.options?.timeout ?? null
+});
 
 /**
  * Crea una suscripción (PreApproval) en Mercado Pago.
@@ -167,6 +174,7 @@ const parseExternalReference = (value) => {
 export {
   createMercadoPagoPreapproval,
   fetchPreapprovalDetails,
+  getMercadoPagoConfigStatus,
   isMercadoPagoConfigured,
   parseExternalReference
 };
