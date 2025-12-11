@@ -162,6 +162,7 @@ export default function Suscripciones() {
   const [error, setError] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [paymentMethodType, setPaymentMethodType] = useState('card');
+  const [mercadoPagoAvailable, setMercadoPagoAvailable] = useState(true);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [methodsLoading, setMethodsLoading] = useState(false);
   const [selectedMethodId, setSelectedMethodId] = useState('');
@@ -249,6 +250,28 @@ export default function Suscripciones() {
     setErrorMessage('');
   };
 
+  useEffect(() => {
+    let active = true;
+
+    const fetchPaymentAvailability = async () => {
+      try {
+        const res = await api.get('/subscriptions/status');
+        if (!active) return;
+        setMercadoPagoAvailable(Boolean(res.data?.mercadoPagoAvailable));
+      } catch (err) {
+        if (!active) return;
+        console.error('Error al verificar disponibilidad de pagos', err);
+        setMercadoPagoAvailable(true);
+      }
+    };
+
+    fetchPaymentAvailability();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const loadPaymentMethods = async () => {
     setMethodsLoading(true);
     try {
@@ -283,6 +306,11 @@ export default function Suscripciones() {
 
   const handlePaymentMethodTypeChange = (event) => {
     const value = event.target.value;
+    if (value === 'mercadopago' && !mercadoPagoAvailable) {
+      setErrorMessage('Mercado Pago no está disponible en este momento. Elegí una tarjeta guardada para continuar.');
+      setPaymentMethodType('card');
+      return;
+    }
     setPaymentMethodType(value);
     setCheckoutResult(null);
     resetMessages();
@@ -607,12 +635,19 @@ export default function Suscripciones() {
                       id="payment-method-mercado-pago"
                       value="mercadopago"
                       checked={paymentMethodType === 'mercadopago'}
+                      disabled={!mercadoPagoAvailable}
                       onChange={handlePaymentMethodTypeChange}
                     />
                     <label className="form-check-label" htmlFor="payment-method-mercado-pago">
                       Mercado Pago (convertimos a ARS al dólar blue compra al momento del pago)
                     </label>
                   </div>
+                  {!mercadoPagoAvailable && (
+                    <p className="text-muted small mb-4">
+                      Mercado Pago no está disponible en este momento. Podés continuar con una tarjeta guardada o
+                      agregar una nueva para activar tu suscripción.
+                    </p>
+                  )}
                 </fieldset>
 
                 {paymentMethodType === 'card' && (
