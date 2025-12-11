@@ -1991,6 +1991,14 @@ app.post('/api/payments/methods', protegerRuta, permitirRol('Delegado', 'Admin')
   }
 });
 
+app.get('/api/subscriptions/status', protegerRuta, permitirRol('Delegado', 'Admin'), (req, res) => {
+  const status = getMercadoPagoConfigStatus();
+  res.json({
+    mercadoPagoAvailable: status.isConfigured,
+    mercadoPagoTimeoutMs: status.sdkTimeoutMs
+  });
+});
+
 app.post(
   '/api/subscriptions/checkout',
   protegerRuta,
