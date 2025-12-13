@@ -9,7 +9,10 @@ const FALLBACK_PLANS = [
     name: 'Club Inicial',
     description: 'Ideal para clubes que están comenzando su recorrido competitivo.',
     monthlyPrice: 10,
+    baseMonthlyPrice: 10,
     currency: 'USD',
+    baseCurrency: 'USD',
+    billingCurrency: 'ARS',
     minAthletes: 0,
     maxAthletes: 15,
     headline: 'Hasta 15 patinadores',
@@ -25,7 +28,10 @@ const FALLBACK_PLANS = [
     name: 'Club en Expansión',
     description: 'Pensado para clubes que suman nuevos deportistas y equipos.',
     monthlyPrice: 15,
+    baseMonthlyPrice: 15,
     currency: 'USD',
+    baseCurrency: 'USD',
+    billingCurrency: 'ARS',
     minAthletes: 16,
     maxAthletes: 30,
     headline: '16 a 30 patinadores',
@@ -41,7 +47,10 @@ const FALLBACK_PLANS = [
     name: 'Club Elite',
     description: 'Para instituciones consolidadas con planteles grandes.',
     monthlyPrice: 20,
+    baseMonthlyPrice: 20,
     currency: 'USD',
+    baseCurrency: 'USD',
+    billingCurrency: 'ARS',
     minAthletes: 31,
     maxAthletes: null,
     headline: 'Más de 30 patinadores',
@@ -154,6 +163,11 @@ const formatBlueRateTimestamp = (value) => {
     return '';
   }
 };
+
+const getBaseCurrency = (plan) => plan?.baseCurrency || plan?.currency || 'USD';
+const getBaseMonthlyPrice = (plan) =>
+  typeof plan?.baseMonthlyPrice === 'number' ? plan.baseMonthlyPrice : plan?.monthlyPrice;
+const getBillingCurrency = (plan) => plan?.billingCurrency || 'ARS';
 
 export default function Suscripciones() {
   const [plans, setPlans] = useState(FALLBACK_PLANS);
@@ -473,13 +487,24 @@ export default function Suscripciones() {
     if (!checkoutResult?.payment) return null;
 
     if (checkoutResult.payment.type === 'card') {
+      const amount = checkoutResult.payment.amount || {};
+      const chargeAmount = formatCurrency(amount.total, amount.currency || getBillingCurrency(selectedPlan));
+      const baseAmount = formatCurrency(
+        amount.baseTotal ?? getBaseMonthlyPrice(selectedPlan),
+        amount.baseCurrency || getBaseCurrency(selectedPlan)
+      );
+      const rate = amount.blueDollarRate;
+      const rateTimestamp = formatBlueRateTimestamp(amount.fetchedAt);
+
       return (
         <div className="alert alert-success mt-4" role="alert">
           <h4 className="h6 text-uppercase mb-2">Tarjeta validada</h4>
           <p className="mb-1">
             Se utilizará {buildSavedMethodLabel(checkoutResult.payment.method)} para abonar{' '}
-            {formatCurrency(checkoutResult.payment.amount?.total, checkoutResult.payment.amount?.currency)} cada mes.
+            {chargeAmount} cada mes (equivalente a {baseAmount}{' '}
+            {rate ? `al dólar blue compra $${rate?.toFixed?.(2) ?? Number(rate).toFixed(2)}` : ''}).
           </p>
+          {rateTimestamp && <p className="mb-1 text-muted">Cotización tomada el {rateTimestamp}.</p>}
           <p className="mb-0 text-muted">Los datos sensibles están cifrados con estándares de grado bancario.</p>
         </div>
       );
@@ -489,12 +514,16 @@ export default function Suscripciones() {
       const amountArs = formatCurrency(checkoutResult.payment.amountArs, 'ARS');
       const rate = checkoutResult.payment.blueDollarRate;
       const rateTimestamp = formatBlueRateTimestamp(checkoutResult.payment.fetchedAt);
+      const baseAmount = formatCurrency(
+        checkoutResult.payment.usdAmount || getBaseMonthlyPrice(selectedPlan),
+        getBaseCurrency(selectedPlan)
+      );
 
       return (
         <div className="alert alert-info mt-4" role="alert">
           <h4 className="h6 text-uppercase mb-2">Pago vía Mercado Pago</h4>
           <p className="mb-1">
-            Serás redirigido a Mercado Pago para abonar {amountArs} (USD {selectedPlan.monthlyPrice}{' '}
+            Serás redirigido a Mercado Pago para abonar {amountArs} (equivalente a {baseAmount}{' '}
             al dólar blue compra ${rate?.toFixed?.(2) ?? Number(rate).toFixed(2)}).
           </p>
           {rateTimestamp && (
@@ -552,9 +581,12 @@ export default function Suscripciones() {
                 <div className="mb-3">
                   <div className="text-muted text-uppercase small">Precio mensual</div>
                   <div className="display-6 fw-bold text-primary">
-                    {formatCurrency(plan.monthlyPrice, plan.currency)}
+                    {formatCurrency(getBaseMonthlyPrice(plan), getBaseCurrency(plan))}
                   </div>
-                  <p className="text-muted mb-0">{buildAthleteRangeLabel(plan)}</p>
+                  <p className="text-muted mb-1">{buildAthleteRangeLabel(plan)}</p>
+                  <p className="text-muted small mb-0">
+                    Cobro en {getBillingCurrency(plan)} al equivalente mensual en dólares del plan.
+                  </p>
                 </div>
                 <ul className="list-unstyled flex-grow-1">
                   {plan.features.map((feature, index) => (
@@ -604,7 +636,7 @@ export default function Suscripciones() {
                   <div className="text-md-end">
                     <span className="text-muted text-uppercase small">Cuota mensual</span>
                     <div className="display-6 fw-bold text-primary">
-                      {formatCurrency(selectedPlan.monthlyPrice, selectedPlan.currency)}
+                      {formatCurrency(getBaseMonthlyPrice(selectedPlan), getBaseCurrency(selectedPlan))}
                     </div>
                   </div>
                 </div>
@@ -784,7 +816,10 @@ export default function Suscripciones() {
                 {paymentMethodType === 'mercadopago' && (
                   <div className="alert alert-primary" role="alert">
                     <i className="bi bi-currency-exchange me-2" aria-hidden="true"></i>
-                    Convertiremos el valor mensual ({formatCurrency(selectedPlan.monthlyPrice, selectedPlan.currency)}) a
+                    Convertiremos el valor mensual ({formatCurrency(
+                      getBaseMonthlyPrice(selectedPlan),
+                      getBaseCurrency(selectedPlan)
+                    )}) a
                     pesos argentinos utilizando la cotización de compra del dólar blue al momento de confirmar el pago en
                     Mercado Pago.
                   </div>

@@ -2,6 +2,8 @@ import { DEFAULT_ATHLETE_LIMIT } from './subscriptionConfig.js';
 
 const ensureArray = (value) => (Array.isArray(value) ? value : []);
 
+const BILLING_CURRENCY = 'ARS';
+
 const SUBSCRIPTION_PLANS = Object.freeze([
   Object.freeze({
     id: 'starter',
@@ -9,6 +11,7 @@ const SUBSCRIPTION_PLANS = Object.freeze([
     description: 'Ideal para clubes que están formando sus primeros equipos.',
     monthlyPrice: 10,
     currency: 'USD',
+    billingCurrency: BILLING_CURRENCY,
     minAthletes: 0,
     maxAthletes: 15,
     headline: 'Hasta 15 patinadores',
@@ -25,6 +28,7 @@ const SUBSCRIPTION_PLANS = Object.freeze([
     description: 'Perfecto para instituciones con varios equipos en competencia.',
     monthlyPrice: 15,
     currency: 'USD',
+    billingCurrency: BILLING_CURRENCY,
     minAthletes: 16,
     maxAthletes: 30,
     headline: '16 a 30 patinadores',
@@ -41,6 +45,7 @@ const SUBSCRIPTION_PLANS = Object.freeze([
     description: 'Para clubes consolidados con planteles numerosos y staff completo.',
     monthlyPrice: 20,
     currency: 'USD',
+    billingCurrency: BILLING_CURRENCY,
     minAthletes: 31,
     maxAthletes: null,
     headline: 'Más de 30 patinadores',
@@ -87,6 +92,9 @@ const buildSubscriptionQuoteForLimit = (limit) => {
     planName: plan.name,
     monthlyPrice: plan.monthlyPrice,
     currency: plan.currency,
+    billingCurrency: plan.billingCurrency || BILLING_CURRENCY,
+    baseCurrency: plan.currency,
+    baseMonthlyPrice: plan.monthlyPrice,
     billingPeriod: 'monthly',
     athleteLimit: normalisedLimit,
     minAthletes: plan.minAthletes,
@@ -101,6 +109,9 @@ const getSubscriptionPlans = ({ trialDays } = {}) =>
     description: plan.description,
     monthlyPrice: plan.monthlyPrice,
     currency: plan.currency,
+    billingCurrency: plan.billingCurrency || BILLING_CURRENCY,
+    baseCurrency: plan.currency,
+    baseMonthlyPrice: plan.monthlyPrice,
     minAthletes: plan.minAthletes,
     maxAthletes: typeof plan.maxAthletes === 'number' ? plan.maxAthletes : null,
     headline: plan.headline,
