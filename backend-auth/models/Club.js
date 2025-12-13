@@ -44,12 +44,15 @@ const applySubscriptionQuote = (subscription, limit = DEFAULT_ATHLETE_LIMIT) => 
     mutated = true;
   };
 
-  assignIfChanged('planId', quote.planId);
-  assignIfChanged('planName', quote.planName);
-  assignIfChanged('currency', quote.currency);
-  assignIfChanged('monthlyPrice', quote.monthlyPrice);
-  assignIfChanged('billingPeriod', quote.billingPeriod);
-  assignIfChanged('athleteLimit', quote.athleteLimit);
+    assignIfChanged('planId', quote.planId);
+    assignIfChanged('planName', quote.planName);
+    assignIfChanged('currency', quote.currency);
+    assignIfChanged('billingCurrency', quote.billingCurrency);
+    assignIfChanged('baseCurrency', quote.baseCurrency);
+    assignIfChanged('monthlyPrice', quote.monthlyPrice);
+    assignIfChanged('baseMonthlyPrice', quote.baseMonthlyPrice);
+    assignIfChanged('billingPeriod', quote.billingPeriod);
+    assignIfChanged('athleteLimit', quote.athleteLimit);
   assignIfChanged('minAthletes', quote.minAthletes);
   assignIfChanged('maxAthletes', quote.maxAthletes);
 
@@ -123,11 +126,14 @@ const subscriptionSchema = new mongoose.Schema(
     graceEndsAt: { type: Date },
     lastPaymentAt: { type: Date },
     notes: { type: String, trim: true },
-    planId: { type: String, trim: true },
-    planName: { type: String, trim: true },
-    currency: { type: String, trim: true, default: 'USD' },
-    monthlyPrice: { type: Number, min: 0 },
-    billingPeriod: { type: String, trim: true, default: 'monthly' },
+      planId: { type: String, trim: true },
+      planName: { type: String, trim: true },
+      currency: { type: String, trim: true, default: 'USD' },
+      billingCurrency: { type: String, trim: true, default: 'ARS' },
+      baseCurrency: { type: String, trim: true, default: 'USD' },
+      monthlyPrice: { type: Number, min: 0 },
+      baseMonthlyPrice: { type: Number, min: 0 },
+      billingPeriod: { type: String, trim: true, default: 'monthly' },
     provider: { type: String, trim: true },
     providerSubscriptionId: { type: String, trim: true },
     lastProviderStatus: { type: String, trim: true },

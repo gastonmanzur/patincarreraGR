@@ -888,18 +888,21 @@ const findSubscriptionPlanById = (planId) => {
   return plan || null;
 };
 
-const buildSubscriptionPlanResponse = (plan) => {
-  if (!plan) return null;
-  return {
-    id: plan.id,
-    name: plan.name,
-    description: plan.description,
-    monthlyPrice: plan.monthlyPrice,
-    currency: plan.currency,
-    minAthletes: plan.minAthletes,
-    maxAthletes: typeof plan.maxAthletes === 'number' ? plan.maxAthletes : null
+  const buildSubscriptionPlanResponse = (plan) => {
+    if (!plan) return null;
+    return {
+      id: plan.id,
+      name: plan.name,
+      description: plan.description,
+      monthlyPrice: plan.monthlyPrice,
+      currency: plan.currency,
+      billingCurrency: plan.billingCurrency || plan.currency,
+      baseCurrency: plan.baseCurrency || plan.currency,
+      baseMonthlyPrice: plan.baseMonthlyPrice || plan.monthlyPrice,
+      minAthletes: plan.minAthletes,
+      maxAthletes: typeof plan.maxAthletes === 'number' ? plan.maxAthletes : null
+    };
   };
-};
 
 const buildPaymentMethodResponse = (method) => {
   if (!method) return null;
@@ -1996,140 +1999,151 @@ app.get('/api/subscriptions/status', protegerRuta, permitirRol('Delegado', 'Admi
   });
 });
 
-app.post(
-  '/api/subscriptions/checkout',
-  protegerRuta,
-  permitirRol('Delegado', 'Admin'),
-  async (req, res) => {
-    try {
-      const clubId = await ensureClubForRequest(req, res);
-      if (!clubId) return;
+  app.post(
+    '/api/subscriptions/checkout',
+    protegerRuta,
+    permitirRol('Delegado', 'Admin'),
+    async (req, res) => {
+      try {
+        const clubId = await ensureClubForRequest(req, res);
+        if (!clubId) return;
 
-      const planId = (req.body?.planId || '').toString().trim();
-      const paymentMethodType = (req.body?.paymentMethodType || '').toString().trim();
+        const planId = (req.body?.planId || '').toString().trim();
+        const paymentMethodType = (req.body?.paymentMethodType || '').toString().trim();
 
-      const plan = findSubscriptionPlanById(planId);
-      if (!plan) {
-        return res.status(400).json({ mensaje: 'El plan de suscripción seleccionado no es válido.' });
-      }
-
-      if (paymentMethodType === 'card') {
-        const methodId = (req.body?.paymentMethodId || '').toString().trim();
-        if (!methodId) {
-          return res
-            .status(400)
-            .json({ mensaje: 'Debes seleccionar una tarjeta guardada para completar el pago.' });
+        const plan = findSubscriptionPlanById(planId);
+        if (!plan) {
+          return res.status(400).json({ mensaje: 'El plan de suscripción seleccionado no es válido.' });
         }
 
-        const method = await PaymentMethod.findOne({
-          _id: methodId,
-          club: clubId,
-          ...(isAdminUser(req) ? {} : { user: req.usuario.id })
-        });
+        const billingCurrency = plan.billingCurrency || 'ARS';
+        const baseCurrency = plan.baseCurrency || plan.currency;
+        const baseMonthlyPrice = plan.baseMonthlyPrice || plan.monthlyPrice;
 
-        if (!method) {
-          return res.status(404).json({ mensaje: 'El método de pago seleccionado no existe.' });
-        }
+        if (paymentMethodType === 'card') {
+          const methodId = (req.body?.paymentMethodId || '').toString().trim();
+          if (!methodId) {
+            return res
+              .status(400)
+              .json({ mensaje: 'Debes seleccionar una tarjeta guardada para completar el pago.' });
+          }
 
-        return res.json({
-          mensaje: 'La tarjeta fue validada correctamente para procesar la suscripción.',
-          plan: buildSubscriptionPlanResponse(plan),
-          payment: {
-            type: 'card',
-            method: buildPaymentMethodResponse(method),
-            amount: {
-              currency: plan.currency,
-              total: plan.monthlyPrice
+          const method = await PaymentMethod.findOne({
+            _id: methodId,
+            club: clubId,
+            ...(isAdminUser(req) ? {} : { user: req.usuario.id })
+          });
+
+          if (!method) {
+            return res.status(404).json({ mensaje: 'El método de pago seleccionado no existe.' });
+          }
+
+          const conversion = await convertUsdToArsAtBlueRate(baseMonthlyPrice);
+
+          return res.json({
+            mensaje: 'La tarjeta fue validada correctamente para procesar la suscripción.',
+            plan: buildSubscriptionPlanResponse(plan),
+            payment: {
+              type: 'card',
+              method: buildPaymentMethodResponse(method),
+              amount: {
+                currency: billingCurrency,
+                total: conversion.arsAmount,
+                baseCurrency,
+                baseTotal: conversion.usdAmount,
+                blueDollarRate: conversion.rate,
+                fetchedAt: conversion.fetchedAt.toISOString(),
+                isFallback: conversion.isFallback
+              }
             }
+          });
+        }
+
+        if (paymentMethodType === 'mercadopago') {
+          if (!isMercadoPagoConfigured()) {
+            return res.status(503).json({
+              mensaje: 'Los pagos con Mercado Pago no están disponibles en este momento. Contactanos para habilitarlos.'
+            });
           }
-        });
-      }
 
-      if (paymentMethodType === 'mercadopago') {
-        if (!isMercadoPagoConfigured()) {
-          return res.status(503).json({
-            mensaje: 'Los pagos con Mercado Pago no están disponibles en este momento. Contactanos para habilitarlos.'
-          });
-        }
+          const user = await User.findById(req.usuario.id).select('email nombre apellido');
 
-        const user = await User.findById(req.usuario.id).select('email nombre apellido');
-
-        if (!user?.email) {
-          return res.status(400).json({ mensaje: 'Tu usuario necesita un email válido para pagar con Mercado Pago.' });
-        }
-
-        const club = await Club.findById(clubId).select('nombre nombreAmigable subscription');
-        const conversion = await convertUsdToArsAtBlueRate(plan.monthlyPrice);
-        const backUrl = resolveMercadoPagoSuccessUrl();
-        const webhookUrl = resolveMercadoPagoWebhookUrl();
-
-        const reason = `Suscripción ${plan.name} - ${club?.nombreAmigable || club?.nombre || 'Club'}`;
-        const externalReference = `club:${clubId}|plan:${plan.id}|user:${req.usuario.id}`;
-
-        let preapproval;
-        try {
-          preapproval = await createMercadoPagoPreapproval({
-            reason,
-            externalReference,
-            payerEmail: user.email,
-            transactionAmount: conversion.arsAmount,
-            currency: 'ARS',
-            frequency: 1,
-            frequencyType: 'months',
-            backUrl,
-            notificationUrl: webhookUrl
-          });
-        } catch (error) {
-          const mpStatus = getMercadoPagoConfigStatus();
-          console.error('No se pudo crear la preaprobación en Mercado Pago', {
-            message: error?.message,
-            cause: error?.cause,
-            mpStatus
-          });
-          return res.status(503).json({
-            mensaje:
-              'No pudimos contactar a Mercado Pago para generar el cobro. Revisá las credenciales configuradas o intentá nuevamente en unos minutos.'
-          });
-        }
-
-        if (club) {
-          if (!club.subscription || typeof club.subscription !== 'object') {
-            club.subscription = {};
+          if (!user?.email) {
+            return res.status(400).json({ mensaje: 'Tu usuario necesita un email válido para pagar con Mercado Pago.' });
           }
-          club.subscription.provider = 'mercadopago';
-          club.subscription.providerSubscriptionId = preapproval?.id ?? club.subscription.providerSubscriptionId;
-          club.subscription.lastProviderStatus = preapproval?.status || 'pending';
-          applyPlanToSubscription(club, plan);
-          await club.save();
+
+          const club = await Club.findById(clubId).select('nombre nombreAmigable subscription');
+          const conversion = await convertUsdToArsAtBlueRate(baseMonthlyPrice);
+          const backUrl = resolveMercadoPagoSuccessUrl();
+          const webhookUrl = resolveMercadoPagoWebhookUrl();
+
+          const reason = `Suscripción ${plan.name} - ${club?.nombreAmigable || club?.nombre || 'Club'}`;
+          const externalReference = `club:${clubId}|plan:${plan.id}|user:${req.usuario.id}`;
+
+          let preapproval;
+          try {
+            preapproval = await createMercadoPagoPreapproval({
+              reason,
+              externalReference,
+              payerEmail: user.email,
+              transactionAmount: conversion.arsAmount,
+              currency: billingCurrency,
+              frequency: 1,
+              frequencyType: 'months',
+              backUrl,
+              notificationUrl: webhookUrl
+            });
+          } catch (error) {
+            const mpStatus = getMercadoPagoConfigStatus();
+            console.error('No se pudo crear la preaprobación en Mercado Pago', {
+              message: error?.message,
+              cause: error?.cause,
+              mpStatus
+            });
+            return res.status(503).json({
+              mensaje:
+                'No pudimos contactar a Mercado Pago para generar el cobro. Revisá las credenciales configuradas o intentá nuevamente en unos minutos.'
+            });
+          }
+
+          if (club) {
+            if (!club.subscription || typeof club.subscription !== 'object') {
+              club.subscription = {};
+            }
+            club.subscription.provider = 'mercadopago';
+            club.subscription.providerSubscriptionId = preapproval?.id ?? club.subscription.providerSubscriptionId;
+            club.subscription.lastProviderStatus = preapproval?.status || 'pending';
+            applyPlanToSubscription(club, plan);
+            await club.save();
+          }
+
+          return res.json({
+            mensaje: 'Redirigí a Mercado Pago para completar el pago en un entorno seguro.',
+            plan: buildSubscriptionPlanResponse(plan),
+            payment: {
+              type: 'mercadopago',
+              amountArs: conversion.arsAmount,
+              usdAmount: conversion.usdAmount,
+              blueDollarRate: conversion.rate,
+              fetchedAt: conversion.fetchedAt.toISOString(),
+              isFallback: conversion.isFallback,
+              preapprovalId: preapproval?.id ?? null,
+              providerStatus: preapproval?.status ?? null
+            },
+            redirectUrl: preapproval?.initPoint || null,
+            webhookUrl
+          });
         }
 
-        return res.json({
-          mensaje: 'Redirigí a Mercado Pago para completar el pago en un entorno seguro.',
-          plan: buildSubscriptionPlanResponse(plan),
-          payment: {
-            type: 'mercadopago',
-            amountArs: conversion.arsAmount,
-            usdAmount: conversion.usdAmount,
-            blueDollarRate: conversion.rate,
-            fetchedAt: conversion.fetchedAt.toISOString(),
-            isFallback: conversion.isFallback,
-            preapprovalId: preapproval?.id ?? null,
-            providerStatus: preapproval?.status ?? null
-          },
-          redirectUrl: preapproval?.initPoint || null,
-          webhookUrl
-        });
+        return res.status(400).json({ mensaje: 'Debes seleccionar un método de pago válido.' });
+      } catch (err) {
+        console.error('Error al preparar el checkout de la suscripción', err);
+        res
+          .status(500)
+          .json({ mensaje: 'No pudimos preparar el cobro de la suscripción. Intentalo nuevamente.' });
       }
-
-      return res.status(400).json({ mensaje: 'Debes seleccionar un método de pago válido.' });
-    } catch (err) {
-      console.error('Error al preparar el checkout de la suscripción', err);
-      res
-        .status(500)
-        .json({ mensaje: 'No pudimos preparar el cobro de la suscripción. Intentalo nuevamente.' });
     }
-  }
-);
+  );
 
 app.get('/api/mercadopago/status', protegerRuta, permitirRol(['Admin']), (req, res) => {
   const status = getMercadoPagoConfigStatus();
