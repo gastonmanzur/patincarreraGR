@@ -16,8 +16,7 @@ const CONTACT_INFO_KEYS = [
   'facebook',
   'instagram',
   'whatsapp',
-  'x',
-  'history'
+  'x'
 ];
 
 const normaliseContactValue = (value) => (typeof value === 'string' ? value : '');
@@ -30,9 +29,7 @@ const DEFAULT_CONTACT_INFO = Object.freeze({
   facebook: 'https://www.facebook.com/',
   instagram: 'https://www.instagram.com/stories/patincarrerag.r/',
   whatsapp: '5491173726166',
-  x: 'https://x.com/?lang=es',
-  history:
-    'En 2021, el Municipio de General Rodríguez creó la Escuela de Patín Carrera como respuesta solidaria al fallecimiento del entrenador que formaba chicos en el Polideportivo Municipal y los llevaba a competir representando al club Social de Paso del Rey. Muchos de esos jóvenes quedaron sin club, y así nació un espacio propio para continuar su desarrollo. Desde entonces, la escuela no dejó de crecer: se afilió a la Asociación de Patinadores Metropolitanos (APM) y participó en torneos nacionales, logrando destacados resultados como el 2.º puesto en el Encuentro Nacional de Escuela y Transición (Moreno, octubre de 2024) y el 3.º puesto en el primer Encuentro Nacional de Escuela y Transición estilo INDOOR (CABA, abril de 2025). Hoy, la Escuela de Patín Carrera de General Rodríguez sigue formando deportistas y consolidando una comunidad en torno al esfuerzo y la velocidad.'
+  x: 'https://x.com/?lang=es'
 });
 
 const buildContactInfoState = (data = {}, fallback = DEFAULT_CONTACT_INFO) =>
@@ -54,8 +51,6 @@ const createEmptyContactInfo = () =>
   }, {});
 
 export default function Footer() {
-  const [historyVisible, setHistoryVisible] = useState(false);
-  const [pinned, setPinned] = useState(false);
   const [message, setMessage] = useState('');
   const [contactInfo, setContactInfo] = useState(() => {
     const stored = getStoredClubContactInfo();
@@ -100,8 +95,6 @@ export default function Footer() {
   useEffect(() => {
     const handleClubContextChange = () => {
       setContactInfo(createEmptyContactInfo());
-      setHistoryVisible(false);
-      setPinned(false);
       void fetchContactInfo();
     };
 
@@ -137,24 +130,6 @@ export default function Footer() {
     whatsappLink = contactInfo.whatsapp;
   }
 
-  const historyText = (contactInfo.history || '').trim();
-
-  const togglePinned = () => {
-    const newPinned = !pinned;
-    setPinned(newPinned);
-    if (historyText) {
-      setHistoryVisible(newPinned);
-    }
-  };
-
-  const handleMouseEnter = () => {
-    if (!pinned && historyText) setHistoryVisible(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (!pinned) setHistoryVisible(false);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -172,32 +147,8 @@ export default function Footer() {
   return (
     <footer className="footer-custom text-light mt-auto pt-5">
       <div className="container py-5">
-        <div className="row align-items-center mb-4">
-          <div className="col-md-9 d-flex justify-content-center mb-4 mb-md-0">
-            <div
-              className={`robot-container ${historyVisible ? 'shift-left' : ''}`}
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
-              onClick={togglePinned}
-              style={{ cursor: 'pointer' }}
-            >
-              <img
-                src="/robot.svg"
-                alt="Logo"
-                width="400"
-                height="400"
-                className={`robot-image mb-3 ${historyVisible ? 'shift-left' : ''}`}
-              />
-              {historyVisible && historyText && (
-                <div className="history-bubble">
-                  <p className="mb-0 small" style={{ whiteSpace: 'pre-line' }}>
-                    {historyText}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-md-3">
+        <div className="row justify-content-center mb-4">
+          <div className="col-md-6 col-lg-4">
             <h5 className="text-center">Contacto</h5>
             <form onSubmit={handleSubmit}>
               <div className="mb-2">
