@@ -52,18 +52,18 @@ const createEmptyContactInfo = () =>
 
 export default function Footer() {
   const [message, setMessage] = useState('');
+  const [activeClubId, setActiveClubId] = useState(() => getStoredClubId());
   const [contactInfo, setContactInfo] = useState(() => {
-    const stored = getStoredClubContactInfo();
-    if (stored) {
-      return buildContactInfoState(stored, DEFAULT_CONTACT_INFO);
-    }
-    return { ...DEFAULT_CONTACT_INFO };
+    const stored = getStoredClubContactInfo(activeClubId);
+    const fallback = activeClubId ? createEmptyContactInfo() : DEFAULT_CONTACT_INFO;
+    return buildContactInfoState(stored || {}, fallback);
   });
 
-  const applyContactInfo = useCallback((data = {}) => {
-    setContactInfo((prev) => {
-      const next = buildContactInfoState(data, prev);
-      setStoredClubContactInfo(next);
+  const applyContactInfo = useCallback((data = {}, clubId = getStoredClubId()) => {
+    setContactInfo(() => {
+      const fallback = clubId ? createEmptyContactInfo() : DEFAULT_CONTACT_INFO;
+      const next = buildContactInfoState(data, fallback);
+      setStoredClubContactInfo(next, clubId);
       return next;
     });
   }, []);
@@ -74,28 +74,32 @@ export default function Footer() {
     mountedRef.current = false;
   }, []);
 
-  const fetchContactInfo = useCallback(async () => {
+  const fetchContactInfo = useCallback(async (clubId = getStoredClubId()) => {
     try {
-      const clubId = getStoredClubId();
       const config = clubId ? { params: { clubId } } : {};
       const res = await api.get('/public/club-contact', config);
       if (!mountedRef.current) return;
-      applyContactInfo(res.data?.contactInfo || {});
+      applyContactInfo(res.data?.contactInfo || {}, clubId);
     } catch (err) {
       if (!mountedRef.current) return;
       console.error('Error al obtener la información de contacto del club', err);
-      applyContactInfo(DEFAULT_CONTACT_INFO);
+      const fallback = clubId ? createEmptyContactInfo() : DEFAULT_CONTACT_INFO;
+      applyContactInfo(fallback, clubId);
     }
   }, [applyContactInfo]);
 
   useEffect(() => {
-    void fetchContactInfo();
-  }, [fetchContactInfo]);
+    void fetchContactInfo(activeClubId);
+  }, [activeClubId, fetchContactInfo]);
 
   useEffect(() => {
     const handleClubContextChange = () => {
-      setContactInfo(createEmptyContactInfo());
-      void fetchContactInfo();
+      const nextClubId = getStoredClubId();
+      setActiveClubId(nextClubId);
+      setContactInfo(
+        buildContactInfoState({}, nextClubId ? createEmptyContactInfo() : DEFAULT_CONTACT_INFO)
+      );
+      void fetchContactInfo(nextClubId);
     };
 
     window.addEventListener(CLUB_CONTEXT_EVENT, handleClubContextChange);
@@ -107,14 +111,14 @@ export default function Footer() {
   useEffect(() => {
     const handleUpdate = (event) => {
       if (!event || typeof event !== 'object') return;
-      applyContactInfo(event.detail?.contactInfo || {});
+      applyContactInfo(event.detail?.contactInfo || {}, activeClubId);
     };
 
     window.addEventListener('clubContactInfoUpdated', handleUpdate);
     return () => {
       window.removeEventListener('clubContactInfoUpdated', handleUpdate);
     };
-  }, [applyContactInfo]);
+  }, [activeClubId, applyContactInfo]);
 
   const cleanDigits = (value) => (typeof value === 'string' ? value.replace(/\D+/g, '') : '');
   const whatsappNumber = cleanDigits(contactInfo.whatsapp || contactInfo.phone);
