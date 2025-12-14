@@ -1181,16 +1181,17 @@ const normaliseContactUrlValue = (value) => {
 };
 
 const sanitiseContactInfoInput = (payload = {}) => {
-  const sanitized = {};
+  const sanitized = createEmptyContactInfo();
+
   for (const key of CONTACT_INFO_KEYS) {
     const raw = payload?.[key];
     const value = CONTACT_INFO_URL_KEYS.has(key)
       ? normaliseContactUrlValue(raw)
       : normaliseContactString(raw);
-    if (value) {
-      sanitized[key] = value;
-    }
+
+    sanitized[key] = value;
   }
+
   return sanitized;
 };
 
