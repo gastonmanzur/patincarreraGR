@@ -50,7 +50,8 @@ export default function VerNoticia() {
         <img
           src={noticia.imagen}
           alt="imagen noticia"
-          className="img-fluid mb-3"
+          className="img-fluid mb-3 d-block mx-auto"
+          style={{ maxWidth: '70vw', maxHeight: '70vh', width: '100%', height: 'auto', objectFit: 'contain' }}
         />
       )}
       {puedeGestionar && (
