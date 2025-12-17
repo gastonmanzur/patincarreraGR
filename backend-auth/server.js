@@ -2982,7 +2982,9 @@ app.get('/api/news', async (req, res) => {
 
 app.get('/api/news/:id', async (req, res) => {
   try {
-    const noticia = await News.findById(req.params.id).populate('autor', 'nombre apellido club');
+    const noticia = await News.findById(req.params.id)
+      .populate('autor', 'nombre apellido club')
+      .populate('club', 'nombre nombreAmigable logo');
     if (!noticia) return res.status(404).json({ mensaje: 'Noticia no encontrada' });
 
     if (req.query?.clubId && isValidObjectId(req.query.clubId)) {
@@ -2990,9 +2992,31 @@ app.get('/api/news/:id', async (req, res) => {
         return res.status(404).json({ mensaje: 'Noticia no encontrada en este club' });
       }
     }
+
+    let clubPayload = null;
+    if (noticia.club) {
+      const nombre = pickNonEmptyString(noticia.club.nombre);
+      const nombreAmigable = pickNonEmptyString(
+        noticia.club.nombreAmigable,
+        nombre === LOCAL_CLUB_CANONICAL_NAME ? LOCAL_CLUB_DISPLAY_NAME : nombre
+      );
+
+      clubPayload = {
+        _id: noticia.club._id ? noticia.club._id.toString() : null,
+        nombre,
+        nombreAmigable,
+        logo: pickNonEmptyString(noticia.club.logo)
+      };
+    }
+
     const respuesta = {
-      _id: noticia._id, titulo: noticia.titulo, contenido: noticia.contenido, imagen: noticia.imagen,
-      autor: noticia.autor ? `${noticia.autor.nombre} ${noticia.autor.apellido}` : 'Anónimo', fecha: noticia.fecha
+      _id: noticia._id,
+      titulo: noticia.titulo,
+      contenido: noticia.contenido,
+      imagen: noticia.imagen,
+      autor: noticia.autor ? `${noticia.autor.nombre} ${noticia.autor.apellido}` : 'Anónimo',
+      fecha: noticia.fecha,
+      club: clubPayload
     };
     res.json(respuesta);
   } catch (err) {
