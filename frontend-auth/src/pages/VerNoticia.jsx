@@ -16,9 +16,16 @@ export default function VerNoticia() {
         const clubId = sessionStorage.getItem('clubId');
         const config = clubId ? { params: { clubId } } : {};
         const res = await api.get(`/news/${id}`, config);
+        const clubLogo = getImageUrl(res.data?.club?.logo);
+        const clubNombre =
+          res.data?.club?.nombreAmigable || res.data?.club?.nombre || 'General Rodríguez';
+
         setNoticia({
           ...res.data,
-          imagen: getImageUrl(res.data?.imagen)
+          imagen: getImageUrl(res.data?.imagen),
+          club: res.data?.club
+            ? { ...res.data.club, logo: clubLogo, nombreAmigable: clubNombre }
+            : null
         });
       } catch (err) {
         console.error(err);
@@ -43,6 +50,9 @@ export default function VerNoticia() {
     }
   };
 
+  const clubNombre = noticia.club?.nombreAmigable || noticia.club?.nombre || 'General Rodríguez';
+  const clubLogo = noticia.club?.logo;
+
   return (
     <div className="container mt-4">
       <h1 className="mb-3 text-center">{noticia.titulo}</h1>
@@ -66,8 +76,14 @@ export default function VerNoticia() {
       )}
       <p>{noticia.contenido}</p>
       <div className="mt-3 d-flex align-items-center gap-2">
-        <img src="/vite.svg" alt="logo patín carrera" width="30" height="30" />
-        <span>Patín carrera General Rodríguez</span>
+        <img
+          src={clubLogo || '/vite.svg'}
+          alt={`Logo del club ${clubNombre}`}
+          width="30"
+          height="30"
+          style={{ objectFit: 'cover' }}
+        />
+        <span>Patín carrera club {clubNombre}</span>
       </div>
     </div>
   );
