@@ -77,7 +77,8 @@ export default function Footer() {
   const fetchContactInfo = useCallback(async (clubId = getStoredClubId()) => {
     try {
       const config = clubId ? { params: { clubId } } : {};
-      const res = await api.get('/public/club-contact', config);
+      const endpoint = clubId ? '/clubs/contact' : '/public/club-contact';
+      const res = await api.get(endpoint, config);
       if (!mountedRef.current) return;
       applyContactInfo(res.data?.contactInfo || {}, clubId);
     } catch (err) {
