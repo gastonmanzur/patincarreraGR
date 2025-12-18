@@ -2988,7 +2988,11 @@ app.get('/api/news/:id', async (req, res) => {
     if (!noticia) return res.status(404).json({ mensaje: 'Noticia no encontrada' });
 
     if (req.query?.clubId && isValidObjectId(req.query.clubId)) {
-      if (!noticia.club || noticia.club.toString() !== req.query.clubId) {
+      const noticiaClubId = noticia.club?._id
+        ? noticia.club._id.toString()
+        : noticia.club?.toString();
+
+      if (!noticiaClubId || noticiaClubId !== req.query.clubId) {
         return res.status(404).json({ mensaje: 'Noticia no encontrada en este club' });
       }
     }
