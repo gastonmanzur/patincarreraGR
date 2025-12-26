@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Patincarrera icon</title>
+  <desc id="desc">Dark circular badge with patincarrera logo</desc>
+  <circle cx="256" cy="256" r="246" fill="#ffffff" stroke="#b8d27c" stroke-width="20" />
+  <circle cx="256" cy="256" r="210" fill="#0f141c" />
+  <path
+    d="M142 220c32-56 106-102 202-80 14 3 36 11 44 17l-84 46c-20 11-44 17-67 17H150c-14 0-16-10-8-16Z"
+    fill="#1f9ce5"
+    fill-rule="evenodd"
+  />
+  <path
+    d="M144 274c2-12 16-22 30-22h106c28 0 56 6 82 18 11 5 11 15 0 21l-70 40c-18 10-38 15-58 15H180c-26 0-40-19-36-40Z"
+    fill="#1aa15b"
+    fill-rule="evenodd"
+  />
+  <circle cx="310" cy="320" r="36" fill="#f7c500" stroke="#0f141c" stroke-width="8" />
+  <text x="256" y="352" text-anchor="middle" font-family="'Montserrat', 'Segoe UI', sans-serif" font-size="54" font-weight="700" fill="#f5f7f9">
+    patincarrera
+  </text>
+  <text x="256" y="395" text-anchor="middle" font-family="'Montserrat', 'Segoe UI', sans-serif" font-size="40" font-weight="700" fill="#f5f7f9">
+    .net
+  </text>
+</svg>
