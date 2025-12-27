@@ -25,6 +25,10 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    # MERCADOPAGO_ACCESS_TOKEN. El backend también acepta los alias
    # MERCADO_PAGO_ACCESS_TOKEN o MP_ACCESS_TOKEN para mayor compatibilidad
    # con distintos paneles de hosting.
+   # Para notificaciones push en la app Android configurá FCM_SERVER_KEY
+   # (o FIREBASE_SERVER_KEY). Es la clave del servidor de Firebase Cloud
+   # Messaging y se usa para enviar los avisos cuando se crean noticias,
+   # notificaciones, reportes y competencias.
    # UPLOADS_DIR defaults to backend-auth/uploads. If you have legacy
    # assets in another directory you can list them in
    # UPLOADS_FALLBACK_DIRS=/ruta/vieja/uploads

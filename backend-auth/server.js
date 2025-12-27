@@ -28,6 +28,7 @@ import Federation from './models/Federation.js';
 import Entrenamiento from './models/Entrenamiento.js';
 import Progreso from './models/Progreso.js';
 import AppConfig from './models/AppConfig.js';
+import DeviceToken from './models/DeviceToken.js';
 import ExcelJS from 'exceljs';
 import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
@@ -1038,14 +1039,109 @@ const recalcularPosiciones = async (competenciaId, categoria = null) => {
   await Promise.all(promesas);
 };
 
-async function crearNotificacionesParaClub(clubId, mensaje, competencia = null) {
+const FCM_ENDPOINT = 'https://fcm.googleapis.com/fcm/send';
+const FCM_BATCH_LIMIT = 500;
+const FCM_INVALID_REASONS = new Set(['NotRegistered', 'InvalidRegistration']);
+
+const resolveFcmServerKey = () =>
+  (process.env.FCM_SERVER_KEY ||
+    process.env.FIREBASE_SERVER_KEY ||
+    process.env.FCM_LEGACY_SERVER_KEY ||
+    '').trim();
+
+const removeUndefinedEntries = (obj = {}) => {
+  const cleaned = {};
+  Object.entries(obj || {}).forEach(([key, value]) => {
+    if (typeof value !== 'undefined') cleaned[key] = value;
+  });
+  return cleaned;
+};
+
+const chunkArray = (items, size) => {
+  const chunks = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+};
+
+const sendPushNotifications = async (tokens, notification, data = {}) => {
+  const serverKey = resolveFcmServerKey();
+  if (!serverKey) return;
+
+  const uniqueTokens = Array.from(new Set((tokens || []).filter(Boolean)));
+  if (uniqueTokens.length === 0) return;
+
+  const invalidTokens = new Set();
+  const payloadData = removeUndefinedEntries(data);
+  const batches = chunkArray(uniqueTokens, FCM_BATCH_LIMIT);
+
+  await Promise.all(
+    batches.map(async (batch) => {
+      try {
+        const response = await fetch(FCM_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `key=${serverKey}`
+          },
+          body: JSON.stringify({
+            registration_ids: batch,
+            priority: 'high',
+            notification,
+            ...(Object.keys(payloadData).length > 0 ? { data: payloadData } : {})
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Error enviando notificaciones push', errorText);
+          return;
+        }
+
+        const result = await response.json().catch(() => null);
+        if (result?.results?.length) {
+          result.results.forEach((item, idx) => {
+            if (item?.error && FCM_INVALID_REASONS.has(item.error)) {
+              invalidTokens.add(batch[idx]);
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Error enviando notificaciones push', err);
+      }
+    })
+  );
+
+  if (invalidTokens.size > 0) {
+    try {
+      await DeviceToken.deleteMany({ token: { $in: Array.from(invalidTokens) } });
+    } catch (err) {
+      console.error('Error al limpiar tokens de push inválidos', err);
+    }
+  }
+};
+
+const sendPushToUsers = async (userIds, notification, data = {}) => {
+  if (!Array.isArray(userIds) || userIds.length === 0) return;
+  try {
+    const tokens = await DeviceToken.find({ user: { $in: userIds } }).distinct('token');
+    if (!tokens || tokens.length === 0) return;
+    await sendPushNotifications(tokens, notification, data);
+  } catch (err) {
+    console.error('Error al preparar notificaciones push', err);
+  }
+};
+
+async function crearNotificacionesParaClub(clubId, mensaje, competencia = null, pushOptions = {}) {
   if (!clubId) return;
 
   try {
     const clubFilter = normaliseObjectId(clubId) ?? clubId;
-    const usuarios = await User.find({ club: clubFilter, rol: { $ne: 'Admin' } }, '_id');
-    const notificaciones = usuarios.map((u) => ({
-      destinatario: u._id,
+    const usuarios = await User.find({ club: clubFilter, rol: { $ne: 'Admin' } }, '_id').lean();
+    const userIds = usuarios.map((u) => u._id);
+    const notificaciones = userIds.map((destinatarioId) => ({
+      destinatario: destinatarioId,
       mensaje,
       club: clubId,
       ...(competencia ? { competencia } : {})
@@ -1053,6 +1149,12 @@ async function crearNotificacionesParaClub(clubId, mensaje, competencia = null) 
     if (notificaciones.length > 0) {
       await Notification.insertMany(notificaciones);
     }
+    const pushTitle = pushOptions.title || 'Nuevo contenido';
+    const pushData = removeUndefinedEntries({
+      competencia: competencia ? competencia.toString() : undefined,
+      ...(pushOptions.data || {})
+    });
+    await sendPushToUsers(userIds, { title: pushTitle, body: mensaje }, pushData);
   } catch (e) {
     console.error('Error creando notificaciones', e);
   }
@@ -3037,7 +3139,10 @@ app.post('/api/news', protegerRuta, permitirRol('Delegado', 'Tecnico'), upload.s
     if (!clubId) return;
 
     const noticia = await News.create({ titulo, contenido, imagen, autor: req.usuario.id, club: clubId });
-    await crearNotificacionesParaClub(clubId, `Nueva noticia: ${titulo}`);
+    await crearNotificacionesParaClub(clubId, `Nueva noticia: ${titulo}`, null, {
+      title: 'Nueva noticia',
+      data: { tipo: 'noticia', noticia: noticia._id.toString() }
+    });
     res.status(201).json(noticia);
   } catch (err) {
     console.error(err);
@@ -3110,7 +3215,10 @@ app.post('/api/notifications', protegerRuta, permitirRol('Delegado', 'Tecnico'),
   const clubId = await ensureClubForRequest(req, res);
   if (!clubId) return;
 
-  await crearNotificacionesParaClub(clubId, mensaje);
+  await crearNotificacionesParaClub(clubId, mensaje, null, {
+    title: 'Nueva notificación',
+    data: { tipo: 'notificacion' }
+  });
   res.status(201).json({ mensaje: 'Notificaciones enviadas' });
 });
 
@@ -3172,6 +3280,34 @@ app.delete('/api/notifications/:id', protegerRuta, permitirRol('Delegado', 'Tecn
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error al eliminar notificaciones' });
+  }
+});
+
+app.post('/api/device-tokens', protegerRuta, async (req, res) => {
+  const rawToken = req.body?.token;
+  if (!rawToken || typeof rawToken !== 'string') {
+    return res.status(400).json({ mensaje: 'Token requerido' });
+  }
+  try {
+    const token = rawToken.trim();
+    if (!token) return res.status(400).json({ mensaje: 'Token requerido' });
+
+    await DeviceToken.findOneAndUpdate(
+      { token },
+      {
+        $set: {
+          user: req.usuario.id,
+          platform: req.body?.plataforma || req.body?.platform || 'android',
+          lastUsedAt: new Date()
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    res.json({ mensaje: 'Token registrado' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: 'Error al registrar token de notificaciones' });
   }
 });
 
@@ -3284,7 +3420,10 @@ app.post('/api/tournaments/:id/competitions', protegerRuta, permitirRol('Delegad
       club: clubId,
       ...(imagen ? { imagen } : {})
     });
-    await crearNotificacionesParaClub(clubId, `Nueva competencia ${nombre}`, competencia._id);
+    await crearNotificacionesParaClub(clubId, `Nueva competencia ${nombre}`, competencia._id, {
+      title: 'Nueva competencia',
+      data: { tipo: 'competencia', competencia: competencia._id.toString() }
+    });
     res.status(201).json(competencia);
   } catch (err) {
     console.error(err);
@@ -4222,6 +4361,11 @@ app.post('/api/progresos/:id/enviar', protegerRuta, permitirRol('Tecnico'), asyn
       club: clubId
     }));
     await Notification.insertMany(notificaciones);
+    await sendPushToUsers(
+      usuarios.map((u) => u._id),
+      { title: 'Nuevo reporte', body: mensaje },
+      { tipo: 'reporte', progreso: prog._id.toString() }
+    );
     prog.enviado = true;
     await prog.save();
     res.json({ mensaje: 'Reporte enviado' });
