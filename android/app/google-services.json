@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "282799184125",
+    "project_id": "patincarreragr-788d3",
+    "storage_bucket": "patincarreragr-788d3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:282799184125:android:c244108228e95f1bc60694",
+        "android_client_info": {
+          "package_name": "com.zuria.patincarrera"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "282799184125-nfb8nnog2tpg64vf67d3ugqdbu7ceth7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHyW4Yj3I6ZacB46UWwZhFzoa91NL3eDc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "282799184125-nfb8nnog2tpg64vf67d3ugqdbu7ceth7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
