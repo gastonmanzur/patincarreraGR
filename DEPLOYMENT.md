@@ -25,10 +25,11 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    # MERCADOPAGO_ACCESS_TOKEN. El backend también acepta los alias
    # MERCADO_PAGO_ACCESS_TOKEN o MP_ACCESS_TOKEN para mayor compatibilidad
    # con distintos paneles de hosting.
-   # Para notificaciones push en la app Android configurá FCM_SERVER_KEY
-   # (o FIREBASE_SERVER_KEY). Es la clave del servidor de Firebase Cloud
-   # Messaging y se usa para enviar los avisos cuando se crean noticias,
-   # notificaciones, reportes y competencias.
+   # Para notificaciones push usá FCM HTTP v1 con Service Account (OAuth).
+   # Guardá el JSON de la cuenta de servicio en un path seguro y definí:
+   # GOOGLE_APPLICATION_CREDENTIALS=/etc/opt/patincarrera/firebase-admin.json
+   # (opcional) FCM_PROJECT_ID=patincarreragr-788d3 para evitar el lookup.
+   # Ya no se usan FCM_SERVER_KEY / FIREBASE_SERVER_KEY / FCM_LEGACY_SERVER_KEY.
    # UPLOADS_DIR defaults to backend-auth/uploads. If you have legacy
    # assets in another directory you can list them in
    # UPLOADS_FALLBACK_DIRS=/ruta/vieja/uploads

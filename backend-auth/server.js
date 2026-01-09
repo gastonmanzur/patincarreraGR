@@ -1039,15 +1039,82 @@ const recalcularPosiciones = async (competenciaId, categoria = null) => {
   await Promise.all(promesas);
 };
 
-const FCM_ENDPOINT = 'https://fcm.googleapis.com/fcm/send';
 const FCM_BATCH_LIMIT = 500;
-const FCM_INVALID_REASONS = new Set(['NotRegistered', 'InvalidRegistration']);
+const FCM_INVALID_REASONS = new Set(['UNREGISTERED', 'INVALID_ARGUMENT', 'NOT_FOUND']);
+const FCM_MESSAGING_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
+const FCM_TOKEN_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:jwt-bearer';
 
-const resolveFcmServerKey = () =>
-  (process.env.FCM_SERVER_KEY ||
-    process.env.FIREBASE_SERVER_KEY ||
-    process.env.FCM_LEGACY_SERVER_KEY ||
-    '').trim();
+let cachedFcmProjectId = null;
+let cachedServiceAccount = null;
+let cachedAccessToken = null;
+let cachedAccessTokenExp = null;
+
+const loadServiceAccount = () => {
+  if (cachedServiceAccount) return cachedServiceAccount;
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!credentialsPath) return null;
+  try {
+    const raw = fs.readFileSync(credentialsPath, 'utf8');
+    cachedServiceAccount = JSON.parse(raw);
+    return cachedServiceAccount;
+  } catch (err) {
+    console.error('Error leyendo credenciales de Service Account', err);
+    return null;
+  }
+};
+
+const resolveFcmProjectId = () => {
+  if (cachedFcmProjectId) return cachedFcmProjectId;
+  const serviceAccount = loadServiceAccount();
+  const projectId = process.env.FCM_PROJECT_ID?.trim() || serviceAccount?.project_id || null;
+  if (!projectId) return null;
+  cachedFcmProjectId = projectId;
+  return projectId;
+};
+
+const resolveFcmAccessToken = async () => {
+  if (cachedAccessToken && cachedAccessTokenExp && Date.now() < cachedAccessTokenExp) {
+    return cachedAccessToken;
+  }
+  const serviceAccount = loadServiceAccount();
+  if (!serviceAccount?.client_email || !serviceAccount?.private_key || !serviceAccount?.token_uri) {
+    return null;
+  }
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const jwt = jwt.sign(
+      {
+        iss: serviceAccount.client_email,
+        scope: FCM_MESSAGING_SCOPE,
+        aud: serviceAccount.token_uri,
+        iat: now,
+        exp: now + 3600
+      },
+      serviceAccount.private_key,
+      { algorithm: 'RS256' }
+    );
+    const body = new URLSearchParams({
+      grant_type: FCM_TOKEN_GRANT_TYPE,
+      assertion: jwt
+    });
+    const response = await fetch(serviceAccount.token_uri, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+    const tokenPayload = await response.json().catch(() => null);
+    if (!response.ok || !tokenPayload?.access_token) {
+      console.error('Error obteniendo token OAuth de FCM', tokenPayload);
+      return null;
+    }
+    cachedAccessToken = tokenPayload.access_token;
+    cachedAccessTokenExp = Date.now() + (tokenPayload.expires_in - 60) * 1000;
+    return cachedAccessToken;
+  } catch (err) {
+    console.error('Error obteniendo token OAuth de FCM', err);
+    return null;
+  }
+};
 
 const removeUndefinedEntries = (obj = {}) => {
   const cleaned = {};
@@ -1065,53 +1132,76 @@ const chunkArray = (items, size) => {
   return chunks;
 };
 
-const sendPushNotifications = async (tokens, notification, data = {}) => {
-  const serverKey = resolveFcmServerKey();
-  if (!serverKey) return;
+const sendFcmMessage = async (endpoint, accessToken, message) => {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`
+    },
+    body: JSON.stringify({ message })
+  });
 
+  if (response.ok) return { ok: true };
+
+  const errorPayload = await response.json().catch(() => null);
+  return { ok: false, errorPayload };
+};
+
+const extractFcmErrorCode = (errorPayload) => {
+  const details = errorPayload?.error?.details;
+  if (!Array.isArray(details)) return errorPayload?.error?.status || null;
+  const fcmError = details.find(
+    (detail) => detail['@type'] === 'type.googleapis.com/google.firebase.fcm.v1.FcmError'
+  );
+  return fcmError?.errorCode || errorPayload?.error?.status || null;
+};
+
+const coerceFcmData = (data = {}) => {
+  const cleaned = removeUndefinedEntries(data);
+  return Object.fromEntries(
+    Object.entries(cleaned).map(([key, value]) => [key, String(value)])
+  );
+};
+
+const sendPushNotifications = async (tokens, notification, data = {}) => {
+  const [accessToken, projectId] = await Promise.all([
+    resolveFcmAccessToken(),
+    resolveFcmProjectId()
+  ]);
+  if (!accessToken || !projectId) return;
+
+  const endpoint = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
   const uniqueTokens = Array.from(new Set((tokens || []).filter(Boolean)));
   if (uniqueTokens.length === 0) return;
 
   const invalidTokens = new Set();
-  const payloadData = removeUndefinedEntries(data);
+  const payloadData = coerceFcmData(data);
   const batches = chunkArray(uniqueTokens, FCM_BATCH_LIMIT);
 
-  await Promise.all(
-    batches.map(async (batch) => {
-      try {
-        const response = await fetch(FCM_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `key=${serverKey}`
-          },
-          body: JSON.stringify({
-            registration_ids: batch,
-            priority: 'high',
+  for (const batch of batches) {
+    await Promise.all(
+      batch.map(async (token) => {
+        try {
+          const message = {
+            token,
             notification,
             ...(Object.keys(payloadData).length > 0 ? { data: payloadData } : {})
-          })
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Error enviando notificaciones push', errorText);
-          return;
-        }
-
-        const result = await response.json().catch(() => null);
-        if (result?.results?.length) {
-          result.results.forEach((item, idx) => {
-            if (item?.error && FCM_INVALID_REASONS.has(item.error)) {
-              invalidTokens.add(batch[idx]);
+          };
+          const result = await sendFcmMessage(endpoint, accessToken, message);
+          if (!result.ok) {
+            const errorCode = extractFcmErrorCode(result.errorPayload);
+            console.error('Error enviando notificación push', result.errorPayload);
+            if (errorCode && FCM_INVALID_REASONS.has(errorCode)) {
+              invalidTokens.add(token);
             }
-          });
+          }
+        } catch (err) {
+          console.error('Error enviando notificaciones push', err);
         }
-      } catch (err) {
-        console.error('Error enviando notificaciones push', err);
-      }
-    })
-  );
+      })
+    );
+  }
 
   if (invalidTokens.size > 0) {
     try {
