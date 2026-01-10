@@ -47,6 +47,10 @@ const buildApiBaseUrlCandidates = () => {
     }
   }
 
+  if (rawEnvUrl) {
+    return unique(candidates);
+  }
+
   if (!isBrowser) {
     candidates.push(ensureApiSuffix('/'));
     return unique(candidates);
