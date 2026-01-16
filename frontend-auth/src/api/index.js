@@ -48,6 +48,16 @@ const buildApiBaseUrlCandidates = () => {
   }
 
   if (rawEnvUrl) {
+    if (isBrowser) {
+      const { protocol, hostname } = window.location;
+      const hasWwwPrefix = hostname.startsWith('www.');
+      const alternateHost = hasWwwPrefix ? hostname.replace(/^www\./i, '') : `www.${hostname}`;
+
+      if (alternateHost && alternateHost !== hostname) {
+        candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}`));
+      }
+    }
+
     return unique(candidates);
   }
 
