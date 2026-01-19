@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Club from '../models/Club.js';
 
 import {
@@ -26,7 +27,18 @@ const shouldPersistDefaults = (options = {}) => {
 export const loadClubSubscription = async (clubId, options = {}) => {
   if (!clubId) return null;
 
-  const club = await Club.findById(clubId).select('nombre subscription');
+  if (!mongoose.Types.ObjectId.isValid(clubId)) {
+    console.warn('Club ID inválido recibido al cargar la suscripción del club.', clubId);
+    return null;
+  }
+
+  let club = null;
+  try {
+    club = await Club.findById(clubId).select('nombre subscription');
+  } catch (error) {
+    console.warn('No se pudo obtener la suscripción del club.', error);
+    return null;
+  }
   if (!club) return null;
 
   const persistDefaults = shouldPersistDefaults(options);
