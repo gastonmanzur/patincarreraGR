@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import http from 'http';
 import https from 'https';
 
 import User from './models/User.js';
@@ -4576,6 +4577,18 @@ app.get('/api/auth/google/callback', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = http.createServer((req, res) => {
+  if (!req || !req.method) {
+    console.error('Solicitud HTTP inválida recibida por el servidor.');
+    if (res) {
+      res.statusCode = 400;
+      res.end('Bad Request');
+    }
+    return;
+  }
+  app(req, res);
+});
+
+server.listen(PORT, () => {
   console.log(`Servidor escuchando en puerto ${PORT}`);
 });
