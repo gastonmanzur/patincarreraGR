@@ -182,6 +182,8 @@ const normaliseAppConfigResponse = (config) => ({
   defaultBrandLogo: typeof config?.defaultBrandLogo === 'string' ? config.defaultBrandLogo : ''
 });
 
+const isMongoReady = () => mongoose.connection.readyState === 1;
+
 // --------- Mongo URI ---------
 mongoose.set('strictQuery', true);
 
@@ -1972,6 +1974,9 @@ app.get('/api/public/clubs', async (_req, res) => {
 
 app.get('/api/public/app-config', async (_req, res) => {
   try {
+    if (!isMongoReady()) {
+      return res.json(normaliseAppConfigResponse(null));
+    }
     const config = await AppConfig.getSingleton();
     res.json(normaliseAppConfigResponse(config));
   } catch (err) {
@@ -2275,6 +2280,14 @@ app.post('/api/mercadopago/webhook', async (req, res) => {
 
 app.get('/api/public/club-contact', async (req, res) => {
   try {
+    if (!isMongoReady()) {
+      const fallbackClub = {
+        nombre: LOCAL_CLUB_CANONICAL_NAME,
+        nombreAmigable: LOCAL_CLUB_DISPLAY_NAME,
+        contactInfo: { ...DEFAULT_LOCAL_CONTACT_INFO }
+      };
+      return res.json(buildClubContactResponse(fallbackClub));
+    }
     await ensureRequestUser(req);
     const clubId = getClubIdFromRequest(req);
     let club = null;
