@@ -9,6 +9,8 @@ const ensureApiSuffix = (value) => {
 };
 
 const unique = (values) => Array.from(new Set(values.filter(Boolean)));
+const isAbsoluteUrl = (value) =>
+  typeof value === 'string' && (/^[a-z][a-z0-9+.-]*:\/\//i.test(value) || value.startsWith('//'));
 
 const resolveConfiguredBase = (rawUrl, origin) => {
   try {
@@ -30,6 +32,7 @@ const resolveConfiguredBase = (rawUrl, origin) => {
 const buildApiBaseUrlCandidates = () => {
   const rawEnvUrl =
     import.meta.env.VITE_API_BASE?.trim() || import.meta.env.VITE_API_URL?.trim();
+  const envIsRelative = rawEnvUrl ? !isAbsoluteUrl(rawEnvUrl) : false;
 
   const isBrowser = typeof window !== 'undefined';
   const candidates = [];
@@ -48,7 +51,7 @@ const buildApiBaseUrlCandidates = () => {
   }
 
   if (rawEnvUrl) {
-    if (isBrowser) {
+    if (isBrowser && !envIsRelative) {
       const { protocol, hostname } = window.location;
       const hasWwwPrefix = hostname.startsWith('www.');
       const alternateHost = hasWwwPrefix ? hostname.replace(/^www\./i, '') : `www.${hostname}`;
