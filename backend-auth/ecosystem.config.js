@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'patin-api',
       script: 'server.js',
-      cwd: '/home/deploy/apps/patincarreraGR/backend-auth',
+      cwd: process.env.PATIN_API_CWD || process.cwd(),
       instances: 1,
       exec_mode: 'fork',
       env: {
