@@ -47,6 +47,22 @@ const buildApiBaseUrlCandidates = () => {
         resolveConfiguredBase(rawEnvUrl, window.location.origin) || normalised
       );
       if (configured) candidates.push(configured);
+
+      if (envIsRelative) {
+        const { protocol, hostname } = window.location;
+        const hasWwwPrefix = hostname.startsWith('www.');
+        const alternateHost = hasWwwPrefix ? hostname.replace(/^www\./i, '') : `www.${hostname}`;
+
+        if (alternateHost && alternateHost !== hostname) {
+          const alternateConfigured = resolveConfiguredBase(
+            rawEnvUrl,
+            `${protocol}//${alternateHost}`
+          );
+          if (alternateConfigured) {
+            candidates.push(ensureApiSuffix(alternateConfigured));
+          }
+        }
+      }
     }
   }
 
