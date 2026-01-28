@@ -1,0 +1,180 @@
+import { MercadoPagoConfig, PreApproval } from 'mercadopago';
+
+const resolveAccessToken = () => {
+  const candidates = [
+    { value: process.env.MERCADOPAGO_ACCESS_TOKEN, name: 'MERCADOPAGO_ACCESS_TOKEN' },
+    { value: process.env.MERCADO_PAGO_ACCESS_TOKEN, name: 'MERCADO_PAGO_ACCESS_TOKEN' },
+    { value: process.env.MP_ACCESS_TOKEN, name: 'MP_ACCESS_TOKEN' }
+  ];
+
+  for (const candidate of candidates) {
+    const token = candidate.value?.trim();
+    if (token) {
+      // Normalizamos en MERCADOPAGO_ACCESS_TOKEN para que el SDK siempre lo lea
+      process.env.MERCADOPAGO_ACCESS_TOKEN = token;
+      return { token, source: candidate.name };
+    }
+  }
+
+  return { token: null, source: null };
+};
+
+const { token: accessToken, source: accessTokenSource } = resolveAccessToken();
+
+/**
+ * Devuelve true si Mercado Pago está correctamente configurado
+ * (es decir, si hay ACCESS_TOKEN definido).
+ */
+const isMercadoPagoConfigured = () => Boolean(accessToken);
+
+// Cliente de MP y cliente de PreApproval (suscripciones) solo si hay token
+const mpClient = accessToken
+  ? new MercadoPagoConfig({
+      accessToken,
+      options: {
+        // MP suele tardar varios segundos en responder, especialmente en horarios pico.
+        // Con 5s se producían timeouts que devolvían 502 al frontend.
+        timeout: 15000
+      }
+    })
+  : null;
+
+const preApprovalClient = mpClient ? new PreApproval(mpClient) : null;
+
+const getMercadoPagoConfigStatus = () => ({
+  isConfigured: Boolean(accessToken),
+  accessTokenSource,
+  accessTokenLast4: accessToken ? accessToken.slice(-4) : null,
+  sdkTimeoutMs: mpClient?.options?.timeout ?? null
+});
+
+/**
+ * Crea una suscripción (PreApproval) en Mercado Pago.
+ * 
+ * params:
+ * - payerEmail: email del pagador
+ * - backUrl: URL a la que vuelve el usuario después de aprobar
+ * - reason: descripción/motivo de la suscripción
+ * - autoRecurring: objeto con frecuencia, monto, moneda, etc.
+ *   Ejemplo:
+ *   {
+ *     frequency: 1,
+ *     frequency_type: 'months',
+ *     transaction_amount: 10,
+ *     currency_id: 'ARS'
+ *   }
+ * - externalReference: string tipo "club:ID|plan:ID|user:ID"
+ */
+const createMercadoPagoPreapproval = async ({
+  payerEmail,
+  backUrl,
+  notificationUrl,
+  reason,
+  transactionAmount,
+  currency,
+  frequency = 1,
+  frequencyType = 'months',
+  externalReference
+}) => {
+  if (!preApprovalClient) {
+    throw new Error(
+      'Mercado Pago no está configurado. Falta MERCADOPAGO_ACCESS_TOKEN.'
+    );
+  }
+
+  const amount = Number.parseFloat(transactionAmount);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error('El monto de la suscripción debe ser un número mayor a 0.');
+  }
+
+  const normalisedCurrency = (currency || 'ARS').toString().trim().toUpperCase();
+
+  const autoRecurring = {
+    frequency,
+    frequency_type: frequencyType,
+    transaction_amount: amount,
+    currency_id: normalisedCurrency
+  };
+
+  const body = {
+    payer_email: payerEmail,
+    back_url: backUrl,
+    reason,
+    external_reference: externalReference,
+    auto_recurring: autoRecurring
+  };
+
+  if (notificationUrl) {
+    body.notification_url = notificationUrl;
+  }
+
+  try {
+    const response = await preApprovalClient.create({ body });
+    return response;
+  } catch (error) {
+    // El SDK envía los detalles en error.cause como array; los incluimos para facilitar el log.
+    const sdkDetails = Array.isArray(error?.cause)
+      ? error.cause.map((item) => item?.description || item?.message).filter(Boolean)
+      : [];
+    const details = sdkDetails.length ? ` | Detalles MP: ${sdkDetails.join(' | ')}` : '';
+    throw new Error(`No se pudo crear la preaprobación en Mercado Pago${details}`, {
+      cause: error
+    });
+  }
+};
+
+/**
+ * Obtiene los detalles de una suscripción (PreApproval) por ID.
+ */
+const fetchPreapprovalDetails = async (preapprovalId) => {
+  if (!preApprovalClient) {
+    throw new Error(
+      'Mercado Pago no está configurado. Falta MERCADOPAGO_ACCESS_TOKEN.'
+    );
+  }
+
+  if (!preapprovalId) {
+    throw new Error('preapprovalId es requerido para consultar la suscripción.');
+  }
+
+  const response = await preApprovalClient.get({ preapprovalId });
+  return response;
+};
+
+/**
+ * Parsea el external_reference que mandás a MP.
+ * Formato esperado: "club:ID_CLUB|plan:ID_PLAN|user:ID_USER"
+ * 
+ * Devuelve:
+ * { clubId, planId, userId } o null si falta club o plan.
+ */
+const parseExternalReference = (value) => {
+  if (!value || typeof value !== 'string') return null;
+
+  const parts = value.split('|').map((part) => part.trim());
+  const meta = {};
+
+  for (const part of parts) {
+    const [key, ...rest] = part.split(':');
+    if (key && rest.length) {
+      meta[key] = rest.join(':');
+    }
+  }
+
+  if (!meta.club || !meta.plan) return null;
+
+  return {
+    clubId: meta.club,
+    planId: meta.plan,
+    userId: meta.user || null
+  };
+};
+
+export {
+  createMercadoPagoPreapproval,
+  fetchPreapprovalDetails,
+  getMercadoPagoConfigStatus,
+  isMercadoPagoConfigured,
+  parseExternalReference
+};

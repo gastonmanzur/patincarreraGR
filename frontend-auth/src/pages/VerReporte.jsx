@@ -28,7 +28,7 @@ export default function VerReporte() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-4">
+      <h1 className="mb-4 text-center">
         Reporte de {reporte.patinador.primerNombre} {reporte.patinador.apellido}
       </h1>
       <p>

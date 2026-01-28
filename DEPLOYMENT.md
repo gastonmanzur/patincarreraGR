@@ -21,10 +21,29 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    cd backend-auth
    cp .env.example .env
    # edit .env with real values (Mongo URI, JWT secret, email creds, etc.)
+   # Si vas a habilitar cobros con Mercado Pago asegurate de definir
+   # MERCADOPAGO_ACCESS_TOKEN. El backend también acepta los alias
+   # MERCADO_PAGO_ACCESS_TOKEN o MP_ACCESS_TOKEN para mayor compatibilidad
+   # con distintos paneles de hosting.
+   # Para notificaciones push usá FCM HTTP v1 con Service Account (OAuth).
+   # Guardá el JSON de la cuenta de servicio en un path seguro y definí:
+   # GOOGLE_APPLICATION_CREDENTIALS=/etc/opt/patincarrera/firebase-admin.json
+   # (opcional) FCM_PROJECT_ID=patincarreragr-788d3 para evitar el lookup.
+   # Ya no se usan FCM_SERVER_KEY / FIREBASE_SERVER_KEY / FCM_LEGACY_SERVER_KEY.
+   # UPLOADS_DIR defaults to backend-auth/uploads. If you have legacy
+   # assets in another directory you can list them in
+   # UPLOADS_FALLBACK_DIRS=/ruta/vieja/uploads
+   # PUBLIC_UPLOADS_PATH defaults to /uploads and must match the path that
+   # Nginx exposes in its static file location. Leave it untouched unless you
+   # intentionally expose the assets under a different public prefix.
    # NODE_ENV=production (present in the example file) ensures the backend
-   # uses https://patincarrera.net as the default domain for redirects & CORS.
+   # uses http://patincarrera.net as the default domain for redirects & CORS.
    npm install
-   pm2 start server.js --name patincarrera-backend
+   # PM2 is now configured via backend-auth/ecosystem.config.js so we can
+   # keep the runtime options under version control. The file assumes the
+   # project lives in /home/deploy/apps/patincarreraGR; adjust `cwd`,
+   # log paths or environment variables if your setup differs.
+   pm2 startOrReload ecosystem.config.js --update-env
    pm2 save
    cd ..
    ```
@@ -45,15 +64,29 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    cd ..
    ```
 
-## 4. Nginx
+   The `.env.example` file now points `VITE_API_BASE` to `/api` so the frontend
+   always talks to the backend through the same origin handled by Nginx,
+   avoiding CORS issues between `patincarrera.net` and `www.patincarrera.net`.
+
+ ## 4. Nginx
 1. Copy the provided configuration:
    ```bash
    sudo cp deployment/nginx.conf /etc/nginx/sites-available/patincarrera
    sudo ln -s /etc/nginx/sites-available/patincarrera /etc/nginx/sites-enabled/
+   # If you placed the frontend bundle in a different directory, edit the
+   # server block and update the `root` directive accordingly before
+   # restarting Nginx. Ensure the `alias` directive for `/uploads/` matches
+   # the absolute path of the backend `uploads` directory (defaults to
+   # /var/www/patincarrera/backend/uploads/ when following this guide).
+   sudo nano /etc/nginx/sites-available/patincarrera
    sudo nginx -t
    sudo systemctl restart nginx
    ```
 2. Point the domain DNS records for `patincarrera.net` and `www.patincarrera.net` to the server IP `72.60.62.242`.
+3. The provided configuration now redirects `www.patincarrera.net` to the apex
+   domain to avoid cross-origin calls between both hosts. Once HTTPS
+   certificates are issued you can uncomment the redirect in the main server
+   block so every visitor is forced to use `https://`.
 
 ## 5. Optional HTTPS
 Use [Certbot](https://certbot.eff.org/) to obtain a Let's Encrypt certificate:
@@ -65,3 +98,13 @@ sudo certbot --nginx -d patincarrera.net -d www.patincarrera.net
 ## Notes
 - Update environment variables as needed for production.
 - PM2 will keep the backend running and revive it on reboot (`pm2 startup`).
+- For future releases you can deploy everything in one step from the project
+  root:
+
+  ```bash
+  ./deploy.sh
+  ```
+
+  The script performs `git pull --rebase`, installs production dependencies for
+  the backend and frontend, rebuilds the Vite bundle and reloads PM2 using the
+  tracked ecosystem configuration.

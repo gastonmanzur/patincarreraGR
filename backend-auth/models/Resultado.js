@@ -23,6 +23,7 @@ const resultadoSchema = new mongoose.Schema(
     },
     categoria: { type: String, required: true },
     clubId: { type: mongoose.Schema.Types.ObjectId, ref: 'Club' },
+    club: { type: mongoose.Schema.Types.ObjectId, ref: 'Club' },
     posicion: Number,
     puntos: Number,
     dorsal: String,

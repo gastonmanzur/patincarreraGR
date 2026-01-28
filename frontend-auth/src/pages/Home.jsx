@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function Home() {
   const [news, setNews] = useState([]);
@@ -8,12 +9,41 @@ export default function Home() {
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
   const [currentPatIndex, setCurrentPatIndex] = useState(0);
   const [nextCompetition, setNextCompetition] = useState(null);
+  const [federaciones, setFederaciones] = useState([]);
+  const [userFederationId, setUserFederationId] = useState(null);
+  const rolActual = sessionStorage.getItem('rol');
+  const token = sessionStorage.getItem('token');
+  const esAdmin = typeof rolActual === 'string' && rolActual.toLowerCase() === 'admin';
+
+  const normaliseFederationUrl = (url) => {
+    if (typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+    if (/^(https?:\/\/|mailto:|tel:)/i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+  };
 
   useEffect(() => {
+    if (esAdmin) {
+      setNews([]);
+      setPatinadores([]);
+      setNextCompetition(null);
+      setFederaciones([]);
+      return;
+    }
+
     const cargarNoticias = async () => {
       try {
-        const newsRes = await api.get('/news');
-        setNews(newsRes.data);
+        const clubId = sessionStorage.getItem('clubId');
+        const config = clubId ? { params: { clubId } } : {};
+        const newsRes = await api.get('/news', config);
+        const normalized = Array.isArray(newsRes.data)
+          ? newsRes.data.map((item) => ({
+              ...item,
+              imagen: getImageUrl(item.imagen)
+            }))
+          : [];
+        setNews(normalized);
       } catch (err) {
         console.error(err);
       }
@@ -22,7 +52,19 @@ export default function Home() {
     const cargarPatinadores = async () => {
       try {
         const userRes = await api.get('/protegido/usuario');
-        setPatinadores(userRes.data.usuario.patinadores || []);
+        const patinadoresData = Array.isArray(userRes.data.usuario?.patinadores)
+          ? userRes.data.usuario.patinadores.map((p) => ({
+              ...p,
+              foto: getImageUrl(p.foto),
+              fotoRostro: getImageUrl(p.fotoRostro)
+            }))
+          : [];
+        setPatinadores(patinadoresData);
+
+        const federation = userRes.data.usuario?.club?.federation;
+        const federationId =
+          federation && typeof federation === 'object' ? federation._id : federation;
+        setUserFederationId(federationId || null);
       } catch (err) {
         console.error(err);
       }
@@ -30,8 +72,15 @@ export default function Home() {
 
     const cargarCompetencia = async () => {
       try {
-        const compRes = await api.get('/competencias');
-        const comps = compRes.data;
+        const clubId = sessionStorage.getItem('clubId');
+        const config = clubId ? { params: { clubId } } : {};
+        const compRes = await api.get('/competencias', config);
+        const comps = Array.isArray(compRes.data)
+          ? compRes.data.map((comp) => ({
+              ...comp,
+              imagen: getImageUrl(comp.imagen)
+            }))
+          : [];
         if (comps.length > 0) {
           const sorted = comps.sort(
             (a, b) => new Date(a.fecha) - new Date(b.fecha)
@@ -43,14 +92,26 @@ export default function Home() {
       }
     };
 
+    const cargarFederaciones = async () => {
+      try {
+        const fedRes = await api.get('/federaciones');
+        setFederaciones(Array.isArray(fedRes.data) ? fedRes.data : []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
     cargarNoticias();
-    if (localStorage.getItem('token')) {
+    if (sessionStorage.getItem('token')) {
       cargarPatinadores();
+    } else {
+      setUserFederationId(null);
     }
     cargarCompetencia();
+    cargarFederaciones();
     const interval = setInterval(cargarCompetencia, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [esAdmin]);
 
   useEffect(() => {
     if (news.length > 0) {
@@ -80,9 +141,34 @@ export default function Home() {
   const wideNews = news.slice(4, 7);
   const additionalNews = news.slice(7, 11);
 
+  const normalisedUserFederationId =
+    userFederationId && typeof userFederationId === 'object'
+      ? userFederationId._id
+      : userFederationId;
+
+  const federacionesParaMostrar = token
+    ? federaciones.filter((fed) => fed._id === normalisedUserFederationId)
+    : federaciones;
+
+  if (esAdmin) {
+    return (
+      <div className="container mt-4">
+        <h1 className="mb-4 text-center">Panel principal del administrador</h1>
+        <p className="text-center">
+          El administrador no está asociado a ningún club. Gestioná federaciones y clubes desde el Panel de Administración.
+        </p>
+        <div className="d-flex justify-content-center mt-4">
+          <Link to="/admin" className="btn btn-primary">
+            Ir al Panel de Administración
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      {localStorage.getItem('token') && patinadores.length === 0 && (
+      {sessionStorage.getItem('token') && patinadores.length === 0 && (
         <div className="container mt-4">
     
           <div className="d-flex justify-content-end mb-3">
@@ -94,7 +180,7 @@ export default function Home() {
       )}
       <div className="container mt-4">
 
-        <h1 className="mb-4">Noticias Falsas</h1>
+        <h1 className="mb-4 text-center">Noticias</h1>
 
         <div className="news-grid">
           {displayedNews[0] && (
@@ -106,7 +192,7 @@ export default function Home() {
               <div className="top-news-text">
                 <div className="news-label-top">NOTICIA</div>
                 <div className="news-label-top-line" />
-                <h5>{displayedNews[0].titulo}</h5>
+                <h5 className="text-center">{displayedNews[0].titulo}</h5>
                 <p>{displayedNews[0].contenido?.slice(0, 100)}...</p>
               </div>
               {displayedNews[0].imagen && (
@@ -123,7 +209,7 @@ export default function Home() {
                   <img src={currentPatinador.foto} alt="foto patinador" />
                 )}
                 <div className="overlay">
-                  <h6>
+                  <h6 className="text-center">
                     {currentPatinador.primerNombre} {currentPatinador.apellido}
                   </h6>
                 </div>
@@ -148,7 +234,7 @@ export default function Home() {
                 </div>
               )}
               <div className="news-info">
-                <h6>{displayedNews[1].titulo}</h6>
+                <h6 className="text-center">{displayedNews[1].titulo}</h6>
                 <p>{displayedNews[1].contenido?.slice(0, 80)}...</p>
                 <div className="news-divider" />
                 <div className="news-footer">
@@ -176,7 +262,7 @@ export default function Home() {
                 </div>
               )}
               <div className="news-info">
-                <h6>{displayedNews[2].titulo}</h6>
+                <h6 className="text-center">{displayedNews[2].titulo}</h6>
                 <p>{displayedNews[2].contenido?.slice(0, 80)}...</p>
                 <div className="news-divider" />
                 <div className="news-footer">
@@ -204,7 +290,7 @@ export default function Home() {
                 </div>
               )}
               <div className="news-info">
-                <h6>{displayedNews[3].titulo}</h6>
+                <h6 className="text-center">{displayedNews[3].titulo}</h6>
                 <p>{displayedNews[3].contenido?.slice(0, 80)}...</p>
                 <div className="news-divider" />
                 <div className="news-footer">
@@ -228,7 +314,7 @@ export default function Home() {
                 <div className="news-label-line" />
               </div>
               <div className="news-info">
-                <h6>{nextCompetition.nombre}</h6>
+                <h6 className="text-center">{nextCompetition.nombre}</h6>
                 <p>{new Date(nextCompetition.fecha).toLocaleDateString()}</p>
                 <div className="news-divider" />
                 <div className="news-footer">
@@ -264,7 +350,7 @@ export default function Home() {
                   />
                   <span>Patín carrera General Rodríguez</span>
                 </div>
-                <h6>
+                <h6 className="text-center">
                   {item.titulo.length > 60
                     ? `${item.titulo.slice(0, 60)}...`
                     : item.titulo}
@@ -291,7 +377,7 @@ export default function Home() {
                   </div>
                 )}
                 <div className="news-info">
-                  <h6>{item.titulo}</h6>
+                  <h6 className="text-center">{item.titulo}</h6>
                   <p>{item.contenido?.slice(0, 80)}...</p>
                   <div className="news-divider" />
                   <div className="news-footer">
@@ -325,7 +411,7 @@ export default function Home() {
                   </div>
                 )}
                 <div className="news-info">
-                  <h6>{item.titulo}</h6>
+                  <h6 className="text-center">{item.titulo}</h6>
                   <p>{item.contenido?.slice(0, 80)}...</p>
                   <div className="news-divider" />
                   <div className="news-footer">
@@ -338,6 +424,40 @@ export default function Home() {
                   </div>
                 </div>
               </Link>
+            ))}
+          </div>
+        </div>
+      )}
+      {federacionesParaMostrar.length > 0 && (
+        <div className="container mb-5">
+          <h2 className="text-center mb-4">
+            {`AFILIADO A "${federacionesParaMostrar[0].nombre}".`}
+          </h2>
+          <div className="row g-4">
+            {federacionesParaMostrar.map((federacion) => (
+              <div className="col-12 col-md-6 col-lg-4" key={federacion._id}>
+                <div className="card h-100 shadow-sm">
+                  <div className="card-body d-flex flex-column">
+                    <h5 className="card-title">{federacion.nombre}</h5>
+                    {federacion.descripcion && (
+                      <p className="card-text flex-grow-1">{federacion.descripcion}</p>
+                    )}
+                    {federacion.sitioWeb && (
+                      <ul className="list-unstyled small mb-0 mt-3">
+                        <li>
+                          <a
+                            href={normaliseFederationUrl(federacion.sitioWeb)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {federacion.sitioWeb}
+                          </a>
+                        </li>
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </div>

@@ -16,7 +16,8 @@ const entrenamientoSchema = new mongoose.Schema(
   {
     fecha: { type: Date, required: true },
     asistencias: [asistenciaSchema],
-    tecnico: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+    tecnico: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    club: { type: mongoose.Schema.Types.ObjectId, ref: 'Club', required: true }
   },
   { timestamps: true }
 );

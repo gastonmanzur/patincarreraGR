@@ -1,17 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function ListaPatinadores() {
   const [patinadores, setPatinadores] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const rol = localStorage.getItem('rol');
+  const rol = sessionStorage.getItem('rol');
 
   useEffect(() => {
     const obtenerPatinadores = async () => {
       try {
         const res = await api.get('/patinadores');
-        setPatinadores(res.data);
+        const patinadoresData = Array.isArray(res.data)
+          ? res.data.map((p) => ({
+              ...p,
+              foto: getImageUrl(p.foto),
+              fotoRostro: getImageUrl(p.fotoRostro)
+            }))
+          : [];
+        setPatinadores(patinadoresData);
       } catch (err) {
         console.error(err);
       }
@@ -23,7 +31,7 @@ export default function ListaPatinadores() {
     if (!window.confirm('¿Eliminar patinador?')) return;
     try {
       await api.delete(`/patinadores/${id}`);
-      setPatinadores(patinadores.filter((p) => p._id !== id));
+      setPatinadores((prev) => prev.filter((p) => p._id !== id));
     } catch (err) {
       console.error(err);
     }
@@ -86,7 +94,7 @@ export default function ListaPatinadores() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-4">Patinadores</h1>
+      <h1 className="mb-4 text-center">Patinadores</h1>
       <div className="row">
         {patinadores.map((p) => (
           <div className="col-md-4 mb-4" key={p._id}>
@@ -99,7 +107,7 @@ export default function ListaPatinadores() {
                 />
               )}
               <div className="card-body d-flex flex-column">
-                <h5 className="card-title">
+                <h5 className="card-title text-center">
                   {p.primerNombre} {p.apellido}
                 </h5>
                 <p className="card-text">Edad: {p.edad}</p>

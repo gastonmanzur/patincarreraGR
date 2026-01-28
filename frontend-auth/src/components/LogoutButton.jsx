@@ -1,11 +1,16 @@
 import { useNavigate } from 'react-router-dom';
+import { clearStoredClubId } from '../utils/clubContext';
 
 export default function LogoutButton() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('rol');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('rol');
+    sessionStorage.removeItem('foto');
+    clearStoredClubId();
+    sessionStorage.removeItem('clubLogo');
+    sessionStorage.removeItem('clubNombre');
     navigate('/');
   };
 

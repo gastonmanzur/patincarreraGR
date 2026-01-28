@@ -12,6 +12,10 @@ export default defineConfig({
       '/uploads': {
         target: 'http://localhost:5000',
         changeOrigin: true
+      },
+      '/api/uploads': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
       }
     }
   }

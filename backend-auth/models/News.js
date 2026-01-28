@@ -6,6 +6,7 @@ const newsSchema = new mongoose.Schema(
     contenido: { type: String, required: true },
     imagen: { type: String },
     autor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    club: { type: mongoose.Schema.Types.ObjectId, ref: 'Club', required: true },
     fecha: { type: Date, default: Date.now }
   },
   { timestamps: true }

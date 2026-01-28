@@ -46,7 +46,7 @@ export default function ListaBuenaFe() {
 
   return (
     <div className="container mt-3">
-      <h2>Lista de Buena Fe</h2>
+      <h2 className="text-center">Lista de Buena Fe</h2>
       <button className="btn btn-success mb-3" onClick={exportar}>
         Exportar a Excel
       </button>

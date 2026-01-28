@@ -65,7 +65,7 @@ export default function EditarPatinador() {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-4">Editar Patinador</h1>
+      <h1 className="mb-4 text-center">Editar Patinador</h1>
       <form onSubmit={handleSubmit}>
         <div className="row g-3">
           <div className="col-md-6">

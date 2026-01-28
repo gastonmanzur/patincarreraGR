@@ -9,11 +9,11 @@ passport.use(new GoogleStrategy({
   callbackURL:
     process.env.GOOGLE_REDIRECT_URI ||
 
-    'https://patincarrera.net/api/auth/google/callback'
+    'http://patincarrera.net/api/auth/google/callback'
 
 
     (process.env.NODE_ENV === 'production'
-      ? 'https://patincarrera.net/api/auth/google/callback'
+      ? 'http://patincarrera.net/api/auth/google/callback'
       : 'http://localhost:5000/api/auth/google/callback')
   
 

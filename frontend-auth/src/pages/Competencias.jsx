@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import getImageUrl from '../utils/getImageUrl';
 
 export default function Competencias() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const rol = localStorage.getItem('rol');
+  const rol = sessionStorage.getItem('rol');
   const [competencias, setCompetencias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,7 +17,13 @@ export default function Competencias() {
     const cargar = async () => {
       try {
         const res = await api.get(`/tournaments/${id}/competitions`);
-        setCompetencias(res.data);
+        const datos = Array.isArray(res.data)
+          ? res.data.map((comp) => ({
+              ...comp,
+              imagen: getImageUrl(comp.imagen)
+            }))
+          : [];
+        setCompetencias(datos);
       } catch (err) {
         console.error(err);
         setError('Error al cargar competencias');
@@ -45,7 +52,13 @@ export default function Competencias() {
       setFecha('');
       e.target.imagen.value = '';
       const res = await api.get(`/tournaments/${id}/competitions`);
-      setCompetencias(res.data);
+      const datos = Array.isArray(res.data)
+        ? res.data.map((comp) => ({
+            ...comp,
+            imagen: getImageUrl(comp.imagen)
+          }))
+        : [];
+      setCompetencias(datos);
     } catch (err) {
       console.error(err);
       alert('Error al crear competencia');
@@ -63,7 +76,13 @@ export default function Competencias() {
         fecha: nuevaFecha
       });
       const res = await api.get(`/tournaments/${id}/competitions`);
-      setCompetencias(res.data);
+      const datos = Array.isArray(res.data)
+        ? res.data.map((item) => ({
+            ...item,
+            imagen: getImageUrl(item.imagen)
+          }))
+        : [];
+      setCompetencias(datos);
     } catch (err) {
       console.error(err);
       alert('Error al actualizar competencia');
@@ -86,7 +105,7 @@ export default function Competencias() {
 
   return (
     <div className="container mt-3">
-      <h2>Competencias</h2>
+      <h2 className="text-center">Competencias</h2>
       {rol === 'Delegado' && (
         <form onSubmit={crearCompetencia} className="row g-2 mb-3" encType="multipart/form-data">
           <div className="col-md-4">
@@ -121,18 +140,18 @@ export default function Competencias() {
       {competencias.length === 0 ? (
         <p>No hay competencias registradas.</p>
       ) : (
-        <ul className="list-group">
+        <ul className="list-group competencias-list">
           {competencias.map((c) => (
-            <li key={c._id} className="list-group-item d-flex justify-content-between align-items-center">
-              <div className="d-flex align-items-center gap-3">
+            <li key={c._id} className="list-group-item competencia-item">
+              <div className="competencia-info">
                 {c.imagen && (
                   <img src={c.imagen} alt="imagen competencia" className="competencia-img" />
                 )}
-                <div>
+                <div className="competencia-info-text">
                   <strong>{c.nombre}</strong> - {new Date(c.fecha).toLocaleDateString()}
                 </div>
               </div>
-              <div className="d-flex gap-2">
+              <div className="competencia-actions">
                 {rol === 'Delegado' && (
                   <>
                     <button

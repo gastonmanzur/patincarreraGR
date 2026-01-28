@@ -9,7 +9,7 @@ export default function Torneos() {
   const [nombre, setNombre] = useState('');
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
-  const rol = localStorage.getItem('rol');
+  const rol = sessionStorage.getItem('rol');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function Torneos() {
 
   return (
     <div className="container mt-3">
-      <h2>Torneos</h2>
+      <h2 className="text-center">Torneos</h2>
       {rol === 'Delegado' && (
         <form onSubmit={crearTorneo} className="row g-2 mb-3">
           <div className="col-md-4">
@@ -130,16 +130,16 @@ export default function Torneos() {
           {torneos.map((t) => (
             <li
               key={t._id}
-              className="list-group-item d-flex justify-content-between align-items-center"
+              className="list-group-item d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3 justify-content-between"
             >
-              <div>
+              <div className="w-100">
                 <strong>{t.nombre}</strong>
                 <div>
                   {new Date(t.fechaInicio).toLocaleDateString()} -
                   {new Date(t.fechaFin).toLocaleDateString()}
                 </div>
               </div>
-              <div className="d-flex gap-2">
+              <div className="d-flex flex-wrap gap-2 w-100 justify-content-start justify-content-md-end">
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={() => navigate(`/torneos/${t._id}`)}
