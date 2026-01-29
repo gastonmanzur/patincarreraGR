@@ -16,6 +16,17 @@ const appConfigSchema = new mongoose.Schema(
     categoriasPorEdad: {
       type: [String],
       default: []
+
+    },
+    categoriasPorEdadEdades: {
+      type: [
+        {
+          categoria: { type: String, required: true },
+          edades: { type: [Number], default: [] }
+        }
+      ],
+      default: []
+
     }
   },
   {
