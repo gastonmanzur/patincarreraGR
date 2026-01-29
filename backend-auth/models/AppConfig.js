@@ -12,6 +12,10 @@ const appConfigSchema = new mongoose.Schema(
     defaultBrandLogo: {
       type: String,
       default: ''
+    },
+    categoriasPorEdad: {
+      type: [String],
+      default: []
     }
   },
   {
