@@ -56,9 +56,17 @@ const buildApiBaseUrlCandidates = () => {
         const { protocol, hostname } = window.location;
         const hasWwwPrefix = hostname.startsWith('www.');
         const alternateHost = hasWwwPrefix ? hostname.replace(/^www\./i, '') : `www.${hostname}`;
+        const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(hostname);
 
-        if (resolvedBackendPort) {
-          candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${resolvedBackendPort}`));
+        const backendCandidate =
+          resolvedBackendPort && ensureApiSuffix(`${protocol}//${hostname}:${resolvedBackendPort}`);
+
+        if (backendCandidate) {
+          if (isLocalHost) {
+            candidates.unshift(backendCandidate);
+          } else {
+            candidates.push(backendCandidate);
+          }
         }
 
         if (allowWwwFallback && alternateHost && alternateHost !== hostname) {
