@@ -16,6 +16,7 @@ const appConfigSchema = new mongoose.Schema(
     categoriasPorEdad: {
       type: [String],
       default: []
+
     },
     categoriasPorEdadEdades: {
       type: [
@@ -25,6 +26,7 @@ const appConfigSchema = new mongoose.Schema(
         }
       ],
       default: []
+
     }
   },
   {
