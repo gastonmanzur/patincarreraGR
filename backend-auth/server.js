@@ -178,10 +178,6 @@ const parseBoolean = (value) => {
   return false;
 };
 
-const normaliseAppConfigResponse = (config) => ({
-  defaultBrandLogo: typeof config?.defaultBrandLogo === 'string' ? config.defaultBrandLogo : ''
-});
-
 const isMongoReady = () => mongoose.connection.readyState === 1;
 
 // --------- Mongo URI ---------
@@ -418,6 +414,11 @@ const ORDEN_CATEGORIAS = [
 ];
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
+const normaliseAppConfigResponse = (config) => ({
+  defaultBrandLogo: typeof config?.defaultBrandLogo === 'string' ? config.defaultBrandLogo : '',
+  categoriasPorEdad: ORDEN_CATEGORIAS
+});
+
 const posCategoria = (cat) => {
   const idx = ORDEN_CATEGORIAS.indexOf(cat);
   return idx === -1 ? ORDEN_CATEGORIAS.length : idx;
@@ -429,6 +430,50 @@ const ordenarResultados = (lista) =>
     const diff = posCategoria(a.categoria) - posCategoria(b.categoria);
     return diff !== 0 ? diff : (b.puntos || 0) - (a.puntos || 0);
   });
+
+const sanitizeEdadValue = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value);
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value.trim(), 10);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return null;
+};
+
+const sanitizeEdades = (raw) => {
+  if (raw === null || raw === undefined) return [];
+  const values = Array.isArray(raw)
+    ? raw
+    : typeof raw === 'string'
+      ? raw.split(/[,;]+/)
+      : [];
+  const unique = new Set();
+  values.forEach((item) => {
+    const parsed = sanitizeEdadValue(item);
+    if (parsed && parsed > 0 && parsed <= 120) {
+      unique.add(parsed);
+    }
+  });
+  return Array.from(unique).sort((a, b) => a - b);
+};
+
+const buildCategoriasPorEdadEdades = (config) => {
+  const stored = Array.isArray(config?.categoriasPorEdadEdades)
+    ? config.categoriasPorEdadEdades
+    : [];
+  const byCategoria = new Map();
+  stored.forEach((item) => {
+    if (!item?.categoria) return;
+    const categoria = String(item.categoria).trim();
+    if (!ORDEN_CATEGORIAS.includes(categoria)) return;
+    byCategoria.set(categoria, sanitizeEdades(item.edades));
+  });
+
+  return ORDEN_CATEGORIAS.map((categoria) => ({
+    categoria,
+    edades: byCategoria.get(categoria) || []
+  }));
+};
 
 const isValidObjectId = (value) => {
   if (!value) return false;
@@ -2560,6 +2605,46 @@ app.delete('/api/admin/clubs/:id', protegerRuta, permitirRol('Admin'), async (re
       return res.status(404).json({ mensaje: 'Club no encontrado' });
     }
     res.status(500).json({ mensaje: 'Error al eliminar el club' });
+  }
+});
+
+app.get('/api/admin/categories-by-age', protegerRuta, permitirRol('Admin'), async (_req, res) => {
+  try {
+    const config = await AppConfig.getSingleton();
+    const categorias = buildCategoriasPorEdadEdades(config);
+    res.json({ categorias });
+  } catch (err) {
+    console.error('Error al obtener las categorías por edad', err);
+    res.status(500).json({ mensaje: 'Error al obtener las categorías por edad' });
+  }
+});
+
+app.put('/api/admin/categories-by-age', protegerRuta, permitirRol('Admin'), async (req, res) => {
+  try {
+    const raw = req.body?.categorias;
+    const items = Array.isArray(raw) ? raw : [];
+    const byCategoria = new Map();
+
+    items.forEach((item) => {
+      if (!item?.categoria) return;
+      const categoria = String(item.categoria).trim();
+      if (!ORDEN_CATEGORIAS.includes(categoria)) return;
+      byCategoria.set(categoria, sanitizeEdades(item.edades));
+    });
+
+    const categoriasPorEdadEdades = ORDEN_CATEGORIAS.map((categoria) => ({
+      categoria,
+      edades: byCategoria.get(categoria) || []
+    }));
+
+    const config = await AppConfig.updateSingleton({ categoriasPorEdadEdades });
+    res.json({
+      mensaje: 'Categorías por edad actualizadas correctamente',
+      categorias: buildCategoriasPorEdadEdades(config)
+    });
+  } catch (err) {
+    console.error('Error al actualizar las categorías por edad', err);
+    res.status(500).json({ mensaje: 'Error al actualizar las categorías por edad' });
   }
 });
 

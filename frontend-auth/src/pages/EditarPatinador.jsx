@@ -8,6 +8,7 @@ export default function EditarPatinador() {
   const [patinador, setPatinador] = useState(null);
   const [fotoRostro, setFotoRostro] = useState(null);
   const [foto, setFoto] = useState(null);
+  const [categoriasPorEdad, setCategoriasPorEdad] = useState([]);
 
   useEffect(() => {
     const obtenerPatinador = async () => {
@@ -20,6 +21,20 @@ export default function EditarPatinador() {
     };
     obtenerPatinador();
   }, [id]);
+
+  useEffect(() => {
+    const cargarCategorias = async () => {
+      try {
+        const res = await api.get('/public/app-config');
+        const categorias = Array.isArray(res.data?.categoriasPorEdad) ? res.data.categoriasPorEdad : [];
+        setCategoriasPorEdad(categorias);
+      } catch (err) {
+        console.error('Error al cargar las categorías por edad', err);
+      }
+    };
+
+    void cargarCategorias();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,6 +77,10 @@ export default function EditarPatinador() {
   if (!patinador) {
     return <div className="container mt-4">Cargando...</div>;
   }
+
+  const categoriasOpciones = categoriasPorEdad.includes(patinador.categoria)
+    ? categoriasPorEdad
+    : [patinador.categoria, ...categoriasPorEdad].filter(Boolean);
 
   return (
     <div className="container mt-4">
@@ -229,13 +248,29 @@ export default function EditarPatinador() {
           </div>
           <div className="col-md-6">
             <label className="form-label">Categoría</label>
-            <input
-              type="text"
-              className="form-control"
-              name="categoria"
-              defaultValue={patinador.categoria}
-              required
-            />
+            {categoriasOpciones.length > 0 ? (
+              <select
+                className="form-select"
+                name="categoria"
+                defaultValue={patinador.categoria}
+                required
+              >
+                <option value="">Seleccione</option>
+                {categoriasOpciones.map((categoria) => (
+                  <option key={categoria} value={categoria}>
+                    {categoria}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                className="form-control"
+                name="categoria"
+                defaultValue={patinador.categoria}
+                required
+              />
+            )}
           </div>
           <div className="col-md-6">
             <label className="form-label">Foto Rostro</label>

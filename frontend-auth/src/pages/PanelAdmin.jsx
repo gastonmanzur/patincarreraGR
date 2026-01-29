@@ -44,6 +44,9 @@ export default function PanelAdmin() {
   const [defaultAppLogoFile, setDefaultAppLogoFile] = useState(null);
   const [defaultAppLogoLoading, setDefaultAppLogoLoading] = useState(false);
   const defaultAppLogoInputRef = useRef(null);
+  const [categoriasPorEdad, setCategoriasPorEdad] = useState([]);
+  const [categoriasLoading, setCategoriasLoading] = useState(false);
+  const [categoriasDirty, setCategoriasDirty] = useState(false);
 
   const showFeedback = useCallback((type, message) => {
     setFeedback({ type, message });
@@ -112,6 +115,26 @@ export default function PanelAdmin() {
     }
   }, [showFeedback]);
 
+  const loadCategoriasPorEdad = useCallback(async () => {
+    try {
+      const res = await api.get('/admin/categories-by-age');
+      const categorias = Array.isArray(res.data?.categorias) ? res.data.categorias : [];
+      setCategoriasPorEdad(
+        categorias.map((item) => ({
+          categoria: item.categoria,
+          edadesInput: Array.isArray(item.edades) ? item.edades.join(', ') : ''
+        }))
+      );
+      setCategoriasDirty(false);
+    } catch (err) {
+      console.error('Error al obtener las categorías por edad', err);
+      showFeedback(
+        'danger',
+        err.response?.data?.mensaje || 'No se pudieron cargar las categorías por edad'
+      );
+    }
+  }, [showFeedback]);
+
   useEffect(
     () => () => {
       if (clubLogoPreview && clubLogoPreview.startsWith('blob:')) {
@@ -134,7 +157,8 @@ export default function PanelAdmin() {
     void loadFederaciones();
     void loadClubs();
     void loadAppConfig();
-  }, [loadFederaciones, loadClubs, loadAppConfig]);
+    void loadCategoriasPorEdad();
+  }, [loadFederaciones, loadClubs, loadAppConfig, loadCategoriasPorEdad]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -290,6 +314,50 @@ export default function PanelAdmin() {
       showFeedback('danger', apiMessage || 'No se pudo restablecer el logo predeterminado de la app');
     } finally {
       setDefaultAppLogoLoading(false);
+    }
+  };
+
+  const handleCategoriaChange = (index, value) => {
+    setCategoriasPorEdad((prev) =>
+      prev.map((item, idx) => (idx === index ? { ...item, edadesInput: value } : item))
+    );
+    setCategoriasDirty(true);
+  };
+
+  const handleCategoriasSave = async () => {
+    const categoriasPayload = categoriasPorEdad.map((item) => {
+      const edades = (item.edadesInput || '')
+        .split(/[,;]+/)
+        .map((value) => Number.parseInt(value.trim(), 10))
+        .filter((value) => Number.isFinite(value) && value > 0 && value <= 120);
+      return {
+        categoria: item.categoria,
+        edades
+      };
+    });
+
+    setCategoriasLoading(true);
+    showFeedback('', '');
+
+    try {
+      const res = await api.put('/admin/categories-by-age', { categorias: categoriasPayload });
+      const updated = Array.isArray(res.data?.categorias) ? res.data.categorias : categoriasPayload;
+      setCategoriasPorEdad(
+        updated.map((item) => ({
+          categoria: item.categoria,
+          edadesInput: Array.isArray(item.edades) ? item.edades.join(', ') : ''
+        }))
+      );
+      setCategoriasDirty(false);
+      showFeedback('success', res.data?.mensaje || 'Categorías por edad actualizadas correctamente');
+    } catch (err) {
+      console.error('Error al guardar las categorías por edad', err);
+      showFeedback(
+        'danger',
+        err.response?.data?.mensaje || 'No se pudieron actualizar las categorías por edad'
+      );
+    } finally {
+      setCategoriasLoading(false);
     }
   };
 
@@ -552,6 +620,56 @@ export default function PanelAdmin() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-4">
+        <div className="card shadow-sm">
+          <div className="card-body">
+            <h2 className="h4 mb-3">Categorías por edad</h2>
+            <p className="text-muted small mb-4">
+              Actualizá las edades que componen cada categoría sin cambiar el orden oficial.
+            </p>
+            <div className="table-responsive">
+              <table className="table table-striped align-middle">
+                <thead>
+                  <tr>
+                    <th style={{ width: '80px' }}>Orden</th>
+                    <th>Categoría</th>
+                    <th>Edades</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {categoriasPorEdad.map((item, index) => (
+                    <tr key={item.categoria}>
+                      <td className="fw-semibold">{index + 1}</td>
+                      <td className="fw-semibold">{item.categoria}</td>
+                      <td>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={item.edadesInput}
+                          onChange={(event) => handleCategoriaChange(index, event.target.value)}
+                          placeholder="Ej: 13, 14"
+                          disabled={categoriasLoading}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="d-flex flex-column flex-sm-row gap-2 mt-3">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleCategoriasSave}
+                disabled={categoriasLoading || !categoriasDirty}
+              >
+                {categoriasLoading ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -853,4 +971,3 @@ export default function PanelAdmin() {
     </div>
   );
 }
-
