@@ -1,10 +1,25 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../api';
 
 export default function CargarPatinador() {
   const [mensaje, setMensaje] = useState('');
   const [fotoRostro, setFotoRostro] = useState(null);
   const [foto, setFoto] = useState(null);
+  const [categoriasPorEdad, setCategoriasPorEdad] = useState([]);
+
+  useEffect(() => {
+    const cargarCategorias = async () => {
+      try {
+        const res = await api.get('/public/app-config');
+        const categorias = Array.isArray(res.data?.categoriasPorEdad) ? res.data.categoriasPorEdad : [];
+        setCategoriasPorEdad(categorias);
+      } catch (err) {
+        console.error('Error al cargar las categorías por edad', err);
+      }
+    };
+
+    void cargarCategorias();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -126,7 +141,18 @@ export default function CargarPatinador() {
           </div>
           <div className="col-md-6">
             <label className="form-label">Categoría</label>
-            <input type="text" className="form-control" name="categoria" required />
+            {categoriasPorEdad.length > 0 ? (
+              <select className="form-select" name="categoria" required>
+                <option value="">Seleccione</option>
+                {categoriasPorEdad.map((categoria) => (
+                  <option key={categoria} value={categoria}>
+                    {categoria}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input type="text" className="form-control" name="categoria" required />
+            )}
           </div>
           <div className="col-md-6">
             <label className="form-label">Foto Rostro</label>

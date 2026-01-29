@@ -179,7 +179,8 @@ const parseBoolean = (value) => {
 };
 
 const normaliseAppConfigResponse = (config) => ({
-  defaultBrandLogo: typeof config?.defaultBrandLogo === 'string' ? config.defaultBrandLogo : ''
+  defaultBrandLogo: typeof config?.defaultBrandLogo === 'string' ? config.defaultBrandLogo : '',
+  categoriasPorEdad: resolveCategoriasPorEdad(config?.categoriasPorEdad)
 });
 
 const isMongoReady = () => mongoose.connection.readyState === 1;
@@ -231,6 +232,8 @@ mongoose
     console.log('MongoDB conectado');
     try {
       await Promise.all([Patinador.syncIndexes(), PatinadorExterno.syncIndexes()]);
+      const appConfig = await AppConfig.getSingleton();
+      updateCategoriasPorEdadCache(appConfig?.categoriasPorEdad);
     } catch (syncError) {
       console.error('Error al sincronizar índices de patinadores:', syncError.message);
     }
@@ -418,9 +421,38 @@ const ORDEN_CATEGORIAS = [
 ];
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
+let categoriasPorEdad = [...ORDEN_CATEGORIAS];
+
+const sanitizeCategoriasPorEdad = (raw) => {
+  if (!Array.isArray(raw)) return [];
+  const cleaned = raw
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter(Boolean);
+  const unique = [];
+  const seen = new Set();
+  cleaned.forEach((item) => {
+    const key = item.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(item);
+    }
+  });
+  return unique;
+};
+
+const resolveCategoriasPorEdad = (raw) => {
+  const sanitized = sanitizeCategoriasPorEdad(raw);
+  return sanitized.length ? sanitized : ORDEN_CATEGORIAS;
+};
+
+const updateCategoriasPorEdadCache = (raw) => {
+  categoriasPorEdad = resolveCategoriasPorEdad(raw);
+  return categoriasPorEdad;
+};
+
 const posCategoria = (cat) => {
-  const idx = ORDEN_CATEGORIAS.indexOf(cat);
-  return idx === -1 ? ORDEN_CATEGORIAS.length : idx;
+  const idx = categoriasPorEdad.indexOf(cat);
+  return idx === -1 ? categoriasPorEdad.length : idx;
 };
 const ordenarPorCategoria = (lista) =>
   lista.sort((a, b) => posCategoria(a.categoria) - posCategoria(b.categoria));
@@ -1978,6 +2010,7 @@ app.get('/api/public/app-config', async (_req, res) => {
       return res.json(normaliseAppConfigResponse(null));
     }
     const config = await AppConfig.getSingleton();
+    updateCategoriasPorEdadCache(config?.categoriasPorEdad);
     res.json(normaliseAppConfigResponse(config));
   } catch (err) {
     console.error('Error al obtener la configuración pública de la app', err);
@@ -2560,6 +2593,38 @@ app.delete('/api/admin/clubs/:id', protegerRuta, permitirRol('Admin'), async (re
       return res.status(404).json({ mensaje: 'Club no encontrado' });
     }
     res.status(500).json({ mensaje: 'Error al eliminar el club' });
+  }
+});
+
+app.get('/api/admin/categories-by-age', protegerRuta, permitirRol('Admin'), async (_req, res) => {
+  try {
+    const config = await AppConfig.getSingleton();
+    const categorias = resolveCategoriasPorEdad(config?.categoriasPorEdad);
+    updateCategoriasPorEdadCache(config?.categoriasPorEdad);
+    res.json({ categorias });
+  } catch (err) {
+    console.error('Error al obtener las categorías por edad', err);
+    res.status(500).json({ mensaje: 'Error al obtener las categorías por edad' });
+  }
+});
+
+app.put('/api/admin/categories-by-age', protegerRuta, permitirRol('Admin'), async (req, res) => {
+  try {
+    const raw = req.body?.categorias ?? req.body?.categoriasPorEdad;
+    const categorias = sanitizeCategoriasPorEdad(raw);
+    if (categorias.length === 0) {
+      return res.status(400).json({ mensaje: 'Ingresá al menos una categoría válida' });
+    }
+
+    const config = await AppConfig.updateSingleton({ categoriasPorEdad: categorias });
+    updateCategoriasPorEdadCache(config?.categoriasPorEdad);
+    res.json({
+      mensaje: 'Categorías por edad actualizadas correctamente',
+      categorias: resolveCategoriasPorEdad(config?.categoriasPorEdad)
+    });
+  } catch (err) {
+    console.error('Error al actualizar las categorías por edad', err);
+    res.status(500).json({ mensaje: 'Error al actualizar las categorías por edad' });
   }
 });
 
