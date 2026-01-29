@@ -106,8 +106,6 @@ export default function PanelAdmin() {
       const res = await api.get('/public/app-config');
       const resolvedLogo = getImageUrl(res.data?.defaultBrandLogo);
       setDefaultAppLogo(resolvedLogo || '');
-      const categorias = Array.isArray(res.data?.categoriasPorEdad) ? res.data.categoriasPorEdad : [];
-      setCategoriasPorEdad(categorias);
       setCategoriasDirty(false);
     } catch (err) {
       console.error('Error al obtener la configuración de la app', err);
@@ -129,8 +127,6 @@ export default function PanelAdmin() {
           edadesInput: Array.isArray(item.edades) ? item.edades.join(', ') : ''
         }))
       );
-
-      setCategoriasPorEdad(categorias);
 
       setCategoriasDirty(false);
     } catch (err) {
@@ -325,7 +321,6 @@ export default function PanelAdmin() {
   };
 
   const handleCategoriaChange = (index, value) => {
-
     setCategoriasPorEdad((prev) =>
       prev.map((item, idx) => (idx === index ? { ...item, edadesInput: value } : item))
     );
@@ -344,47 +339,10 @@ export default function PanelAdmin() {
       };
     });
 
-    setCategoriasPorEdad((prev) => prev.map((item, idx) => (idx === index ? value : item)));
-    setCategoriasDirty(true);
-  };
-
-  const handleCategoriaMove = (index, direction) => {
-    setCategoriasPorEdad((prev) => {
-      const next = [...prev];
-      const target = index + direction;
-      if (target < 0 || target >= next.length) return prev;
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
-    setCategoriasDirty(true);
-  };
-
-  const handleCategoriaRemove = (index) => {
-    setCategoriasPorEdad((prev) => prev.filter((_, idx) => idx !== index));
-    setCategoriasDirty(true);
-  };
-
-  const handleCategoriaAdd = () => {
-    setCategoriasPorEdad((prev) => [...prev, '']);
-    setCategoriasDirty(true);
-  };
-
-  const handleCategoriasSave = async () => {
-    const cleaned = categoriasPorEdad
-      .map((item) => (typeof item === 'string' ? item.trim() : ''))
-      .filter(Boolean);
-
-    if (cleaned.length === 0) {
-      showFeedback('danger', 'Ingresá al menos una categoría válida');
-      return;
-    }
-
-
     setCategoriasLoading(true);
     showFeedback('', '');
 
     try {
-
       const res = await api.put('/admin/categories-by-age', { categorias: categoriasPayload });
       const updated = Array.isArray(res.data?.categorias) ? res.data.categorias : categoriasPayload;
       setCategoriasPorEdad(
@@ -393,10 +351,6 @@ export default function PanelAdmin() {
           edadesInput: Array.isArray(item.edades) ? item.edades.join(', ') : ''
         }))
       );
-
-      const res = await api.put('/admin/categories-by-age', { categorias: cleaned });
-      const updated = Array.isArray(res.data?.categorias) ? res.data.categorias : cleaned;
-      setCategoriasPorEdad(updated);
 
       setCategoriasDirty(false);
       showFeedback('success', res.data?.mensaje || 'Categorías por edad actualizadas correctamente');
@@ -679,11 +633,7 @@ export default function PanelAdmin() {
           <div className="card-body">
             <h2 className="h4 mb-3">Categorías por edad</h2>
             <p className="text-muted small mb-4">
-
               Actualizá las edades que componen cada categoría sin cambiar el orden oficial.
-
-              Actualizá el orden de las categorías para que las cargas y listados respeten las edades vigentes.
-
             </p>
             <div className="table-responsive">
               <table className="table table-striped align-middle">
@@ -691,7 +641,6 @@ export default function PanelAdmin() {
                   <tr>
                     <th style={{ width: '80px' }}>Orden</th>
                     <th>Categoría</th>
-
                     <th>Edades</th>
                   </tr>
                 </thead>
@@ -700,87 +649,24 @@ export default function PanelAdmin() {
                     <tr key={item.categoria}>
                       <td className="fw-semibold">{index + 1}</td>
                       <td className="fw-semibold">{item.categoria}</td>
-
-                    <th className="text-center" style={{ width: '180px' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {categoriasPorEdad.map((categoria, index) => (
-                    <tr key={`${categoria}-${index}`}>
-                      <td className="fw-semibold">{index + 1}</td>
-
                       <td>
                         <input
                           type="text"
                           className="form-control"
-
                           value={item.edadesInput}
                           onChange={(event) => handleCategoriaChange(index, event.target.value)}
                           placeholder="Ej: 13, 14"
                           disabled={categoriasLoading}
                         />
                       </td>
-
-                          value={categoria}
-                          onChange={(event) => handleCategoriaChange(index, event.target.value)}
-                          placeholder="Ej: M7DE"
-                          disabled={categoriasLoading}
-                        />
-                      </td>
-                      <td className="text-center">
-                        <div className="btn-group btn-group-sm" role="group">
-                          <button
-                            type="button"
-                            className="btn btn-outline-secondary"
-                            onClick={() => handleCategoriaMove(index, -1)}
-                            disabled={categoriasLoading || index === 0}
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-outline-secondary"
-                            onClick={() => handleCategoriaMove(index, 1)}
-                            disabled={categoriasLoading || index === categoriasPorEdad.length - 1}
-                          >
-                            ↓
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-outline-danger"
-                            onClick={() => handleCategoriaRemove(index)}
-                            disabled={categoriasLoading}
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </td>
-
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-
             <div className="d-flex flex-column flex-sm-row gap-2 mt-3">
               <button
                 type="button"
-
-            {categoriasPorEdad.length === 0 && (
-              <p className="text-muted">Todavía no hay categorías configuradas.</p>
-            )}
-            <div className="d-flex flex-column flex-sm-row gap-2 mt-3">
-              <button
-                type="button"
-                className="btn btn-outline-primary"
-                onClick={handleCategoriaAdd}
-                disabled={categoriasLoading}
-              >
-                Agregar categoría
-              </button>
-              <button
-                type="button"
-
                 className="btn btn-primary"
                 onClick={handleCategoriasSave}
                 disabled={categoriasLoading || !categoriasDirty}
