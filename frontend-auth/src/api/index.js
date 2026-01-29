@@ -33,6 +33,7 @@ const buildApiBaseUrlCandidates = () => {
   const rawEnvUrl =
     import.meta.env.VITE_API_BASE?.trim() || import.meta.env.VITE_API_URL?.trim();
   const envIsRelative = rawEnvUrl ? !isAbsoluteUrl(rawEnvUrl) : false;
+  const allowWwwFallback = import.meta.env.VITE_ALLOW_WWW_FALLBACK === 'true';
 
   const isBrowser = typeof window !== 'undefined';
   const candidates = [];
@@ -53,7 +54,12 @@ const buildApiBaseUrlCandidates = () => {
         const hasWwwPrefix = hostname.startsWith('www.');
         const alternateHost = hasWwwPrefix ? hostname.replace(/^www\./i, '') : `www.${hostname}`;
 
-        if (alternateHost && alternateHost !== hostname) {
+        const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim() || '5000';
+        if (backendPort) {
+          candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${backendPort}`));
+        }
+
+        if (allowWwwFallback && alternateHost && alternateHost !== hostname) {
           const alternateConfigured = resolveConfiguredBase(
             rawEnvUrl,
             `${protocol}//${alternateHost}`
@@ -61,13 +67,17 @@ const buildApiBaseUrlCandidates = () => {
           if (alternateConfigured) {
             candidates.push(ensureApiSuffix(alternateConfigured));
           }
+
+          if (backendPort) {
+            candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}:${backendPort}`));
+          }
         }
       }
     }
   }
 
   if (rawEnvUrl) {
-    if (isBrowser && !envIsRelative) {
+    if (isBrowser && !envIsRelative && allowWwwFallback) {
       const { protocol, hostname } = window.location;
       const hasWwwPrefix = hostname.startsWith('www.');
       const alternateHost = hasWwwPrefix ? hostname.replace(/^www\./i, '') : `www.${hostname}`;
@@ -108,10 +118,12 @@ const buildApiBaseUrlCandidates = () => {
   // upstream 502) try the alternate host with/without the `www.` prefix before
   // giving up. This keeps the app usable during brief outages handled by the
   // CDN or while the apex domain is being updated.
-  const hasWwwPrefix = hostname.startsWith('www.');
-  const alternateHost = hasWwwPrefix ? hostname.replace(/^www\./i, '') : `www.${hostname}`;
-  if (alternateHost && alternateHost !== hostname) {
-    candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}`));
+  if (allowWwwFallback) {
+    const hasWwwPrefix = hostname.startsWith('www.');
+    const alternateHost = hasWwwPrefix ? hostname.replace(/^www\./i, '') : `www.${hostname}`;
+    if (alternateHost && alternateHost !== hostname) {
+      candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}`));
+    }
   }
 
   return unique(candidates);
@@ -187,7 +199,24 @@ const shouldRetryWithFallback = (error) => {
 
   if (!status) return true;
 
-  return [500, 502, 503, 504, 521, 522, 523].includes(status);
+  if ([500, 502, 503, 504, 521, 522, 523].includes(status)) return true;
+
+  if (status === 404 && error.config?.method?.toLowerCase() === 'get') {
+    const requestPath = String(error.config.url || '');
+    const bootstrapEndpoints = [
+      'public/app-config',
+      'public/club-contact',
+      'public/clubs',
+      'federaciones',
+      'clubs',
+      'admin/categories-by-age'
+    ];
+    if (bootstrapEndpoints.some((endpoint) => requestPath.includes(endpoint))) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 api.interceptors.response.use(
