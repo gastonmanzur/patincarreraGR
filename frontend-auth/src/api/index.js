@@ -34,6 +34,7 @@ const buildApiBaseUrlCandidates = () => {
     import.meta.env.VITE_API_BASE?.trim() || import.meta.env.VITE_API_URL?.trim();
   const envIsRelative = rawEnvUrl ? !isAbsoluteUrl(rawEnvUrl) : false;
   const allowWwwFallback = import.meta.env.VITE_ALLOW_WWW_FALLBACK === 'true';
+
   const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim();
   const resolvedBackendPort = backendPort || (envIsRelative ? '5000' : null);
 
@@ -56,8 +57,14 @@ const buildApiBaseUrlCandidates = () => {
         const hasWwwPrefix = hostname.startsWith('www.');
         const alternateHost = hasWwwPrefix ? hostname.replace(/^www\./i, '') : `www.${hostname}`;
 
+
         if (resolvedBackendPort) {
           candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${resolvedBackendPort}`));
+
+        const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim() || '5000';
+        if (backendPort) {
+          candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${backendPort}`));
+
         }
 
         if (allowWwwFallback && alternateHost && alternateHost !== hostname) {
@@ -69,8 +76,21 @@ const buildApiBaseUrlCandidates = () => {
             candidates.push(ensureApiSuffix(alternateConfigured));
           }
 
+
           if (resolvedBackendPort) {
             candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}:${resolvedBackendPort}`));
+
+          if (backendPort) {
+            candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}:${backendPort}`));
+          }
+        }
+
+        const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim() || '5000';
+        if (backendPort) {
+          candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${backendPort}`));
+          if (alternateHost && alternateHost !== hostname) {
+            candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}:${backendPort}`));
+
           }
         }
       }
