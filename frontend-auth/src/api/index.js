@@ -62,6 +62,14 @@ const buildApiBaseUrlCandidates = () => {
             candidates.push(ensureApiSuffix(alternateConfigured));
           }
         }
+
+        const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim() || '5000';
+        if (backendPort) {
+          candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${backendPort}`));
+          if (alternateHost && alternateHost !== hostname) {
+            candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}:${backendPort}`));
+          }
+        }
       }
     }
   }
@@ -187,7 +195,24 @@ const shouldRetryWithFallback = (error) => {
 
   if (!status) return true;
 
-  return [500, 502, 503, 504, 521, 522, 523].includes(status);
+  if ([500, 502, 503, 504, 521, 522, 523].includes(status)) return true;
+
+  if (status === 404 && error.config?.method?.toLowerCase() === 'get') {
+    const requestPath = String(error.config.url || '');
+    const bootstrapEndpoints = [
+      'public/app-config',
+      'public/club-contact',
+      'public/clubs',
+      'federaciones',
+      'clubs',
+      'admin/categories-by-age'
+    ];
+    if (bootstrapEndpoints.some((endpoint) => requestPath.includes(endpoint))) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 api.interceptors.response.use(
