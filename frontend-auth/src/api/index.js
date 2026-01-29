@@ -57,14 +57,8 @@ const buildApiBaseUrlCandidates = () => {
         const hasWwwPrefix = hostname.startsWith('www.');
         const alternateHost = hasWwwPrefix ? hostname.replace(/^www\./i, '') : `www.${hostname}`;
 
-
         if (resolvedBackendPort) {
           candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${resolvedBackendPort}`));
-
-        const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim() || '5000';
-        if (backendPort) {
-          candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${backendPort}`));
-
         }
 
         if (allowWwwFallback && alternateHost && alternateHost !== hostname) {
@@ -75,23 +69,10 @@ const buildApiBaseUrlCandidates = () => {
           if (alternateConfigured) {
             candidates.push(ensureApiSuffix(alternateConfigured));
           }
-
-
-          if (resolvedBackendPort) {
-            candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}:${resolvedBackendPort}`));
-
-          if (backendPort) {
-            candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}:${backendPort}`));
-          }
         }
 
-        const backendPort = import.meta.env.VITE_BACKEND_PORT?.trim() || '5000';
-        if (backendPort) {
-          candidates.push(ensureApiSuffix(`${protocol}//${hostname}:${backendPort}`));
-          if (alternateHost && alternateHost !== hostname) {
-            candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}:${backendPort}`));
-
-          }
+        if (resolvedBackendPort && allowWwwFallback && alternateHost && alternateHost !== hostname) {
+          candidates.push(ensureApiSuffix(`${protocol}//${alternateHost}:${resolvedBackendPort}`));
         }
       }
     }
