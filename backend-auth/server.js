@@ -2649,9 +2649,6 @@ app.get('/api/admin/categories-by-age', protegerRuta, permitirRol('Admin'), asyn
 
     const categorias = buildCategoriasPorEdadEdades(config);
 
-    const categorias = resolveCategoriasPorEdad(config?.categoriasPorEdad);
-    updateCategoriasPorEdadCache(config?.categoriasPorEdad);
-
     res.json({ categorias });
   } catch (err) {
     console.error('Error al obtener las categorías por edad', err);
@@ -2661,40 +2658,43 @@ app.get('/api/admin/categories-by-age', protegerRuta, permitirRol('Admin'), asyn
 
 app.put('/api/admin/categories-by-age', protegerRuta, permitirRol('Admin'), async (req, res) => {
   try {
+    const rawInput = req.body?.categorias ?? req.body?.categoriasPorEdad;
+    const hasCategoriaObjects = Array.isArray(rawInput)
+      && rawInput.some((item) => item && typeof item === 'object' && 'categoria' in item);
 
-    const raw = req.body?.categorias;
-    const items = Array.isArray(raw) ? raw : [];
-    const byCategoria = new Map();
+    if (hasCategoriaObjects) {
+      const items = Array.isArray(rawInput) ? rawInput : [];
+      const byCategoria = new Map();
 
-    items.forEach((item) => {
-      if (!item?.categoria) return;
-      const categoria = String(item.categoria).trim();
-      if (!ORDEN_CATEGORIAS.includes(categoria)) return;
-      byCategoria.set(categoria, sanitizeEdades(item.edades));
-    });
+      items.forEach((item) => {
+        if (!item?.categoria) return;
+        const categoria = String(item.categoria).trim();
+        if (!ORDEN_CATEGORIAS.includes(categoria)) return;
+        byCategoria.set(categoria, sanitizeEdades(item.edades));
+      });
 
-    const categoriasPorEdadEdades = ORDEN_CATEGORIAS.map((categoria) => ({
-      categoria,
-      edades: byCategoria.get(categoria) || []
-    }));
+      const categoriasPorEdadEdades = ORDEN_CATEGORIAS.map((categoria) => ({
+        categoria,
+        edades: byCategoria.get(categoria) || []
+      }));
 
-    const config = await AppConfig.updateSingleton({ categoriasPorEdadEdades });
-    res.json({
-      mensaje: 'Categorías por edad actualizadas correctamente',
-      categorias: buildCategoriasPorEdadEdades(config)
+      const config = await AppConfig.updateSingleton({ categoriasPorEdadEdades });
+      return res.json({
+        mensaje: 'Categorías por edad actualizadas correctamente',
+        categorias: buildCategoriasPorEdadEdades(config)
+      });
+    }
 
-    const raw = req.body?.categorias ?? req.body?.categoriasPorEdad;
-    const categorias = sanitizeCategoriasPorEdad(raw);
+    const categorias = sanitizeCategoriasPorEdad(rawInput);
     if (categorias.length === 0) {
       return res.status(400).json({ mensaje: 'Ingresá al menos una categoría válida' });
     }
 
     const config = await AppConfig.updateSingleton({ categoriasPorEdad: categorias });
     updateCategoriasPorEdadCache(config?.categoriasPorEdad);
-    res.json({
+    return res.json({
       mensaje: 'Categorías por edad actualizadas correctamente',
       categorias: resolveCategoriasPorEdad(config?.categoriasPorEdad)
-
     });
   } catch (err) {
     console.error('Error al actualizar las categorías por edad', err);
