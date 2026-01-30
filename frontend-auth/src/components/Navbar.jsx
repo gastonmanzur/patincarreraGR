@@ -257,6 +257,11 @@ export default function Navbar() {
 
   const handleNavigate = (path) => navigate(path);
 
+  const handleBrandClick = () => {
+    if (!isLoggedIn) return;
+    handleNavigate('/home');
+  };
+
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -350,8 +355,8 @@ export default function Navbar() {
       <div className="container">
         <a
           className="navbar-brand d-flex align-items-center"
-          onClick={() => handleNavigate('/home')}
-          style={{ cursor: 'pointer' }}
+          onClick={handleBrandClick}
+          style={{ cursor: isLoggedIn ? 'pointer' : 'default' }}
         >
           <img
             src={clubLogo || appDefaultLogo || defaultBrandLogo}
