@@ -179,12 +179,6 @@ const parseBoolean = (value) => {
 };
 
 
-const normaliseAppConfigResponse = (config) => ({
-  defaultBrandLogo: typeof config?.defaultBrandLogo === 'string' ? config.defaultBrandLogo : '',
-  categoriasPorEdad: resolveCategoriasPorEdad(config?.categoriasPorEdad)
-});
-
-
 const isMongoReady = () => mongoose.connection.readyState === 1;
 
 // --------- Mongo URI ---------
@@ -424,11 +418,6 @@ const ORDEN_CATEGORIAS = [
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
 
-const normaliseAppConfigResponse = (config) => ({
-  defaultBrandLogo: typeof config?.defaultBrandLogo === 'string' ? config.defaultBrandLogo : '',
-  categoriasPorEdad: ORDEN_CATEGORIAS
-});
-
 let categoriasPorEdad = [...ORDEN_CATEGORIAS];
 
 const sanitizeCategoriasPorEdad = (raw) => {
@@ -452,6 +441,11 @@ const resolveCategoriasPorEdad = (raw) => {
   const sanitized = sanitizeCategoriasPorEdad(raw);
   return sanitized.length ? sanitized : ORDEN_CATEGORIAS;
 };
+
+const normaliseAppConfigResponse = (config) => ({
+  defaultBrandLogo: typeof config?.defaultBrandLogo === 'string' ? config.defaultBrandLogo : '',
+  categoriasPorEdad: resolveCategoriasPorEdad(config?.categoriasPorEdad)
+});
 
 const updateCategoriasPorEdadCache = (raw) => {
   categoriasPorEdad = resolveCategoriasPorEdad(raw);
