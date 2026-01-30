@@ -442,11 +442,6 @@ const resolveCategoriasPorEdad = (raw) => {
   return sanitized.length ? sanitized : ORDEN_CATEGORIAS;
 };
 
-const normaliseAppConfigResponse = (config) => ({
-  defaultBrandLogo: typeof config?.defaultBrandLogo === 'string' ? config.defaultBrandLogo : '',
-  categoriasPorEdad: resolveCategoriasPorEdad(config?.categoriasPorEdad)
-});
-
 const updateCategoriasPorEdadCache = (raw) => {
   categoriasPorEdad = resolveCategoriasPorEdad(raw);
   return categoriasPorEdad;
@@ -507,6 +502,70 @@ const buildCategoriasPorEdadEdades = (config) => {
     categoria,
     edades: byCategoria.get(categoria) || []
   }));
+};
+
+const normaliseAppConfigResponse = (config) => ({
+  defaultBrandLogo: typeof config?.defaultBrandLogo === 'string' ? config.defaultBrandLogo : '',
+  categoriasPorEdad: resolveCategoriasPorEdad(config?.categoriasPorEdad),
+  categoriasPorEdadEdades: config ? buildCategoriasPorEdadEdades(config) : []
+});
+
+const calculateAgeFromDate = (birthDate) => {
+  if (!(birthDate instanceof Date) || Number.isNaN(birthDate.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
+};
+
+const nivelToCodigo = (nivel) => {
+  const mapping = {
+    Escuela: 'E',
+    Transicion: 'T',
+    Intermedia: 'I',
+    Federados: 'F'
+  };
+  return mapping[nivel] || null;
+};
+
+const sexoToCodigo = (sexo) => {
+  if (sexo === 'M') return 'V';
+  if (sexo === 'F') return 'D';
+  return null;
+};
+
+const matchesCategoriaSexo = (categoria, sexoCodigo) => {
+  if (!categoria || !sexoCodigo) return false;
+  const isM7 = categoria.startsWith('M7');
+  const index = isM7 ? 2 : 1;
+  const sexoChar = categoria[index];
+  if (!sexoChar || !['V', 'D'].includes(sexoChar)) return false;
+  return sexoChar === sexoCodigo;
+};
+
+const matchesCategoriaNivel = (categoria, nivelCodigo) => {
+  if (!categoria || !nivelCodigo) return false;
+  const lastChar = categoria[categoria.length - 1];
+  if (!['E', 'T', 'I', 'F'].includes(lastChar)) return false;
+  return lastChar === nivelCodigo;
+};
+
+const inferCategoriaPorEdad = ({ edad, sexo, nivel, config }) => {
+  const edadValue = sanitizeEdadValue(edad);
+  if (!edadValue) return null;
+  const sexoCodigo = sexoToCodigo(sexo);
+  const nivelCodigo = nivelToCodigo(nivel);
+  if (!sexoCodigo || !nivelCodigo) return null;
+  const categoriasConfig = buildCategoriasPorEdadEdades(config);
+  const candidatas = categoriasConfig.filter((item) => item.edades.includes(edadValue));
+  const filtradas = candidatas
+    .map((item) => item.categoria)
+    .filter((categoria) => matchesCategoriaSexo(categoria, sexoCodigo))
+    .filter((categoria) => matchesCategoriaNivel(categoria, nivelCodigo));
+  return filtradas[0] || null;
 };
 
 const isValidObjectId = (value) => {
@@ -1925,16 +1984,49 @@ app.post('/api/patinadores', protegerRuta, upload.fields([{ name: 'fotoRostro', 
     if (!clubId) return;
 
     const {
-      primerNombre, segundoNombre, apellido, edad, fechaNacimiento, dni, cuil, direccion,
-      dniMadre, dniPadre, telefono, sexo, nivel, seguro, numeroCorredor, categoria
+      primerNombre, segundoNombre, apellido, fechaNacimiento, dni, cuil, direccion,
+      dniMadre, dniPadre, telefono, sexo, nivel, seguro, numeroCorredor
     } = req.body;
 
     const fotoRostroFile = req.files?.fotoRostro?.[0];
     const fotoFile = req.files?.foto?.[0];
 
+    const fechaNacimientoDate = new Date(fechaNacimiento);
+    const edadCalculada = calculateAgeFromDate(fechaNacimientoDate);
+    if (edadCalculada === null) {
+      return res.status(400).json({ mensaje: 'Fecha de nacimiento inválida' });
+    }
+
+    const config = await AppConfig.getSingleton();
+    const categoriaCalculada = inferCategoriaPorEdad({
+      edad: edadCalculada,
+      sexo,
+      nivel,
+      config
+    });
+    if (!categoriaCalculada) {
+      return res.status(400).json({
+        mensaje: 'No se pudo determinar la categoría con la edad, el sexo y el nivel indicados'
+      });
+    }
+
     const patinador = await Patinador.create({
-      primerNombre, segundoNombre, apellido, edad, fechaNacimiento, dni, cuil, direccion,
-      dniMadre, dniPadre, telefono, sexo, nivel, seguro, numeroCorredor, categoria,
+      primerNombre,
+      segundoNombre,
+      apellido,
+      edad: edadCalculada,
+      fechaNacimiento,
+      dni,
+      cuil,
+      direccion,
+      dniMadre,
+      dniPadre,
+      telefono,
+      sexo,
+      nivel,
+      seguro,
+      numeroCorredor,
+      categoria: categoriaCalculada,
       fotoRostro: fotoRostroFile ? buildUploadUrl(fotoRostroFile.filename) : undefined,
       foto: fotoFile ? buildUploadUrl(fotoFile.filename) : undefined,
       club: clubId

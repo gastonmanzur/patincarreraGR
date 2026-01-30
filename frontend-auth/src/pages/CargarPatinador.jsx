@@ -5,14 +5,86 @@ export default function CargarPatinador() {
   const [mensaje, setMensaje] = useState('');
   const [fotoRostro, setFotoRostro] = useState(null);
   const [foto, setFoto] = useState(null);
-  const [categoriasPorEdad, setCategoriasPorEdad] = useState([]);
+  const [categoriasPorEdadEdades, setCategoriasPorEdadEdades] = useState([]);
+  const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [sexo, setSexo] = useState('');
+  const [nivel, setNivel] = useState('');
+  const [edad, setEdad] = useState('');
+  const [categoria, setCategoria] = useState('');
+  const [categoriaError, setCategoriaError] = useState('');
+
+  const calcularEdad = (fecha) => {
+    if (!fecha) return '';
+    const nacimiento = new Date(fecha);
+    if (Number.isNaN(nacimiento.getTime())) return '';
+    const hoy = new Date();
+    let edadCalculada = hoy.getFullYear() - nacimiento.getFullYear();
+    const mes = hoy.getMonth() - nacimiento.getMonth();
+    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+      edadCalculada -= 1;
+    }
+    return edadCalculada >= 0 ? edadCalculada : '';
+  };
+
+  const nivelToCodigo = (nivelValue) => {
+    const mapping = {
+      Escuela: 'E',
+      Transicion: 'T',
+      Intermedia: 'I',
+      Federados: 'F'
+    };
+    return mapping[nivelValue] || '';
+  };
+
+  const sexoToCodigo = (sexoValue) => {
+    if (sexoValue === 'M') return 'V';
+    if (sexoValue === 'F') return 'D';
+    return '';
+  };
+
+  const matchesCategoriaSexo = (categoriaValue, sexoCodigo) => {
+    if (!categoriaValue || !sexoCodigo) return false;
+    const esM7 = categoriaValue.startsWith('M7');
+    const index = esM7 ? 2 : 1;
+    const sexoChar = categoriaValue[index];
+    if (!sexoChar || !['V', 'D'].includes(sexoChar)) return false;
+    return sexoChar === sexoCodigo;
+  };
+
+  const matchesCategoriaNivel = (categoriaValue, nivelCodigo) => {
+    if (!categoriaValue || !nivelCodigo) return false;
+    const lastChar = categoriaValue[categoriaValue.length - 1];
+    if (!['E', 'T', 'I', 'F'].includes(lastChar)) return false;
+    return lastChar === nivelCodigo;
+  };
+
+  const inferirCategoria = (edadValue, sexoValue, nivelValue, categoriasConfig) => {
+    const edadNumero = Number.parseInt(edadValue, 10);
+    if (!Number.isFinite(edadNumero) || edadNumero <= 0) return '';
+    const sexoCodigo = sexoToCodigo(sexoValue);
+    const nivelCodigo = nivelToCodigo(nivelValue);
+    if (!sexoCodigo || !nivelCodigo) return '';
+    const candidatas = (categoriasConfig || []).filter((item) =>
+      Array.isArray(item.edades) && item.edades.includes(edadNumero)
+    );
+    const categoriaFiltrada = candidatas
+      .map((item) => item.categoria)
+      .find(
+        (categoriaItem) =>
+          matchesCategoriaSexo(categoriaItem, sexoCodigo)
+          && matchesCategoriaNivel(categoriaItem, nivelCodigo)
+      );
+    return categoriaFiltrada || '';
+  };
 
   useEffect(() => {
     const cargarCategorias = async () => {
       try {
         const res = await api.get('/public/app-config');
-        const categorias = Array.isArray(res.data?.categoriasPorEdad) ? res.data.categoriasPorEdad : [];
-        setCategoriasPorEdad(categorias);
+        const categoriasEdades = Array.isArray(res.data?.categoriasPorEdadEdades)
+          ? res.data.categoriasPorEdadEdades
+          : [];
+        setCategoriasPorEdadEdades(categoriasEdades);
       } catch (err) {
         console.error('Error al cargar las categorías por edad', err);
       }
@@ -21,26 +93,45 @@ export default function CargarPatinador() {
     void cargarCategorias();
   }, []);
 
+  useEffect(() => {
+    const nuevaEdad = calcularEdad(fechaNacimiento);
+    setEdad(nuevaEdad);
+  }, [fechaNacimiento]);
+
+  useEffect(() => {
+    const nuevaCategoria = inferirCategoria(edad, sexo, nivel, categoriasPorEdadEdades);
+    setCategoria(nuevaCategoria);
+    if (edad && sexo && nivel && !nuevaCategoria) {
+      setCategoriaError('No se encontró una categoría con la edad, sexo y nivel seleccionados.');
+    } else {
+      setCategoriaError('');
+    }
+  }, [edad, sexo, nivel, categoriasPorEdadEdades]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
+    if (!edad || !categoria) {
+      setMensaje('Complete fecha de nacimiento, sexo y nivel para calcular edad y categoría.');
+      return;
+    }
     const formData = new FormData();
     formData.append('primerNombre', form.primerNombre.value);
     formData.append('segundoNombre', form.segundoNombre.value);
     formData.append('apellido', form.apellido.value);
-    formData.append('edad', form.edad.value);
-    formData.append('fechaNacimiento', form.fechaNacimiento.value);
+    formData.append('edad', edad);
+    formData.append('fechaNacimiento', fechaNacimiento);
     formData.append('dni', form.dni.value);
     formData.append('cuil', form.cuil.value);
     formData.append('direccion', form.direccion.value);
     formData.append('dniMadre', form.dniMadre.value);
     formData.append('dniPadre', form.dniPadre.value);
     formData.append('telefono', form.telefono.value);
-    formData.append('sexo', form.sexo.value);
-    formData.append('nivel', form.nivel.value);
+    formData.append('sexo', sexo);
+    formData.append('nivel', nivel);
     formData.append('seguro', form.seguro.value);
     formData.append('numeroCorredor', form.numeroCorredor.value);
-    formData.append('categoria', form.categoria.value);
+    formData.append('categoria', categoria);
     if (fotoRostro) formData.append('fotoRostro', fotoRostro);
     if (foto) formData.append('foto', foto);
 
@@ -54,6 +145,12 @@ export default function CargarPatinador() {
       form.reset();
       setFotoRostro(null);
       setFoto(null);
+      setFechaNacimiento('');
+      setSexo('');
+      setNivel('');
+      setEdad('');
+      setCategoria('');
+      setCategoriaError('');
     } catch (err) {
       console.error(err);
       setMensaje(err.response?.data?.mensaje || 'Error al crear el patinador');
@@ -79,11 +176,18 @@ export default function CargarPatinador() {
           </div>
           <div className="col-md-3">
             <label className="form-label">Edad</label>
-            <input type="number" className="form-control" name="edad" required />
+            <input type="number" className="form-control" name="edad" value={edad} readOnly required />
           </div>
           <div className="col-md-3">
             <label className="form-label">Fecha de Nacimiento</label>
-            <input type="date" className="form-control" name="fechaNacimiento" required />
+            <input
+              type="date"
+              className="form-control"
+              name="fechaNacimiento"
+              value={fechaNacimiento}
+              onChange={(e) => setFechaNacimiento(e.target.value)}
+              required
+            />
           </div>
           <div className="col-md-4">
             <label className="form-label">DNI</label>
@@ -111,7 +215,13 @@ export default function CargarPatinador() {
           </div>
           <div className="col-md-4">
             <label className="form-label">Sexo</label>
-            <select className="form-select" name="sexo" required>
+            <select
+              className="form-select"
+              name="sexo"
+              value={sexo}
+              onChange={(e) => setSexo(e.target.value)}
+              required
+            >
               <option value="">Seleccione</option>
               <option value="M">M</option>
               <option value="F">F</option>
@@ -119,7 +229,13 @@ export default function CargarPatinador() {
           </div>
           <div className="col-md-4">
             <label className="form-label">Nivel</label>
-            <select className="form-select" name="nivel" required>
+            <select
+              className="form-select"
+              name="nivel"
+              value={nivel}
+              onChange={(e) => setNivel(e.target.value)}
+              required
+            >
               <option value="">Seleccione</option>
               <option value="Escuela">Escuela</option>
               <option value="Transicion">Transición</option>
@@ -141,18 +257,15 @@ export default function CargarPatinador() {
           </div>
           <div className="col-md-6">
             <label className="form-label">Categoría</label>
-            {categoriasPorEdad.length > 0 ? (
-              <select className="form-select" name="categoria" required>
-                <option value="">Seleccione</option>
-                {categoriasPorEdad.map((categoria) => (
-                  <option key={categoria} value={categoria}>
-                    {categoria}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input type="text" className="form-control" name="categoria" required />
-            )}
+            <input
+              type="text"
+              className={`form-control${categoriaError ? ' is-invalid' : ''}`}
+              name="categoria"
+              value={categoria}
+              readOnly
+              required
+            />
+            {categoriaError && <div className="invalid-feedback">{categoriaError}</div>}
           </div>
           <div className="col-md-6">
             <label className="form-label">Foto Rostro</label>
