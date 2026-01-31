@@ -415,6 +415,7 @@ const ORDEN_CATEGORIAS = [
   'CHP','M7DE','M7VE','PDE','PVE','6DE','6VE','5DE','5VE','4DE','4VE','JDE','JVE','MDE','MVE',
   'PDT','PVT','6DT','6VT','5DT','5VT','4DT','4VT','JDI','JVI','MDI','MVI','PDF','PVF','6DF','6VF','5DF','5VF','4DF','4VF','JDF','JVF','MDF','MVF'
 ];
+const CATEGORIAS_MAYORES = ['MDE', 'MVE', 'MDI', 'MVI', 'MDF', 'MVF'];
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
 
@@ -559,6 +560,10 @@ const inferCategoriaPorEdad = ({ edad, sexo, nivel, config }) => {
   const sexoCodigo = sexoToCodigo(sexo);
   const nivelCodigo = nivelToCodigo(nivel);
   if (!sexoCodigo || !nivelCodigo) return null;
+  if (edadValue >= 18) {
+    const categoriaMayor = `M${sexoCodigo}${nivelCodigo}`;
+    return CATEGORIAS_MAYORES.includes(categoriaMayor) ? categoriaMayor : null;
+  }
   const categoriasConfig = buildCategoriasPorEdadEdades(config);
   const candidatas = categoriasConfig.filter((item) => item.edades.includes(edadValue));
   const filtradas = candidatas
