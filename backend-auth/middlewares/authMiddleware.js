@@ -58,6 +58,7 @@ export const protegerRuta = async (req, res, next) => {
         const requestPath = normalisePath(req.originalUrl) || normalisePath(rawPath);
         const allowedInactivePaths = new Set([
           '/api/protegido/usuario',
+          '/api/payments/methods',
           '/api/subscriptions/checkout',
           '/api/subscriptions/status'
         ]);

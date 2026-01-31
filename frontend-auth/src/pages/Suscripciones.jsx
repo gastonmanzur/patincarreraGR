@@ -320,14 +320,12 @@ export default function Suscripciones() {
 
   const handlePaymentMethodTypeChange = (event) => {
     const value = event.target.value;
-    if (value === 'mercadopago' && !mercadoPagoAvailable) {
-      setErrorMessage('Mercado Pago no está disponible en este momento. Elegí una tarjeta guardada para continuar.');
-      setPaymentMethodType('card');
-      return;
-    }
     setPaymentMethodType(value);
     setCheckoutResult(null);
     resetMessages();
+    if (value === 'mercadopago' && !mercadoPagoAvailable) {
+      setErrorMessage('Mercado Pago no está disponible en este momento. Elegí una tarjeta guardada para continuar.');
+    }
     if (value !== 'card') {
       setSelectedMethodId('');
     }
@@ -447,6 +445,10 @@ export default function Suscripciones() {
     if (paymentMethodType === 'card' && !selectedMethodId) {
       setCardErrors((prev) => ({ ...prev, general: 'Seleccioná una tarjeta guardada.' }));
       setErrorMessage('Seleccioná una tarjeta guardada para continuar.');
+      return;
+    }
+    if (paymentMethodType === 'mercadopago' && !mercadoPagoAvailable) {
+      setErrorMessage('Mercado Pago no está disponible en este momento. Elegí una tarjeta guardada para continuar.');
       return;
     }
 
@@ -667,7 +669,6 @@ export default function Suscripciones() {
                       id="payment-method-mercado-pago"
                       value="mercadopago"
                       checked={paymentMethodType === 'mercadopago'}
-                      disabled={!mercadoPagoAvailable}
                       onChange={handlePaymentMethodTypeChange}
                     />
                     <label className="form-check-label" htmlFor="payment-method-mercado-pago">
