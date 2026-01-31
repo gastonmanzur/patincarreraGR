@@ -64,6 +64,11 @@ export default function CargarPatinador() {
     const sexoCodigo = sexoToCodigo(sexoValue);
     const nivelCodigo = nivelToCodigo(nivelValue);
     if (!sexoCodigo || !nivelCodigo) return '';
+    if (edadNumero >= 18) {
+      const categoriasMayores = ['MDE', 'MVE', 'MDI', 'MVI', 'MDF', 'MVF'];
+      const categoriaMayor = `M${sexoCodigo}${nivelCodigo}`;
+      return categoriasMayores.includes(categoriaMayor) ? categoriaMayor : '';
+    }
     const candidatas = (categoriasConfig || []).filter((item) =>
       Array.isArray(item.edades) && item.edades.includes(edadNumero)
     );
