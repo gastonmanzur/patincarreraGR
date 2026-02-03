@@ -53,6 +53,11 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    ```bash
    cd frontend-auth
    cp .env.example .env
+   # Para notificaciones web completá las variables:
+   # VITE_FIREBASE_API_KEY / VITE_FIREBASE_AUTH_DOMAIN / VITE_FIREBASE_PROJECT_ID
+   # VITE_FIREBASE_STORAGE_BUCKET / VITE_FIREBASE_MESSAGING_SENDER_ID / VITE_FIREBASE_APP_ID
+   # (Firebase Console > Project settings > General > Your apps (Web)).
+   # VITE_FIREBASE_VAPID_KEY (clave Web Push desde Firebase > Cloud Messaging).
    npm install
    npm run build
    sudo mkdir -p /var/www/patincarrera/frontend/dist
@@ -67,6 +72,17 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    The `.env.example` file now points `VITE_API_BASE` to `/api` so the frontend
    always talks to the backend through the same origin handled by Nginx,
    avoiding CORS issues between `patincarrera.net` and `www.patincarrera.net`.
+
+## 3.1 Android (FCM)
+1. Reemplazá `android/app/google-services.json` por el que descargás desde
+   Firebase > Project settings > General > Your apps (Android).
+2. Actualizá `android/app/src/main/res/values/strings.xml` con la URL base del backend:
+   ```xml
+   <string name="backend_base_url">https://patincarrera.net</string>
+   ```
+3. El backend espera el endpoint `/api/device-tokens` con el token FCM; el
+   servicio de mensajería Android lo envía si encuentra un auth token en
+   SharedPreferences (clave `auth_token`).
 
  ## 4. Nginx
 1. Copy the provided configuration:

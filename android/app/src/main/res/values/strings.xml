@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">PatinCarrera</string>
+    <string name="backend_base_url">https://patincarrera.net</string>
 </resources>

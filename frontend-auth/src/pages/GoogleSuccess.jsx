@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import getImageUrl from '../utils/getImageUrl';
 import { clearStoredClubId, setStoredClubId } from '../utils/clubContext';
+import { registerWebPushNotifications } from '../utils/pushNotifications';
 
 
 export default function GoogleSuccess() {
@@ -41,6 +42,10 @@ export default function GoogleSuccess() {
       } else {
         navigate('/home');
       }
+
+      registerWebPushNotifications({ requestPermission: true }).catch((pushError) => {
+        console.warn('No se pudo registrar el token de notificaciones web', pushError);
+      });
     }
   }, [token, navigate]);
   

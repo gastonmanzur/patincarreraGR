@@ -1,0 +1,59 @@
+import api from '../api';
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
+const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+
+const hasFirebaseConfig = () =>
+  Object.values(firebaseConfig).every((value) => typeof value === 'string' && value.trim().length > 0);
+
+const buildServiceWorkerUrl = () => {
+  const params = new URLSearchParams(
+    Object.entries(firebaseConfig).map(([key, value]) => [key, value?.trim() || ''])
+  );
+  return `/firebase-messaging-sw.js?${params.toString()}`;
+};
+
+export const registerWebPushNotifications = async ({ requestPermission = false } = {}) => {
+  if (!hasFirebaseConfig() || !vapidKey) return { status: 'missing-config' };
+
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !window.firebase) {
+    return { status: 'unsupported' };
+  }
+
+  if (Notification.permission === 'default' && requestPermission) {
+    await Notification.requestPermission();
+  }
+
+  if (Notification.permission !== 'granted') {
+    return { status: 'permission-denied' };
+  }
+
+  const app =
+    window.firebase.apps && window.firebase.apps.length
+      ? window.firebase.app()
+      : window.firebase.initializeApp(firebaseConfig);
+  const messaging = window.firebase.messaging(app);
+  const registration = await navigator.serviceWorker.register(buildServiceWorkerUrl());
+
+  const token = await messaging.getToken({
+    vapidKey,
+    serviceWorkerRegistration: registration
+  });
+
+  if (token) {
+    await api.post('/device-tokens', {
+      token,
+      plataforma: 'web'
+    });
+  }
+
+  return { status: token ? 'registered' : 'missing-token', token };
+};
