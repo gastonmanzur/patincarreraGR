@@ -2,10 +2,13 @@ package com.zuria.patincarrera;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import androidx.core.app.NotificationCompat;
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 import java.io.OutputStream;
@@ -22,7 +25,7 @@ public class PatinFirebaseMessagingService extends FirebaseMessagingService {
     @Override
     public void onNewToken(String token) {
         super.onNewToken(token);
-        registerTokenWithBackend(token);
+        registerTokenWithBackend(this, token);
     }
 
     @Override
@@ -53,32 +56,51 @@ public class PatinFirebaseMessagingService extends FirebaseMessagingService {
 
         NotificationManager manager =
             (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager == null) {
+            return;
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
                 "Notificaciones PatinCarrera",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             );
             manager.createNotificationChannel(channel);
         }
+
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent contentIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
-            .setAutoCancel(true);
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(contentIntent);
 
         manager.notify((int) System.currentTimeMillis(), builder.build());
     }
 
-    private void registerTokenWithBackend(String token) {
-        String backendBaseUrl = getString(R.string.backend_base_url);
+    public static void registerTokenWithBackend(Context context, String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return;
+        }
+
+        String backendBaseUrl = context.getString(R.string.backend_base_url);
         if (backendBaseUrl == null || backendBaseUrl.trim().isEmpty()) {
             return;
         }
 
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         String authToken = prefs.getString(AUTH_TOKEN_KEY, null);
         if (authToken == null || authToken.trim().isEmpty()) {
             return;
@@ -123,5 +145,16 @@ public class PatinFirebaseMessagingService extends FirebaseMessagingService {
                 }
             }
         }).start();
+    }
+
+    public static void fetchAndRegisterIfLogged(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String authToken = prefs.getString(AUTH_TOKEN_KEY, null);
+        if (authToken == null || authToken.trim().isEmpty()) {
+            return;
+        }
+
+        FirebaseMessaging.getInstance().getToken()
+            .addOnSuccessListener(token -> registerTokenWithBackend(context, token));
     }
 }
