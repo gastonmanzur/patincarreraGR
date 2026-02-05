@@ -124,7 +124,7 @@ export default function PanelAdmin() {
       setCategoriasPorEdad(
         categorias.map((item) => ({
           categoria: item.categoria,
-          edadesInput: Array.isArray(item.edades) ? item.edades.join(', ') : ''
+          aniosNacimientoInput: Array.isArray(item.aniosNacimiento) ? item.aniosNacimiento.join(', ') : ''
         }))
       );
 
@@ -322,20 +322,20 @@ export default function PanelAdmin() {
 
   const handleCategoriaChange = (index, value) => {
     setCategoriasPorEdad((prev) =>
-      prev.map((item, idx) => (idx === index ? { ...item, edadesInput: value } : item))
+      prev.map((item, idx) => (idx === index ? { ...item, aniosNacimientoInput: value } : item))
     );
     setCategoriasDirty(true);
   };
 
   const handleCategoriasSave = async () => {
     const categoriasPayload = categoriasPorEdad.map((item) => {
-      const edades = (item.edadesInput || '')
+      const aniosNacimiento = (item.aniosNacimientoInput || '')
         .split(/[,;]+/)
         .map((value) => Number.parseInt(value.trim(), 10))
-        .filter((value) => Number.isFinite(value) && value > 0 && value <= 120);
+        .filter((value) => Number.isFinite(value) && value >= 1900 && value <= 2100);
       return {
         categoria: item.categoria,
-        edades
+        aniosNacimiento
       };
     });
 
@@ -348,7 +348,7 @@ export default function PanelAdmin() {
       setCategoriasPorEdad(
         updated.map((item) => ({
           categoria: item.categoria,
-          edadesInput: Array.isArray(item.edades) ? item.edades.join(', ') : ''
+          aniosNacimientoInput: Array.isArray(item.aniosNacimiento) ? item.aniosNacimiento.join(', ') : ''
         }))
       );
 
@@ -631,9 +631,9 @@ export default function PanelAdmin() {
       <section className="mt-4">
         <div className="card shadow-sm">
           <div className="card-body">
-            <h2 className="h4 mb-3">Categorías por edad</h2>
+            <h2 className="h4 mb-3">Categorías por año de nacimiento</h2>
             <p className="text-muted small mb-4">
-              Actualizá las edades que componen cada categoría sin cambiar el orden oficial.
+              Actualizá los años de nacimiento que componen cada categoría sin cambiar el orden oficial.
             </p>
             <div className="table-responsive">
               <table className="table table-striped align-middle">
@@ -641,7 +641,7 @@ export default function PanelAdmin() {
                   <tr>
                     <th style={{ width: '80px' }}>Orden</th>
                     <th>Categoría</th>
-                    <th>Edades</th>
+                    <th>Años de nacimiento</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -653,9 +653,9 @@ export default function PanelAdmin() {
                         <input
                           type="text"
                           className="form-control"
-                          value={item.edadesInput}
+                          value={item.aniosNacimientoInput}
                           onChange={(event) => handleCategoriaChange(index, event.target.value)}
-                          placeholder="Ej: 13, 14"
+                          placeholder="Ej: 2011, 2012"
                           disabled={categoriasLoading}
                         />
                       </td>

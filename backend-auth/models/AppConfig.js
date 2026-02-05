@@ -22,6 +22,7 @@ const appConfigSchema = new mongoose.Schema(
       type: [
         {
           categoria: { type: String, required: true },
+          aniosNacimiento: { type: [Number], default: [] },
           edades: { type: [Number], default: [] }
         }
       ],

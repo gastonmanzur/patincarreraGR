@@ -470,7 +470,7 @@ const sanitizeEdadValue = (value) => {
   return null;
 };
 
-const sanitizeEdades = (raw) => {
+const sanitizeAniosNacimiento = (raw) => {
   if (raw === null || raw === undefined) return [];
   const values = Array.isArray(raw)
     ? raw
@@ -480,14 +480,14 @@ const sanitizeEdades = (raw) => {
   const unique = new Set();
   values.forEach((item) => {
     const parsed = sanitizeEdadValue(item);
-    if (parsed && parsed > 0 && parsed <= 120) {
+    if (parsed && parsed >= 1900 && parsed <= 2100) {
       unique.add(parsed);
     }
   });
   return Array.from(unique).sort((a, b) => a - b);
 };
 
-const buildCategoriasPorEdadEdades = (config) => {
+const buildCategoriasPorEdadAnioNacimiento = (config) => {
   const stored = Array.isArray(config?.categoriasPorEdadEdades)
     ? config.categoriasPorEdadEdades
     : [];
@@ -496,19 +496,20 @@ const buildCategoriasPorEdadEdades = (config) => {
     if (!item?.categoria) return;
     const categoria = String(item.categoria).trim();
     if (!ORDEN_CATEGORIAS.includes(categoria)) return;
-    byCategoria.set(categoria, sanitizeEdades(item.edades));
+    const origen = item.aniosNacimiento ?? item.edades;
+    byCategoria.set(categoria, sanitizeAniosNacimiento(origen));
   });
 
   return ORDEN_CATEGORIAS.map((categoria) => ({
     categoria,
-    edades: byCategoria.get(categoria) || []
+    aniosNacimiento: byCategoria.get(categoria) || []
   }));
 };
 
 const normaliseAppConfigResponse = (config) => ({
   defaultBrandLogo: typeof config?.defaultBrandLogo === 'string' ? config.defaultBrandLogo : '',
   categoriasPorEdad: resolveCategoriasPorEdad(config?.categoriasPorEdad),
-  categoriasPorEdadEdades: config ? buildCategoriasPorEdadEdades(config) : []
+  categoriasPorEdadEdades: config ? buildCategoriasPorEdadAnioNacimiento(config) : []
 });
 
 const calculateAgeFromDate = (birthDate) => {
@@ -554,18 +555,21 @@ const matchesCategoriaNivel = (categoria, nivelCodigo) => {
   return lastChar === nivelCodigo;
 };
 
-const inferCategoriaPorEdad = ({ edad, sexo, nivel, config }) => {
-  const edadValue = sanitizeEdadValue(edad);
-  if (!edadValue) return null;
+const inferCategoriaPorAnioNacimiento = ({ anioNacimiento, sexo, nivel, config }) => {
+  const anioNacimientoValue = sanitizeEdadValue(anioNacimiento);
+  if (!anioNacimientoValue) return null;
   const sexoCodigo = sexoToCodigo(sexo);
   const nivelCodigo = nivelToCodigo(nivel);
   if (!sexoCodigo || !nivelCodigo) return null;
+  const currentYear = new Date().getFullYear();
+  const edadValue = currentYear - anioNacimientoValue;
+
   if (edadValue >= 18) {
     const categoriaMayor = `M${sexoCodigo}${nivelCodigo}`;
     return CATEGORIAS_MAYORES.includes(categoriaMayor) ? categoriaMayor : null;
   }
-  const categoriasConfig = buildCategoriasPorEdadEdades(config);
-  const candidatas = categoriasConfig.filter((item) => item.edades.includes(edadValue));
+  const categoriasConfig = buildCategoriasPorEdadAnioNacimiento(config);
+  const candidatas = categoriasConfig.filter((item) => item.aniosNacimiento.includes(anioNacimientoValue));
   const filtradas = candidatas
     .map((item) => item.categoria)
     .filter((categoria) => matchesCategoriaSexo(categoria, sexoCodigo))
@@ -2026,15 +2030,15 @@ app.post('/api/patinadores', protegerRuta, upload.fields([{ name: 'fotoRostro', 
     }
 
     const config = await AppConfig.getSingleton();
-    const categoriaCalculada = inferCategoriaPorEdad({
-      edad: edadCalculada,
+    const categoriaCalculada = inferCategoriaPorAnioNacimiento({
+      anioNacimiento: fechaNacimientoDate.getFullYear(),
       sexo,
       nivel,
       config
     });
     if (!categoriaCalculada) {
       return res.status(400).json({
-        mensaje: 'No se pudo determinar la categoría con la edad, el sexo y el nivel indicados'
+        mensaje: 'No se pudo determinar la categoría con el año de nacimiento, el sexo y el nivel indicados'
       });
     }
 
@@ -2767,7 +2771,7 @@ app.get('/api/admin/categories-by-age', protegerRuta, permitirRol('Admin'), asyn
   try {
     const config = await AppConfig.getSingleton();
 
-    const categorias = buildCategoriasPorEdadEdades(config);
+    const categorias = buildCategoriasPorEdadAnioNacimiento(config);
 
     res.json({ categorias });
   } catch (err) {
@@ -2790,18 +2794,19 @@ app.put('/api/admin/categories-by-age', protegerRuta, permitirRol('Admin'), asyn
         if (!item?.categoria) return;
         const categoria = String(item.categoria).trim();
         if (!ORDEN_CATEGORIAS.includes(categoria)) return;
-        byCategoria.set(categoria, sanitizeEdades(item.edades));
+        const origen = item.aniosNacimiento ?? item.edades;
+        byCategoria.set(categoria, sanitizeAniosNacimiento(origen));
       });
 
       const categoriasPorEdadEdades = ORDEN_CATEGORIAS.map((categoria) => ({
         categoria,
-        edades: byCategoria.get(categoria) || []
+        aniosNacimiento: byCategoria.get(categoria) || []
       }));
 
       const config = await AppConfig.updateSingleton({ categoriasPorEdadEdades });
       return res.json({
         mensaje: 'Categorías por edad actualizadas correctamente',
-        categorias: buildCategoriasPorEdadEdades(config)
+        categorias: buildCategoriasPorEdadAnioNacimiento(config)
       });
     }
 
