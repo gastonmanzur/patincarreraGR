@@ -58,30 +58,6 @@ export default function CargarPatinador() {
     return lastChar === nivelCodigo;
   };
 
-  const inferirCategoria = (edadValue, sexoValue, nivelValue, categoriasConfig) => {
-    const edadNumero = Number.parseInt(edadValue, 10);
-    if (!Number.isFinite(edadNumero) || edadNumero <= 0) return '';
-    const sexoCodigo = sexoToCodigo(sexoValue);
-    const nivelCodigo = nivelToCodigo(nivelValue);
-    if (!sexoCodigo || !nivelCodigo) return '';
-    if (edadNumero >= 18) {
-      const categoriasMayores = ['MDE', 'MVE', 'MDI', 'MVI', 'MDF', 'MVF'];
-      const categoriaMayor = `M${sexoCodigo}${nivelCodigo}`;
-      return categoriasMayores.includes(categoriaMayor) ? categoriaMayor : '';
-    }
-    const candidatas = (categoriasConfig || []).filter((item) =>
-      Array.isArray(item.edades) && item.edades.includes(edadNumero)
-    );
-    const categoriaFiltrada = candidatas
-      .map((item) => item.categoria)
-      .find(
-        (categoriaItem) =>
-          matchesCategoriaSexo(categoriaItem, sexoCodigo)
-          && matchesCategoriaNivel(categoriaItem, nivelCodigo)
-      );
-    return categoriaFiltrada || '';
-  };
-
   useEffect(() => {
     const cargarCategorias = async () => {
       try {
@@ -104,20 +80,55 @@ export default function CargarPatinador() {
   }, [fechaNacimiento]);
 
   useEffect(() => {
-    const nuevaCategoria = inferirCategoria(edad, sexo, nivel, categoriasPorEdadEdades);
-    setCategoria(nuevaCategoria);
-    if (edad && sexo && nivel && !nuevaCategoria) {
-      setCategoriaError('No se encontró una categoría con la edad, sexo y nivel seleccionados.');
+    const fecha = new Date(fechaNacimiento);
+    if (Number.isNaN(fecha.getTime()) || !sexo || !nivel) {
+      setCategoria('');
+      setCategoriaError('');
+      return;
+    }
+
+    const anioNacimiento = fecha.getFullYear();
+    const sexoCodigo = sexoToCodigo(sexo);
+    const nivelCodigo = nivelToCodigo(nivel);
+    if (!sexoCodigo || !nivelCodigo) {
+      setCategoria('');
+      setCategoriaError('');
+      return;
+    }
+
+    if (edad >= 18) {
+      const categoriasMayores = ['MDE', 'MVE', 'MDI', 'MVI', 'MDF', 'MVF'];
+      const categoriaMayor = `M${sexoCodigo}${nivelCodigo}`;
+      const categoriaMayorValida = categoriasMayores.includes(categoriaMayor) ? categoriaMayor : '';
+      setCategoria(categoriaMayorValida);
+      setCategoriaError(categoriaMayorValida ? '' : 'No se encontró una categoría con el año de nacimiento, sexo y nivel seleccionados.');
+      return;
+    }
+
+    const candidatas = (categoriasPorEdadEdades || []).filter((item) =>
+      Array.isArray(item.aniosNacimiento) && item.aniosNacimiento.includes(anioNacimiento)
+    );
+    const categoriaFiltrada = candidatas
+      .map((item) => item.categoria)
+      .find(
+        (categoriaItem) =>
+          matchesCategoriaSexo(categoriaItem, sexoCodigo)
+          && matchesCategoriaNivel(categoriaItem, nivelCodigo)
+      ) || '';
+
+    setCategoria(categoriaFiltrada);
+    if (!categoriaFiltrada) {
+      setCategoriaError('No se encontró una categoría con el año de nacimiento, sexo y nivel seleccionados.');
     } else {
       setCategoriaError('');
     }
-  }, [edad, sexo, nivel, categoriasPorEdadEdades]);
+  }, [fechaNacimiento, edad, sexo, nivel, categoriasPorEdadEdades]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
     if (!edad || !categoria) {
-      setMensaje('Complete fecha de nacimiento, sexo y nivel para calcular edad y categoría.');
+      setMensaje('Complete fecha de nacimiento, sexo y nivel para calcular categoría.');
       return;
     }
     const formData = new FormData();
