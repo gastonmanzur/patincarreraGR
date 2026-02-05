@@ -487,6 +487,14 @@ const sanitizeAniosNacimiento = (raw) => {
   return Array.from(unique).sort((a, b) => a - b);
 };
 
+const applyCategoriaAnioRules = (categoria, aniosNacimiento = []) => {
+  if (!Array.isArray(aniosNacimiento)) return [];
+  if (categoria === 'CHP') {
+    return aniosNacimiento.filter((anio) => anio <= 2022);
+  }
+  return aniosNacimiento;
+};
+
 const buildCategoriasPorEdadAnioNacimiento = (config) => {
   const stored = Array.isArray(config?.categoriasPorEdadEdades)
     ? config.categoriasPorEdadEdades
@@ -497,7 +505,7 @@ const buildCategoriasPorEdadAnioNacimiento = (config) => {
     const categoria = String(item.categoria).trim();
     if (!ORDEN_CATEGORIAS.includes(categoria)) return;
     const origen = item.aniosNacimiento ?? item.edades;
-    byCategoria.set(categoria, sanitizeAniosNacimiento(origen));
+    byCategoria.set(categoria, applyCategoriaAnioRules(categoria, sanitizeAniosNacimiento(origen)));
   });
 
   return ORDEN_CATEGORIAS.map((categoria) => ({
@@ -2795,7 +2803,7 @@ app.put('/api/admin/categories-by-age', protegerRuta, permitirRol('Admin'), asyn
         const categoria = String(item.categoria).trim();
         if (!ORDEN_CATEGORIAS.includes(categoria)) return;
         const origen = item.aniosNacimiento ?? item.edades;
-        byCategoria.set(categoria, sanitizeAniosNacimiento(origen));
+        byCategoria.set(categoria, applyCategoriaAnioRules(categoria, sanitizeAniosNacimiento(origen)));
       });
 
       const categoriasPorEdadEdades = ORDEN_CATEGORIAS.map((categoria) => ({
