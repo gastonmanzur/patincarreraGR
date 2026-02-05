@@ -1258,6 +1258,37 @@ const sendPushToUsers = async (userIds, notification, data = {}) => {
   }
 };
 
+const crearNotificacionesParaUsuarios = async ({
+  userIds,
+  mensaje,
+  clubId,
+  competencia = null,
+  progreso = null,
+  pushOptions = {}
+}) => {
+  if (!Array.isArray(userIds) || userIds.length === 0) return;
+
+  const notificaciones = userIds.map((destinatarioId) => ({
+    destinatario: destinatarioId,
+    mensaje,
+    club: clubId,
+    ...(competencia ? { competencia } : {}),
+    ...(progreso ? { progreso } : {})
+  }));
+
+  if (notificaciones.length > 0) {
+    await Notification.insertMany(notificaciones);
+  }
+
+  const pushTitle = pushOptions.title || 'Nuevo contenido';
+  const pushData = removeUndefinedEntries({
+    competencia: competencia ? competencia.toString() : undefined,
+    progreso: progreso ? progreso.toString() : undefined,
+    ...(pushOptions.data || {})
+  });
+  await sendPushToUsers(userIds, { title: pushTitle, body: mensaje }, pushData);
+};
+
 async function crearNotificacionesParaClub(clubId, mensaje, competencia = null, pushOptions = {}) {
   if (!clubId) return;
 
@@ -1265,21 +1296,13 @@ async function crearNotificacionesParaClub(clubId, mensaje, competencia = null, 
     const clubFilter = normaliseObjectId(clubId) ?? clubId;
     const usuarios = await User.find({ club: clubFilter, rol: { $ne: 'Admin' } }, '_id').lean();
     const userIds = usuarios.map((u) => u._id);
-    const notificaciones = userIds.map((destinatarioId) => ({
-      destinatario: destinatarioId,
+    await crearNotificacionesParaUsuarios({
+      userIds,
       mensaje,
-      club: clubId,
-      ...(competencia ? { competencia } : {})
-    }));
-    if (notificaciones.length > 0) {
-      await Notification.insertMany(notificaciones);
-    }
-    const pushTitle = pushOptions.title || 'Nuevo contenido';
-    const pushData = removeUndefinedEntries({
-      competencia: competencia ? competencia.toString() : undefined,
-      ...(pushOptions.data || {})
+      clubId,
+      competencia,
+      pushOptions
     });
-    await sendPushToUsers(userIds, { title: pushTitle, body: mensaje }, pushData);
   } catch (e) {
     console.error('Error creando notificaciones', e);
   }
@@ -4613,18 +4636,16 @@ app.post('/api/progresos/:id/enviar', protegerRuta, permitirRol('Tecnico'), asyn
         .json({ mensaje: 'No se encontró destinatario para el progreso' });
     }
     const mensaje = `Nuevo progreso de ${prog.patinador.primerNombre} ${prog.patinador.apellido}`;
-    const notificaciones = usuarios.map((u) => ({
-      destinatario: u._id,
+    await crearNotificacionesParaUsuarios({
+      userIds: usuarios.map((u) => u._id),
       mensaje,
+      clubId,
       progreso: prog._id,
-      club: clubId
-    }));
-    await Notification.insertMany(notificaciones);
-    await sendPushToUsers(
-      usuarios.map((u) => u._id),
-      { title: 'Nuevo reporte', body: mensaje },
-      { tipo: 'reporte', progreso: prog._id.toString() }
-    );
+      pushOptions: {
+        title: 'Nuevo reporte',
+        data: { tipo: 'reporte', progreso: prog._id.toString() }
+      }
+    });
     prog.enviado = true;
     await prog.save();
     res.json({ mensaje: 'Reporte enviado' });
