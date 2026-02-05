@@ -25,6 +25,7 @@ public class PatinFirebaseMessagingService extends FirebaseMessagingService {
     @Override
     public void onNewToken(String token) {
         super.onNewToken(token);
+        android.util.Log.d("FCM_TOKEN", token);
         registerTokenWithBackend(this, token);
     }
 
