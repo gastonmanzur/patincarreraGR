@@ -44,6 +44,7 @@ export default function CargarPatinador() {
 
   const matchesCategoriaSexo = (categoriaValue, sexoCodigo) => {
     if (!categoriaValue || !sexoCodigo) return false;
+    if (categoriaValue === 'CHP') return true;
     const esM7 = categoriaValue.startsWith('M7');
     const index = esM7 ? 2 : 1;
     const sexoChar = categoriaValue[index];
@@ -53,6 +54,7 @@ export default function CargarPatinador() {
 
   const matchesCategoriaNivel = (categoriaValue, nivelCodigo) => {
     if (!categoriaValue || !nivelCodigo) return false;
+    if (categoriaValue === 'CHP') return true;
     const lastChar = categoriaValue[categoriaValue.length - 1];
     if (!['E', 'T', 'I', 'F'].includes(lastChar)) return false;
     return lastChar === nivelCodigo;
