@@ -1,8 +1,21 @@
 import admin from 'firebase-admin';
 
+const resolveFirebaseCredential = () => {
+  const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
+  const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY || '';
+  const privateKey = rawPrivateKey.replace(/\\n/g, '\n').trim();
+
+  if (projectId && clientEmail && privateKey) {
+    return admin.credential.cert({ projectId, clientEmail, privateKey });
+  }
+
+  return admin.credential.applicationDefault();
+};
+
 const getMessaging = () => {
   if (!admin.apps.length) {
-    admin.initializeApp({ credential: admin.credential.applicationDefault() });
+    admin.initializeApp({ credential: resolveFirebaseCredential() });
   }
   return admin.messaging();
 };
@@ -21,6 +34,18 @@ export const sendToToken = async ({ token, title, body, data = {} }) => {
     notification: {
       title: title ?? '',
       body: body ?? ''
+    },
+    android: {
+      priority: 'high',
+      notification: {
+        channelId: 'patincarrera_general'
+      }
+    },
+    webpush: {
+      headers: { Urgency: 'high' },
+      notification: {
+        icon: '/patincarrera-favicon.svg'
+      }
     }
   };
   const cleanedData = coerceData(data);

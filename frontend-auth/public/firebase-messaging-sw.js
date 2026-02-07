@@ -20,12 +20,19 @@ if (hasConfig) {
 
   messaging.onBackgroundMessage((payload) => {
     const notification = payload?.notification || {};
-    const title = notification.title || 'PatinCarrera';
+    const title = notification.title || 'Patín Carrera';
     const options = {
       body: notification.body || '',
-      icon: '/favicon.ico',
+      icon: '/patincarrera-favicon.svg',
+      badge: '/patincarrera-favicon.svg',
       data: payload?.data || {}
     };
     self.registration.showNotification(title, options);
   });
 }
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification?.close();
+  const targetUrl = event.notification?.data?.url || '/';
+  event.waitUntil(self.clients.openWindow(targetUrl));
+});
