@@ -21,6 +21,19 @@ const buildServiceWorkerUrl = () => {
   return `/firebase-messaging-sw.js?${params.toString()}`;
 };
 
+const normalizeApiBase = (candidate) => {
+  if (!candidate || typeof candidate !== 'string') return '';
+  return candidate.replace(/\/api\/?$/i, '').replace(/\/+$/, '');
+};
+
+const resolveApiBaseUrl = () =>
+  normalizeApiBase(
+    import.meta.env.VITE_API_BASE_URL ||
+      import.meta.env.VITE_API_URL ||
+      api?.defaults?.baseURL ||
+      (typeof window !== 'undefined' ? window.location.origin : '')
+  );
+
 export const registerWebPushNotifications = async ({ requestPermission = false } = {}) => {
   if (!hasFirebaseConfig() || !vapidKey) return { status: 'missing-config' };
 
@@ -49,9 +62,28 @@ export const registerWebPushNotifications = async ({ requestPermission = false }
   });
 
   if (token) {
-    await api.post('/device-tokens', {
-      token,
-      plataforma: 'web'
+    const apiBaseUrl = resolveApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/api/device-tokens`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(sessionStorage.getItem('token') ? { Authorization: `Bearer ${sessionStorage.getItem('token')}` } : {})
+      },
+      body: JSON.stringify({
+        token,
+        plataforma: 'web',
+        platform: 'web',
+        device: navigator.userAgent
+      })
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload?.mensaje || 'Error registrando token web en backend');
+    }
+
+    messaging.onMessage((payload) => {
+      console.log('FCM foreground payload:', payload);
     });
   }
 
