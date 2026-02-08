@@ -35,6 +35,7 @@ import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
 import { comparePasswordWithHash } from './utils/passwordUtils.js';
 import { sendToToken, sendToTopic } from './utils/fcmV1.js';
+import pushRoutes from './routes/push.js';
 
 import {
   loadClubSubscription,
@@ -3599,54 +3600,7 @@ const registerDeviceToken = async (req, res) => {
 };
 
 app.post('/api/device-tokens', protegerRuta, registerDeviceToken);
-app.post('/api/push/register', protegerRuta, registerDeviceToken);
-
-app.post('/api/push/test', protegerRuta, async (req, res) => {
-  try {
-    const requestedUserId = typeof req.body?.userId === 'string' ? req.body.userId.trim() : '';
-    const userId = requestedUserId || req.usuario.id;
-
-    if (!isAdminUser(req) && userId !== req.usuario.id) {
-      return res.status(403).json({ mensaje: 'No tenés permiso para enviar notificaciones a otro usuario' });
-    }
-
-    const title = typeof req.body?.title === 'string' && req.body.title.trim()
-      ? req.body.title.trim()
-      : 'Prueba';
-    const body = typeof req.body?.body === 'string' && req.body.body.trim()
-      ? req.body.body.trim()
-      : 'Push OK';
-
-    const data =
-      req.body?.data && typeof req.body.data === 'object' && !Array.isArray(req.body.data)
-        ? req.body.data
-        : {};
-
-    const tokens = await DeviceToken.find({ user: userId }).lean();
-    if (!tokens.length) {
-      return res.status(404).json({ ok: false, mensaje: 'El usuario no tiene tokens registrados' });
-    }
-
-    const sent = [];
-    for (const deviceToken of tokens) {
-      try {
-        await sendToToken({ token: deviceToken.token, title, body, data });
-        sent.push({ token: deviceToken.token, ok: true });
-      } catch (err) {
-        sent.push({
-          token: deviceToken.token,
-          ok: false,
-          error: err?.errorInfo?.message || err?.message || 'Error enviando push'
-        });
-      }
-    }
-
-    res.json({ ok: true, userId, sent });
-  } catch (err) {
-    console.error('Error en /api/push/test', err);
-    res.status(500).json({ ok: false, mensaje: 'Error enviando push de prueba' });
-  }
-});
+app.use('/api/push', pushRoutes);
 
 // ---- TORNEOS / COMPETENCIAS ----
 app.post('/api/tournaments', protegerRuta, permitirRol('Delegado'), async (req, res) => {
