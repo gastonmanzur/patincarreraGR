@@ -74,8 +74,8 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    avoiding CORS issues between `patincarrera.net` and `www.patincarrera.net`.
 
 ## 3.1 Android (FCM)
-1. Reemplazá `android/app/google-services.json` por el que descargás desde
-   Firebase > Project settings > General > Your apps (Android).
+1. Copiá `android/app/google-services.example.json` a `android/app/google-services.json` y reemplazá sus placeholders con el archivo real descargado desde Firebase > Project settings > General > Your apps (Android).
+   **No** subas `google-services.json` real al repositorio; quedó ignorado por Git para evitar filtrar credenciales.
 2. Actualizá `android/app/src/main/res/values/strings.xml` con la URL base del backend:
    ```xml
    <string name="backend_base_url">https://patincarrera.net</string>
@@ -113,6 +113,7 @@ sudo certbot --nginx -d patincarrera.net -d www.patincarrera.net
 
 ## Notes
 - Update environment variables as needed for production.
+- Si alguna clave/API key o private key fue compartida públicamente (chat, ticket, etc.), rotala en Firebase/Google Cloud antes de desplegar.
 - PM2 will keep the backend running and revive it on reboot (`pm2 startup`).
 - For future releases you can deploy everything in one step from the project
   root:
