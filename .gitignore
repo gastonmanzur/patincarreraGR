@@ -12,3 +12,8 @@ frontend-auth/dist/
 backend-auth/.env
 frontend-auth/.env*
 !frontend-auth/.env.production
+
+# Firebase credentials (never commit real keys)
+android/app/google-services.json
+*.service-account.json
+firebase-admin.json
