@@ -1,16 +1,12 @@
 package com.zuria.patincarrera;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
+import android.widget.FrameLayout;
+import android.widget.TextView;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import android.widget.TextView;
-import android.widget.FrameLayout;
 
 public class MainActivity extends AppCompatActivity {
     @Override
@@ -32,17 +28,5 @@ public class MainActivity extends AppCompatActivity {
         });
 
         setContentView(root);
-        requestNotificationPermissionIfNeeded();
-    }
-
-    private void requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            return;
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-            == PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-        requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 1001);
     }
 }

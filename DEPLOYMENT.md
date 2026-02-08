@@ -25,11 +25,6 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    # MERCADOPAGO_ACCESS_TOKEN. El backend también acepta los alias
    # MERCADO_PAGO_ACCESS_TOKEN o MP_ACCESS_TOKEN para mayor compatibilidad
    # con distintos paneles de hosting.
-   # Para notificaciones push usá FCM HTTP v1 con Service Account (OAuth).
-   # Guardá el JSON de la cuenta de servicio en un path seguro y definí:
-   # GOOGLE_APPLICATION_CREDENTIALS=/etc/opt/patincarrera/firebase-admin.json
-   # (opcional) FCM_PROJECT_ID=patincarreragr-788d3 para evitar el lookup.
-   # Ya no se usan FCM_SERVER_KEY / FIREBASE_SERVER_KEY / FCM_LEGACY_SERVER_KEY.
    # UPLOADS_DIR defaults to backend-auth/uploads. If you have legacy
    # assets in another directory you can list them in
    # UPLOADS_FALLBACK_DIRS=/ruta/vieja/uploads
@@ -53,11 +48,6 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    ```bash
    cd frontend-auth
    cp .env.example .env
-   # Para notificaciones web completá las variables:
-   # VITE_FIREBASE_API_KEY / VITE_FIREBASE_AUTH_DOMAIN / VITE_FIREBASE_PROJECT_ID
-   # VITE_FIREBASE_STORAGE_BUCKET / VITE_FIREBASE_MESSAGING_SENDER_ID / VITE_FIREBASE_APP_ID
-   # (Firebase Console > Project settings > General > Your apps (Web)).
-   # VITE_FIREBASE_VAPID_KEY (clave Web Push desde Firebase > Cloud Messaging).
    npm install
    npm run build
    sudo mkdir -p /var/www/patincarrera/frontend/dist
@@ -73,18 +63,7 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    always talks to the backend through the same origin handled by Nginx,
    avoiding CORS issues between `patincarrera.net` and `www.patincarrera.net`.
 
-## 3.1 Android (FCM)
-1. Copiá `android/app/google-services.example.json` a `android/app/google-services.json` y reemplazá sus placeholders con el archivo real descargado desde Firebase > Project settings > General > Your apps (Android).
-   **No** subas `google-services.json` real al repositorio; quedó ignorado por Git para evitar filtrar credenciales.
-2. Actualizá `android/app/src/main/res/values/strings.xml` con la URL base del backend:
-   ```xml
-   <string name="backend_base_url">https://patincarrera.net</string>
-   ```
-3. El backend acepta `/api/device-tokens` (compatibilidad) y `/api/push/register`
-   para registrar tokens FCM; el servicio de mensajería Android envía el token
-   si encuentra un auth token en SharedPreferences (clave `auth_token`).
-
- ## 4. Nginx
+## 4. Nginx
 1. Copy the provided configuration:
    ```bash
    sudo cp deployment/nginx.conf /etc/nginx/sites-available/patincarrera
@@ -113,7 +92,6 @@ sudo certbot --nginx -d patincarrera.net -d www.patincarrera.net
 
 ## Notes
 - Update environment variables as needed for production.
-- Si alguna clave/API key o private key fue compartida públicamente (chat, ticket, etc.), rotala en Firebase/Google Cloud antes de desplegar.
 - PM2 will keep the backend running and revive it on reboot (`pm2 startup`).
 - For future releases you can deploy everything in one step from the project
   root:

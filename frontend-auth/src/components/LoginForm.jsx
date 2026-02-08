@@ -2,7 +2,6 @@ import api, { login } from '../api';
 import { useNavigate } from 'react-router-dom';
 import getImageUrl from '../utils/getImageUrl';
 import { clearStoredClubId, setStoredClubId } from '../utils/clubContext';
-import { registerWebPushNotifications } from '../utils/pushNotifications';
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -47,12 +46,6 @@ export default function LoginForm() {
         clearStoredClubId();
         sessionStorage.removeItem('clubLogo');
         sessionStorage.removeItem('clubNombre');
-      }
-
-      try {
-        await registerWebPushNotifications({ requestPermission: true });
-      } catch (pushError) {
-        console.warn('No se pudo registrar el token de notificaciones web', pushError);
       }
 
       alert(`Bienvenido ${usuario.nombre}`);
