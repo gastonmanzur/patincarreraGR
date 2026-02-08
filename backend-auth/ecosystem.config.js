@@ -8,9 +8,7 @@ module.exports = {
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
-        PORT: 5000,
-        GOOGLE_APPLICATION_CREDENTIALS: '/etc/opt/patincarrera/firebase-admin.json',
-        FCM_PROJECT_ID: 'patincarreragr-788d3'
+        PORT: 5000
       },
       watch: false,
       time: true,

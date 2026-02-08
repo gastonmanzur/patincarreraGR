@@ -29,13 +29,10 @@ import Federation from './models/Federation.js';
 import Entrenamiento from './models/Entrenamiento.js';
 import Progreso from './models/Progreso.js';
 import AppConfig from './models/AppConfig.js';
-import DeviceToken from './models/DeviceToken.js';
 import ExcelJS from 'exceljs';
 import pdfToJson from './utils/pdfToJson.js';
 import parseResultadosJson from './utils/parseResultadosJson.js';
 import { comparePasswordWithHash } from './utils/passwordUtils.js';
-import { sendToToken, sendToTopic } from './utils/fcmV1.js';
-import pushRoutes from './routes/push.js';
 
 import {
   loadClubSubscription,
@@ -1199,85 +1196,12 @@ const recalcularPosiciones = async (competenciaId, categoria = null) => {
   await Promise.all(promesas);
 };
 
-const FCM_BATCH_LIMIT = 500;
-const FCM_INVALID_REASONS = new Set([
-  'messaging/registration-token-not-registered',
-  'messaging/invalid-registration-token',
-  'messaging/invalid-argument'
-]);
-
-const removeUndefinedEntries = (obj = {}) => {
-  const cleaned = {};
-  Object.entries(obj || {}).forEach(([key, value]) => {
-    if (typeof value !== 'undefined') cleaned[key] = value;
-  });
-  return cleaned;
-};
-
-const chunkArray = (items, size) => {
-  const chunks = [];
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size));
-  }
-  return chunks;
-};
-
-const sendPushNotifications = async (tokens, notification, data = {}) => {
-  const uniqueTokens = Array.from(new Set((tokens || []).filter(Boolean)));
-  if (uniqueTokens.length === 0) return;
-
-  const invalidTokens = new Set();
-  const payloadData = removeUndefinedEntries(data);
-  const batches = chunkArray(uniqueTokens, FCM_BATCH_LIMIT);
-
-  for (const batch of batches) {
-    await Promise.all(
-      batch.map(async (token) => {
-        try {
-          await sendToToken({
-            token,
-            title: notification?.title,
-            body: notification?.body,
-            data: payloadData
-          });
-        } catch (err) {
-          const errorCode = err?.errorInfo?.code || err?.code || null;
-          console.error('Error enviando notificaciones push', err);
-          if (errorCode && FCM_INVALID_REASONS.has(errorCode)) {
-            invalidTokens.add(token);
-          }
-        }
-      })
-    );
-  }
-
-  if (invalidTokens.size > 0) {
-    try {
-      await DeviceToken.deleteMany({ token: { $in: Array.from(invalidTokens) } });
-    } catch (err) {
-      console.error('Error al limpiar tokens de push inválidos', err);
-    }
-  }
-};
-
-const sendPushToUsers = async (userIds, notification, data = {}) => {
-  if (!Array.isArray(userIds) || userIds.length === 0) return;
-  try {
-    const tokens = await DeviceToken.find({ user: { $in: userIds } }).distinct('token');
-    if (!tokens || tokens.length === 0) return;
-    await sendPushNotifications(tokens, notification, data);
-  } catch (err) {
-    console.error('Error al preparar notificaciones push', err);
-  }
-};
-
 const crearNotificacionesParaUsuarios = async ({
   userIds,
   mensaje,
   clubId,
   competencia = null,
-  progreso = null,
-  pushOptions = {}
+  progreso = null
 }) => {
   if (!Array.isArray(userIds) || userIds.length === 0) return;
 
@@ -1292,17 +1216,9 @@ const crearNotificacionesParaUsuarios = async ({
   if (notificaciones.length > 0) {
     await Notification.insertMany(notificaciones);
   }
-
-  const pushTitle = pushOptions.title || 'Nuevo contenido';
-  const pushData = removeUndefinedEntries({
-    competencia: competencia ? competencia.toString() : undefined,
-    progreso: progreso ? progreso.toString() : undefined,
-    ...(pushOptions.data || {})
-  });
-  await sendPushToUsers(userIds, { title: pushTitle, body: mensaje }, pushData);
 };
 
-async function crearNotificacionesParaClub(clubId, mensaje, competencia = null, pushOptions = {}) {
+async function crearNotificacionesParaClub(clubId, mensaje, competencia = null) {
   if (!clubId) return;
 
   try {
@@ -1313,8 +1229,7 @@ async function crearNotificacionesParaClub(clubId, mensaje, competencia = null, 
       userIds,
       mensaje,
       clubId,
-      competencia,
-      pushOptions
+      competencia
     });
   } catch (e) {
     console.error('Error creando notificaciones', e);
@@ -3405,25 +3320,7 @@ app.post('/api/news', protegerRuta, permitirRol('Delegado', 'Tecnico'), upload.s
     if (!clubId) return;
 
     const noticia = await News.create({ titulo, contenido, imagen, autor: req.usuario.id, club: clubId });
-    await crearNotificacionesParaClub(clubId, `Nueva noticia: ${titulo}`, null, {
-      title: 'Nueva noticia',
-      data: { tipo: 'noticia', noticia: noticia._id.toString() }
-    });
-    try {
-      await sendToTopic({
-        topic: `club_${clubId}`,
-        title: 'Nueva noticia',
-        body: 'Se publicó una nueva noticia del club',
-        data: {
-          type: 'news',
-          id: noticia._id.toString(),
-          tipo: 'noticia',
-          noticia: noticia._id.toString()
-        }
-      });
-    } catch (err) {
-      console.error('Error enviando notificación push por tópico', err);
-    }
+    await crearNotificacionesParaClub(clubId, `Nueva noticia: ${titulo}`, null);
     res.status(201).json(noticia);
   } catch (err) {
     console.error(err);
@@ -3496,10 +3393,7 @@ app.post('/api/notifications', protegerRuta, permitirRol('Delegado', 'Tecnico'),
   const clubId = await ensureClubForRequest(req, res);
   if (!clubId) return;
 
-  await crearNotificacionesParaClub(clubId, mensaje, null, {
-    title: 'Nueva notificación',
-    data: { tipo: 'notificacion' }
-  });
+  await crearNotificacionesParaClub(clubId, mensaje, null);
   res.status(201).json({ mensaje: 'Notificaciones enviadas' });
 });
 
@@ -3564,43 +3458,6 @@ app.delete('/api/notifications/:id', protegerRuta, permitirRol('Delegado', 'Tecn
   }
 });
 
-const registerDeviceToken = async (req, res) => {
-  const rawToken = req.body?.token;
-  if (!rawToken || typeof rawToken !== 'string') {
-    return res.status(400).json({ ok: false, mensaje: 'Token requerido' });
-  }
-
-  try {
-    const token = rawToken.trim();
-    if (!token) return res.status(400).json({ ok: false, mensaje: 'Token requerido' });
-
-    const requestedUserId = typeof req.body?.userId === 'string' ? req.body.userId.trim() : '';
-    const targetUserId = requestedUserId || req.usuario.id;
-    if (!isAdminUser(req) && targetUserId !== req.usuario.id) {
-      return res.status(403).json({ ok: false, mensaje: 'No tenés permiso para registrar tokens de otro usuario' });
-    }
-
-    await DeviceToken.findOneAndUpdate(
-      { token },
-      {
-        $set: {
-          user: targetUserId,
-          platform: req.body?.plataforma || req.body?.platform || 'android',
-          lastUsedAt: new Date()
-        }
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-
-    return res.json({ ok: true, mensaje: 'Token registrado' });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ ok: false, mensaje: 'Error al registrar token de notificaciones' });
-  }
-};
-
-app.post('/api/device-tokens', protegerRuta, registerDeviceToken);
-app.use('/api/push', pushRoutes);
 
 // ---- TORNEOS / COMPETENCIAS ----
 app.post('/api/tournaments', protegerRuta, permitirRol('Delegado'), async (req, res) => {
@@ -3711,25 +3568,7 @@ app.post('/api/tournaments/:id/competitions', protegerRuta, permitirRol('Delegad
       club: clubId,
       ...(imagen ? { imagen } : {})
     });
-    await crearNotificacionesParaClub(clubId, `Nueva competencia ${nombre}`, competencia._id, {
-      title: 'Nueva competencia',
-      data: { tipo: 'competencia', competencia: competencia._id.toString() }
-    });
-    try {
-      await sendToTopic({
-        topic: `club_${clubId}`,
-        title: 'Nueva competencia',
-        body: 'Ya está disponible la competencia del fin de semana',
-        data: {
-          type: 'race',
-          id: competencia._id.toString(),
-          tipo: 'competencia',
-          competencia: competencia._id.toString()
-        }
-      });
-    } catch (err) {
-      console.error('Error enviando notificación push por tópico', err);
-    }
+    await crearNotificacionesParaClub(clubId, `Nueva competencia ${nombre}`, competencia._id);
     res.status(201).json(competencia);
   } catch (err) {
     console.error(err);
@@ -4664,11 +4503,7 @@ app.post('/api/progresos/:id/enviar', protegerRuta, permitirRol('Tecnico'), asyn
       userIds: usuarios.map((u) => u._id),
       mensaje,
       clubId,
-      progreso: prog._id,
-      pushOptions: {
-        title: 'Nuevo reporte',
-        data: { tipo: 'reporte', progreso: prog._id.toString() }
-      }
+      progreso: prog._id
     });
     prog.enviado = true;
     await prog.save();

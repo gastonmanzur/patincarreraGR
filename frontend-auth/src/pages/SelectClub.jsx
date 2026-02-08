@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import getImageUrl from '../utils/getImageUrl';
 import { setStoredClubId } from '../utils/clubContext';
-import { registerWebPushNotifications } from '../utils/pushNotifications';
 
 export default function SelectClub() {
   const navigate = useNavigate();
@@ -53,12 +52,6 @@ export default function SelectClub() {
         sessionStorage.setItem('foto', foto);
       } else {
         sessionStorage.removeItem('foto');
-      }
-
-      try {
-        await registerWebPushNotifications({ requestPermission: true });
-      } catch (pushError) {
-        console.warn('No se pudo registrar el token de notificaciones web', pushError);
       }
 
       setMensaje('Club asignado correctamente.');
