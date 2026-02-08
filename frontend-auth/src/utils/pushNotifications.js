@@ -14,12 +14,7 @@ const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 const hasFirebaseConfig = () =>
   Object.values(firebaseConfig).every((value) => typeof value === 'string' && value.trim().length > 0);
 
-const buildServiceWorkerUrl = () => {
-  const params = new URLSearchParams(
-    Object.entries(firebaseConfig).map(([key, value]) => [key, value?.trim() || ''])
-  );
-  return `/firebase-messaging-sw.js?${params.toString()}`;
-};
+const SERVICE_WORKER_PATH = '/firebase-messaging-sw.js';
 
 const normalizeApiBase = (candidate) => {
   if (!candidate || typeof candidate !== 'string') return '';
@@ -54,7 +49,7 @@ export const registerWebPushNotifications = async ({ requestPermission = false }
       ? window.firebase.app()
       : window.firebase.initializeApp(firebaseConfig);
   const messaging = window.firebase.messaging(app);
-  const registration = await navigator.serviceWorker.register(buildServiceWorkerUrl());
+  const registration = await navigator.serviceWorker.register(SERVICE_WORKER_PATH);
 
   const token = await messaging.getToken({
     vapidKey,
@@ -63,13 +58,14 @@ export const registerWebPushNotifications = async ({ requestPermission = false }
 
   if (token) {
     const apiBaseUrl = resolveApiBaseUrl();
-    const response = await fetch(`${apiBaseUrl}/api/device-tokens`, {
+    const response = await fetch(`${apiBaseUrl}/api/push/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(sessionStorage.getItem('token') ? { Authorization: `Bearer ${sessionStorage.getItem('token')}` } : {})
       },
       body: JSON.stringify({
+        userId: sessionStorage.getItem('userId') || undefined,
         token,
         plataforma: 'web',
         platform: 'web',
