@@ -3563,20 +3563,27 @@ app.delete('/api/notifications/:id', protegerRuta, permitirRol('Delegado', 'Tecn
   }
 });
 
-app.post('/api/device-tokens', protegerRuta, async (req, res) => {
+const registerDeviceToken = async (req, res) => {
   const rawToken = req.body?.token;
   if (!rawToken || typeof rawToken !== 'string') {
-    return res.status(400).json({ mensaje: 'Token requerido' });
+    return res.status(400).json({ ok: false, mensaje: 'Token requerido' });
   }
+
   try {
     const token = rawToken.trim();
-    if (!token) return res.status(400).json({ mensaje: 'Token requerido' });
+    if (!token) return res.status(400).json({ ok: false, mensaje: 'Token requerido' });
+
+    const requestedUserId = typeof req.body?.userId === 'string' ? req.body.userId.trim() : '';
+    const targetUserId = requestedUserId || req.usuario.id;
+    if (!isAdminUser(req) && targetUserId !== req.usuario.id) {
+      return res.status(403).json({ ok: false, mensaje: 'No tenés permiso para registrar tokens de otro usuario' });
+    }
 
     await DeviceToken.findOneAndUpdate(
       { token },
       {
         $set: {
-          user: req.usuario.id,
+          user: targetUserId,
           platform: req.body?.plataforma || req.body?.platform || 'android',
           lastUsedAt: new Date()
         }
@@ -3584,12 +3591,15 @@ app.post('/api/device-tokens', protegerRuta, async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    res.json({ mensaje: 'Token registrado' });
+    return res.json({ ok: true, mensaje: 'Token registrado' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ mensaje: 'Error al registrar token de notificaciones' });
+    return res.status(500).json({ ok: false, mensaje: 'Error al registrar token de notificaciones' });
   }
-});
+};
+
+app.post('/api/device-tokens', protegerRuta, registerDeviceToken);
+app.post('/api/push/register', protegerRuta, registerDeviceToken);
 
 app.post('/api/push/test', protegerRuta, async (req, res) => {
   try {

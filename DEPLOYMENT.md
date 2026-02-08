@@ -80,9 +80,9 @@ This project can be deployed on an Ubuntu VPS (e.g. Hostinger) with the domain `
    ```xml
    <string name="backend_base_url">https://patincarrera.net</string>
    ```
-3. El backend espera el endpoint `/api/device-tokens` con el token FCM; el
-   servicio de mensajería Android lo envía si encuentra un auth token en
-   SharedPreferences (clave `auth_token`).
+3. El backend acepta `/api/device-tokens` (compatibilidad) y `/api/push/register`
+   para registrar tokens FCM; el servicio de mensajería Android envía el token
+   si encuentra un auth token en SharedPreferences (clave `auth_token`).
 
  ## 4. Nginx
 1. Copy the provided configuration:
