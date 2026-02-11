@@ -17,6 +17,8 @@ const String channelId = 'patincarrera_default';
 @pragma('vm:entry-point')
 Future<void> _bgHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+  // Si llega notification payload, Android suele mostrar sola en background.
+  // Si querés 100% consistente, podrías generar local notification también.
 }
 
 Future<void> main() async {
@@ -51,6 +53,7 @@ Future<void> _initLocalNotifications() async {
 }
 
 Future<void> _requestPushPermissionAndroid13() async {
+  // firebase_messaging ya expone requestPermission; en Android 13+ es relevante
   await FirebaseMessaging.instance.requestPermission();
 }
 
@@ -78,17 +81,25 @@ class _WebWrapperPageState extends State<WebWrapperPage> {
   StreamSubscription<RemoteMessage>? _onMessageOpenedSub;
   StreamSubscription<String>? _onTokenRefreshSub;
 
+  String? _androidToken;
+  String? _currentUserId;
+  String? _currentJwt;
+
   @override
   void initState() {
     super.initState();
 
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadRequest(Uri.parse(apiBaseUrl));
-
     setupForegroundPushUI();
     _setupDeepLinksFromPush();
-    _syncFcmToken();
+    _initToken();
+
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..addJavaScriptChannel(
+        'PatinBridge',
+        onMessageReceived: _onBridgeMessage,
+      )
+      ..loadRequest(Uri.parse(apiBaseUrl));
   }
 
   void setupForegroundPushUI() {
@@ -122,26 +133,80 @@ class _WebWrapperPageState extends State<WebWrapperPage> {
         FirebaseMessaging.onMessageOpenedApp.listen(_openPushUrl);
   }
 
-  Future<void> _syncFcmToken() async {
-    final token = await FirebaseMessaging.instance.getToken();
-    if (token != null && token.isNotEmpty) {
-      await _sendTokenToBackend(token);
+  Future<void> _initToken() async {
+    _androidToken = await FirebaseMessaging.instance.getToken();
+    debugPrint('[PUSH] Android token: $_androidToken');
+
+    if (_currentUserId != null && _currentUserId!.isNotEmpty) {
+      await _registerAndroidToken(userId: _currentUserId!, jwt: _currentJwt);
     }
 
     _onTokenRefreshSub = FirebaseMessaging.instance.onTokenRefresh.listen(
       (newToken) async {
-        await _sendTokenToBackend(newToken);
+        _androidToken = newToken;
+        if (_currentUserId != null && _currentUserId!.isNotEmpty) {
+          await _registerAndroidToken(userId: _currentUserId!, jwt: _currentJwt);
+        }
       },
     );
   }
 
-  Future<void> _sendTokenToBackend(String token) async {
+  Future<void> _onBridgeMessage(JavaScriptMessage msg) async {
+    // Esperamos JSON: { "type":"LOGIN", "userId":"...", "jwt":"..." }
     try {
-      await http.post(
+      final dynamic data = jsonDecode(msg.message);
+      if (data is! Map<String, dynamic>) {
+        debugPrint('[Bridge] mensaje inválido: ${msg.message}');
+        return;
+      }
+
+      if (data['type'] == 'LOGIN') {
+        final dynamic userIdRaw = data['userId'];
+        final dynamic jwtRaw = data['jwt'];
+
+        if (userIdRaw == null || userIdRaw.toString().isEmpty) {
+          debugPrint('[Bridge] LOGIN sin userId');
+          return;
+        }
+
+        _currentUserId = userIdRaw.toString();
+        _currentJwt = jwtRaw?.toString();
+
+        await _registerAndroidToken(
+          userId: _currentUserId!,
+          jwt: _currentJwt,
+        );
+      }
+    } catch (_) {
+      debugPrint('[Bridge] mensaje inválido: ${msg.message}');
+    }
+  }
+
+  Future<void> _registerAndroidToken({
+    required String userId,
+    String? jwt,
+  }) async {
+    if (_androidToken == null || _androidToken!.isEmpty) {
+      await _initToken();
+    }
+    if (_androidToken == null || _androidToken!.isEmpty) return;
+
+    try {
+      final resp = await http.post(
         Uri.parse('$apiBaseUrl/api/push/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'token': token}),
+        headers: {
+          'Content-Type': 'application/json',
+          if (jwt != null && jwt.isNotEmpty) 'Authorization': 'Bearer $jwt',
+        },
+        body: jsonEncode({
+          'userId': userId,
+          'token': _androidToken,
+          'platform': 'android',
+          'device': 'flutter-webview',
+        }),
       );
+
+      debugPrint('[PUSH] register resp: ${resp.statusCode} ${resp.body}');
     } catch (_) {
       // Evitamos interrumpir la app si no hay conectividad.
     }

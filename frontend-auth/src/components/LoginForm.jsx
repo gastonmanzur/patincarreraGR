@@ -2,6 +2,7 @@ import api, { login } from '../api';
 import { useNavigate } from 'react-router-dom';
 import getImageUrl from '../utils/getImageUrl';
 import { clearStoredClubId, setStoredClubId } from '../utils/clubContext';
+import { notifyWrapperLogin } from '../utils/wrapperBridge';
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function LoginForm() {
       const normalisedRole = rawRole.toLowerCase();
 
       sessionStorage.setItem('token', token);
+      notifyWrapperLogin({ userId: usuario._id || usuario.id, jwt: token });
 
       if (rawRole) {
         sessionStorage.setItem('rol', rawRole);
